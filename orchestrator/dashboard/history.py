@@ -20,7 +20,7 @@ def _history_dir() -> Path:
     return _repo_root() / "reports" / "history"
 
 
-def append_run(report: PipelineReport, *, source: str = "local") -> Path:
+def append_run(report: PipelineReport, *, source: str = "local", duration_s: float | None = None) -> Path:
     """Write one history entry for a completed pipeline run."""
     history_dir = _history_dir()
     history_dir.mkdir(parents=True, exist_ok=True)
@@ -29,6 +29,7 @@ def append_run(report: PipelineReport, *, source: str = "local") -> Path:
     entry = {
         "timestamp": timestamp.isoformat(),
         "source": source,
+        "duration_s": round(duration_s, 1) if duration_s is not None else None,
         **report.model_dump(),
     }
 
@@ -66,6 +67,7 @@ def load_runs(limit: int = 50) -> list[dict[str, Any]]:
                 "passed": data.get("passed", 0),
                 "failed": data.get("failed", 0),
                 "total": data.get("total", 0),
+                "duration_s": data.get("duration_s"),
                 "summary": (data.get("summary") or "")[:300],
                 "v8_coverage_percentage": data.get("v8_coverage_percentage"),
             }

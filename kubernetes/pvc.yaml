@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: zyvor-qa-reports
+  labels:
+    app: zyvor-qa-agent
+spec:
+  # k3s ships the local-path provisioner by default
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

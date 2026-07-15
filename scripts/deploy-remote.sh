@@ -37,7 +37,8 @@ SERVE_PORT="${ZYVOR_QA_PORT:-}"
 DEFAULT_SERVE_PORT=30080   # fixed NodePort-range default — stable across hosts and redeploys
 RUNTIME_PREF="${ZYVOR_QA_RUNTIME:-}"   # docker | podman | (auto)
 NO_AUTH=false
-DASH_USER="admin"
+DASH_USER="${ZYVOR_QA_DASH_USER:-admin}"
+DASH_PASS_DEFAULT="${ZYVOR_QA_DASH_PASS:-Admin@321}"
 DASH_PASS=""
 SSH_RETRIES="${ZYVOR_QA_SSH_RETRIES:-3}"
 POSITIONAL=()
@@ -75,8 +76,9 @@ Options:
                       existing docker, else podman; installs docker on apt hosts
                       and podman on dnf/yum hosts when neither is present)
   --podman            Shorthand for --runtime podman
-  --no-auth           Skip dashboard login setup (default: generate a random
-                      password once per host, persist it, print it in the summary)
+  --no-auth           Skip dashboard login setup (default: admin / Admin@321,
+                      persisted per host; override with ZYVOR_QA_DASH_USER /
+                      ZYVOR_QA_DASH_PASS or by editing .zyvor-qa-auth on the host)
   --smoke             Run 'zyvor-qa test' on the remote after deploy
   --key               SSH key auth (clear password)
   --uninstall         Remove zyvor-qa from host
@@ -348,10 +350,9 @@ resolve_dashboard_auth() {
         DASH_PASS="${existing#*:}"
         info "Dashboard auth: reusing credentials from remote"
     else
-        # openssl: single command, no tr|head SIGPIPE under pipefail
-        DASH_PASS=$(openssl rand -hex 8 2>/dev/null) || DASH_PASS=$(date +%s%N | shasum | cut -c1-16)
+        DASH_PASS="${DASH_PASS_DEFAULT}"
         _ssh "mkdir -p '${REMOTE_DIR}' && umask 077 && echo '${DASH_USER}:${DASH_PASS}' > '${REMOTE_DIR}/.zyvor-qa-auth'"
-        info "Dashboard auth: generated new credentials (persisted on remote)"
+        info "Dashboard auth: default credentials set (persisted on remote)"
     fi
     _ssh env REMOTE_STAGING="${REMOTE_DIR}" DASH_USER="${DASH_USER}" DASH_PASS="${DASH_PASS}" bash <<'REMOTE'
 set -e
@@ -668,12 +669,12 @@ cd "${REMOTE_STAGING}"
 
 # Local image only — force imagePullPolicy: Never so k3s never hits a registry
 WORK=$(mktemp -d)
-for f in configmap secret rbac deployment service cronjob; do
+for f in configmap secret rbac pvc deployment service cronjob; do
     sed -E 's|^([[:space:]]*)image: zyvor-qa-agent:latest|\1image: zyvor-qa-agent:latest\n\1imagePullPolicy: Never|' \
         "kubernetes/${f}.yaml" > "${WORK}/${f}.yaml"
 done
 $KUBECTL apply -f "${WORK}/configmap.yaml" -f "${WORK}/secret.yaml" -f "${WORK}/rbac.yaml" \
-    -f "${WORK}/deployment.yaml" -f "${WORK}/service.yaml" -f "${WORK}/cronjob.yaml"
+    -f "${WORK}/pvc.yaml" -f "${WORK}/deployment.yaml" -f "${WORK}/service.yaml" -f "${WORK}/cronjob.yaml"
 rm -rf "${WORK}"
 
 # Dashboard login — patch credentials into the secret before the rollout below

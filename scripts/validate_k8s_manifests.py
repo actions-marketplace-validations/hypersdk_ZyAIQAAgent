@@ -12,6 +12,7 @@ MANIFESTS = [
     "kubernetes/configmap.yaml",
     "kubernetes/secret.yaml",
     "kubernetes/rbac.yaml",
+    "kubernetes/pvc.yaml",
     "kubernetes/deployment.yaml",
     "kubernetes/service.yaml",
     "kubernetes/cronjob.yaml",

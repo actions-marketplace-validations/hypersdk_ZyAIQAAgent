@@ -133,7 +133,8 @@
   }
   .empty code { font-family: var(--font-mono); color: var(--text-primary); background: var(--fill-secondary); padding: 1px 6px; border-radius: 6px; }
 
-  .qa { display: grid; grid-template-columns: 310px 1fr; gap: 14px; }
+  .qa { display: grid; grid-template-columns: 300px 1fr 300px; gap: 14px; }
+  @media (max-width: 1100px) { .qa { grid-template-columns: 300px 1fr; } }
   @media (max-width: 800px) { .qa { grid-template-columns: 1fr; } }
   .spark-wrap { position: relative; }
   .spark-tip {
@@ -212,6 +213,53 @@
   .result-err { color: var(--status-error); font-size: 13px; }
   .rlink { color: var(--accent); text-decoration: none; font-size: 12px; }
   .rlink:hover { text-decoration: underline; }
+  /* toasts */
+  #toasts { position: fixed; top: 18px; right: 18px; z-index: 50; display: flex; flex-direction: column; gap: 10px; }
+  .toast {
+    background-color: var(--surface-strong); border: 1px solid var(--glass-border-strong);
+    backdrop-filter: blur(var(--blur-liquid)); -webkit-backdrop-filter: blur(var(--blur-liquid));
+    border-radius: 14px; padding: 10px 16px; box-shadow: var(--glass-shadow);
+    font-size: 13px; display: flex; align-items: center; gap: 10px; min-width: 240px;
+    animation: toast-in .25s ease-out;
+  }
+  @keyframes toast-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+  .toast.ok { border-left: 3px solid var(--status-ok); }
+  .toast.bad { border-left: 3px solid var(--status-error); }
+  .toast .t-kind { font-weight: 600; }
+  .toast .t-sub { color: var(--text-secondary); font-size: 12px; }
+
+  /* activity feed */
+  .feed { display: flex; flex-direction: column; gap: 0; max-height: 300px; overflow-y: auto; }
+  .feed-item { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--separator); font-size: 12px; }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-item .f-when { color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .feed-item .f-kind { font-weight: 600; white-space: nowrap; }
+  .feed-item .f-brief { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* pod search */
+  .pod-search { margin-left: 10px; width: 190px; font-weight: 400; }
+
+  /* stat trend */
+  .trend-up { color: var(--status-ok); }
+  .trend-down { color: var(--status-error); }
+
+  /* log drawer controls */
+  .drawer-controls { display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-bottom: 1px solid var(--separator); flex-wrap: wrap; }
+  .drawer-controls .inp { padding: 3px 8px; font-size: 11px; }
+  .drawer-controls .chk { font-size: 11px; }
+  .dl-btn {
+    cursor: pointer; font-size: 11px; padding: 3px 10px; border-radius: 9999px;
+    color: var(--text-secondary); background: var(--surface-muted); border: 1px solid var(--separator);
+  }
+  .dl-btn:hover { color: var(--text-primary); background: var(--fill-secondary); }
+
+  /* expandable run rows */
+  .runs-table tr.expandable { cursor: pointer; }
+  .run-detail td {
+    background: var(--surface-muted); font-size: 12px; color: var(--text-secondary);
+    white-space: pre-wrap; padding: 10px 12px;
+  }
+
   footer { margin-top: 36px; color: var(--text-muted); font-size: 12px; display: flex; gap: 18px; }
   kbd {
     border: 1px solid var(--separator); border-radius: 6px; padding: 0 6px; font-size: 11px;
@@ -243,6 +291,7 @@
       <div class="stat-tile"><span class="stat-label">Pods</span><span class="stat-value" id="stat-pods">—</span><span class="stat-sub" id="stat-pods-sub"></span></div>
       <div class="stat-tile"><span class="stat-label">Replicas</span><span class="stat-value" id="stat-replicas">—</span><span class="stat-sub" id="stat-replicas-sub"></span></div>
       <div class="stat-tile"><span class="stat-label">Last QA run</span><span class="stat-value" id="stat-run">—</span><span class="stat-sub" id="stat-run-sub"></span></div>
+      <div class="stat-tile"><span class="stat-label">Pass rate</span><span class="stat-value" id="stat-rate">—</span><span class="stat-sub" id="stat-rate-sub">last 30 runs</span></div>
       <div class="stat-tile"><span class="stat-label">Next smoke run</span><span class="stat-value" id="stat-cron">—</span><span class="stat-sub" id="stat-cron-sub"></span></div>
     </div>
   </div>
@@ -250,7 +299,14 @@
   <h2>Workloads</h2>
   <div class="strip" id="workloads"><div class="empty">No workload data yet.</div></div>
 
-  <h2>Pods <span style="color:var(--text-muted);font-weight:400" id="ns"></span></h2>
+  <h2 style="display:flex;align-items:center">Pods <span style="color:var(--text-muted);font-weight:400;margin-left:6px" id="ns"></span>
+    <input class="inp pod-search" id="pod-search" placeholder="filter pods…">
+    <button class="dl-btn" id="events-toggle" style="margin-left:8px">⚡ events</button>
+  </h2>
+  <div class="glass card" id="events-panel" style="display:none;margin-bottom:14px">
+    <div class="k" style="margin-bottom:8px">Recent cluster events</div>
+    <div style="overflow-x:auto"><table class="runs-table" id="events-table"><tbody></tbody></table></div>
+  </div>
   <div class="pods" id="pods"><div class="empty">No pod data yet.</div></div>
 
   <h2 style="display:flex;align-items:center;gap:12px">Actions <span id="run-status" class="run-status"></span></h2>
@@ -259,7 +315,7 @@
       <div class="act-title">▶ Run tests</div>
       <div class="act-row">
         <select class="inp" id="run-source"><option value="local">local</option><option value="github">github</option></select>
-        <input class="inp grow" id="run-spec" placeholder="spec path (optional)">
+        <input class="inp grow" id="run-spec" placeholder="spec path (optional)" list="spec-list">
       </div>
       <div class="act-row">
         <input class="inp" id="run-pr" type="number" placeholder="PR #" style="width:80px">
@@ -274,7 +330,7 @@
       <div class="act-title">⚙ Generate tests</div>
       <div class="act-row">
         <select class="inp" id="gen-source"><option value="local">local</option><option value="github">github</option></select>
-        <input class="inp grow" id="gen-spec" placeholder="spec path (optional)">
+        <input class="inp grow" id="gen-spec" placeholder="spec path (optional)" list="spec-list">
       </div>
       <div class="act-row"><label class="chk"><input type="checkbox" id="gen-coverage"> expand coverage</label></div>
       <div class="act-row"><button class="run-btn act-btn" data-kind="generate">⚙ Generate</button></div>
@@ -290,6 +346,11 @@
     <div class="glass card act">
       <div class="act-title">✨ Create from English</div>
       <div class="act-row"><textarea class="inp grow" id="nl-desc" rows="2" placeholder="e.g. Verify /vm page mentions KubeVirt migration"></textarea></div>
+      <div class="act-row" id="nl-chips" style="gap:6px">
+        <span class="chip nl-chip" style="cursor:pointer">homepage shows all products</span>
+        <span class="chip nl-chip" style="cursor:pointer">/vm mentions KubeVirt</span>
+        <span class="chip nl-chip" style="cursor:pointer">Schedule Demo button works</span>
+      </div>
       <div class="act-row">
         <label class="chk"><input type="checkbox" id="nl-execute"> run immediately</label>
         <button class="run-btn act-btn" data-kind="create">✨ Create</button>
@@ -319,7 +380,11 @@
   </div>
   <div class="glass card" id="job-result" style="display:none;margin-top:14px"></div>
 
-  <h2>QA Runs</h2>
+  <datalist id="spec-list"></datalist>
+
+  <h2 style="display:flex;align-items:center;gap:10px">QA Runs
+    <a class="dl-btn" href="/api/dashboard/runs?limit=200" download="qa-runs.json" style="text-decoration:none">⬇ export</a>
+  </h2>
   <div class="qa">
     <div class="glass card">
       <div class="k">Latest run
@@ -338,12 +403,24 @@
       <table class="runs-table" id="runs-table" aria-label="Recent QA runs"><tbody></tbody></table>
       <div class="empty" id="runs-empty" style="border:none;background:none">No run history yet — run <code>zyvor-qa run</code> once.</div>
     </div>
+    <div class="glass card">
+      <div class="k" style="margin-bottom:8px">Activity</div>
+      <div class="feed" id="feed"><span class="d">No activity yet this session.</span></div>
+    </div>
   </div>
 
   <footer>
     <span><kbd>r</kbd> refresh</span>
     <span><kbd>esc</kbd> close logs</span>
-    <span>auto-refresh {{ refresh_interval_ms // 1000 }}s</span>
+    <span>auto-refresh
+      <select class="inp" id="refresh-rate" style="padding:1px 6px;font-size:11px">
+        <option value="5000">5s</option>
+        <option value="15000">15s</option>
+        <option value="60000">60s</option>
+        <option value="0">paused</option>
+      </select>
+    </span>
+    <span id="server-info" style="margin-left:auto"></span>
   </footer>
 </main>
 
@@ -352,8 +429,21 @@
     <b id="drawer-title">logs</b>
     <button class="close" id="drawer-close" aria-label="Close">✕</button>
   </header>
+  <div class="drawer-controls">
+    <select class="inp" id="drawer-container"><option value="">all containers</option></select>
+    <select class="inp" id="drawer-lines">
+      <option value="100">100 lines</option>
+      <option value="500">500 lines</option>
+      <option value="1000">1000 lines</option>
+    </select>
+    <label class="chk"><input type="checkbox" id="drawer-follow" checked> follow</label>
+    <button class="dl-btn" id="drawer-download">⬇ download</button>
+    <span class="d" style="font-size:11px;margin-left:auto">hover pauses refresh</span>
+  </div>
   <pre id="drawer-body">…</pre>
 </aside>
+
+<div id="toasts" aria-live="polite"></div>
 
 <script>
 "use strict";
@@ -377,6 +467,26 @@ function rel(seconds) {
 function relIso(iso) {
   if (!iso) return "—";
   return rel(Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000 | 0)) + " ago";
+}
+function tspan(iso) {
+  return '<span title="' + esc(iso || "") + '">' + relIso(iso) + "</span>";
+}
+function fmtMem(bytes) {
+  if (bytes == null) return null;
+  if (bytes >= 1024 ** 3) return (bytes / 1024 ** 3).toFixed(1) + "Gi";
+  return Math.round(bytes / 1024 ** 2) + "Mi";
+}
+function fmtCpu(m) {
+  if (m == null) return null;
+  return m >= 1000 ? (m / 1000).toFixed(1) + " cpu" : Math.round(m) + "m";
+}
+function toast(kind, ok, sub) {
+  const host = $("toasts");
+  const el = document.createElement("div");
+  el.className = "toast " + (ok ? "ok" : "bad");
+  el.innerHTML = "<span>" + (ok ? "✅" : "❌") + '</span><span><span class="t-kind">' + esc(kind) + "</span><br><span class=\"t-sub\">" + esc(sub) + "</span></span>";
+  host.appendChild(el);
+  setTimeout(() => el.remove(), 7000);
 }
 
 /* minimal 5-field cron "next fire" — supports *, numbers, lists, and steps */
@@ -424,12 +534,33 @@ function podStatus(p) {
   return { color: "var(--status-warn)", label: phase };
 }
 
+/* dynamic favicon + tab title reflecting status */
+const STATUS_DOT = { go: "#22c55e", degraded: "#f59e0b", down: "#ef4444", offline: "#8e8e93" };
+function setFavicon(status) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 32;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = STATUS_DOT[status] || STATUS_DOT.offline;
+  ctx.beginPath(); ctx.arc(16, 16, 11, 0, Math.PI * 2); ctx.fill();
+  let link = document.querySelector('link[rel="icon"]');
+  if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+  link.href = canvas.toDataURL("image/png");
+}
+
 function renderHero(overview, pods, runs) {
   const hero = $("hero");
   const status = overview.status || "offline";
   hero.dataset.status = status;
   const titles = { go: "ALL SYSTEMS GO", degraded: "DEGRADED", down: "SYSTEMS DOWN", offline: "CLUSTER OFFLINE" };
   $("banner-title").textContent = titles[status] || status.toUpperCase();
+  setFavicon(status);
+  document.title = (status === "go" ? "🟢" : status === "degraded" ? "🟡" : status === "down" ? "🔴" : "⚪")
+    + " " + (titles[status] || status) + " · Zyvor QA";
+  if (overview.server) {
+    $("server-info").innerHTML = "zyvor-qa v" + esc(overview.server.version)
+      + ' · up <span title="' + esc(overview.server.started_at) + '">'
+      + rel(Math.max(0, (Date.now() - new Date(overview.server.started_at).getTime()) / 1000 | 0)) + "</span>";
+  }
   $("banner-sub").textContent = overview.cluster && overview.cluster.available
     ? "Kubernetes connected · namespace " + overview.namespace
     : "no Kubernetes API — QA history only";
@@ -450,6 +581,23 @@ function renderHero(overview, pods, runs) {
   $("stat-run").textContent = latest ? latest.passed + "/" + latest.total : "—";
   $("stat-run").style.color = latest ? (latest.failed > 0 ? "var(--status-error)" : "var(--status-ok)") : "";
   $("stat-run-sub").textContent = latest ? relIso(latest.timestamp) : "no history";
+
+  // pass rate over history + trend vs the older half
+  const rated = (runs || []).filter((r) => r.total > 0);
+  if (rated.length) {
+    const rate = (list) => list.reduce((a, r) => a + r.passed / r.total, 0) / list.length;
+    const overall = rate(rated) * 100;
+    const half = Math.ceil(rated.length / 2);
+    const newer = rate(rated.slice(0, half)) * 100;
+    const older = rated.length > half ? rate(rated.slice(half)) * 100 : newer;
+    const delta = newer - older;
+    const arrow = Math.abs(delta) < 0.5 ? "" : delta > 0 ? ' <span class="trend-up">↑</span>' : ' <span class="trend-down">↓</span>';
+    $("stat-rate").innerHTML = overall.toFixed(0) + "%" + arrow;
+    $("stat-rate").style.color = overall >= 99 ? "var(--status-ok)" : overall >= 90 ? "" : "var(--status-warn)";
+    $("stat-rate-sub").textContent = "last " + rated.length + " run" + (rated.length === 1 ? "" : "s");
+  } else {
+    $("stat-rate").textContent = "—";
+  }
 
   const crons = (overview.workloads && overview.workloads.cronjobs) || [];
   const active = crons.find((c) => !c.suspend);
@@ -481,20 +629,27 @@ function renderWorkloads(w) {
   el.innerHTML = html;
 }
 
+let podsCache = null;
 function renderPods(data) {
+  podsCache = data;
   const el = $("pods");
   if (!data.available) {
     el.innerHTML = '<div class="empty">Kubernetes API unreachable — start a cluster or set KUBECONFIG. '
       + 'The QA runs panel below still works.</div>';
     return;
   }
-  if (!data.pods.length) {
-    el.innerHTML = '<div class="empty">No pods in namespace ' + esc(data.namespace) + '.</div>';
+  const filter = $("pod-search").value.trim().toLowerCase();
+  const pods = data.pods.filter((p) =>
+    !filter || [p.name, p.node, p.phase, (p.images || []).join(" ")].join(" ").toLowerCase().includes(filter));
+  if (!pods.length) {
+    el.innerHTML = '<div class="empty">' + (filter ? "No pods match “" + esc(filter) + "”." : "No pods in namespace " + esc(data.namespace) + ".") + "</div>";
     return;
   }
-  el.innerHTML = data.pods.map((p) => {
+  el.innerHTML = pods.map((p) => {
     const st = podStatus(p);
     const image = (p.images && p.images[0] || "").split("/").pop();
+    const cpu = p.usage ? fmtCpu(p.usage.cpu_millicores) : null;
+    const mem = p.usage ? fmtMem(p.usage.memory_bytes) : null;
     return '<div class="glass card pod" data-pod="' + esc(p.name) + '" title="click for logs">'
       + '<div class="row"><span class="dot" style="background:' + st.color + ';box-shadow:0 0 8px ' + st.color + '"></span>'
       + '<span class="name">' + esc(p.name) + '</span>'
@@ -503,16 +658,75 @@ function renderPods(data) {
       + '<span>ready <b>' + p.ready + "/" + p.total + '</b></span>'
       + '<span class="' + (p.restarts > 0 ? "restarts-bad" : "") + '">restarts <b>' + p.restarts + '</b></span>'
       + '<span>age <b>' + rel(p.age_seconds) + '</b></span>'
+      + (cpu ? '<span>cpu <b>' + cpu + '</b></span>' : "")
+      + (mem ? '<span>mem <b>' + mem + '</b></span>' : "")
       + (p.node ? '<span>node <b>' + esc(p.node) + '</b></span>' : "")
       + (image ? '<span><b>' + esc(image) + '</b></span>' : "")
       + '</div>'
       + (p.warnings && p.warnings.length ? '<div class="warn" title="' + esc(p.warnings.join("\n")) + '">⚠ ' + esc(p.warnings[p.warnings.length - 1]) + '</div>' : "")
+      + '<div class="meta" style="margin-top:8px"><button class="dl-btn pod-restart" data-pod="' + esc(p.name) + '">⟳ restart</button></div>'
       + '</div>';
   }).join("");
   for (const card of el.querySelectorAll(".pod")) {
     card.addEventListener("click", () => openDrawer(card.dataset.pod));
   }
+  for (const btn of el.querySelectorAll(".pod-restart")) {
+    btn.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const pod = btn.dataset.pod;
+      if (!confirm("Restart pod " + pod + "? Its controller will recreate it.")) return;
+      const res = await fetch("/api/dashboard/pods/" + encodeURIComponent(pod), { method: "DELETE" });
+      const data = await res.json();
+      toast("restart pod", !!data.ok, data.ok ? pod + " deleted — recreating" : (data.error || "failed"));
+      sync();
+    });
+  }
 }
+$("pod-search").addEventListener("input", () => { if (podsCache) renderPods(podsCache); });
+
+/* cluster events panel */
+let eventsOpen = false;
+$("events-toggle").addEventListener("click", async () => {
+  eventsOpen = !eventsOpen;
+  $("events-panel").style.display = eventsOpen ? "block" : "none";
+  if (eventsOpen) await loadEvents();
+});
+async function loadEvents() {
+  try {
+    const data = await fetch("/api/dashboard/events").then((r) => r.json());
+    const tbody = $("events-table").querySelector("tbody");
+    if (!data.available || !data.events.length) {
+      tbody.innerHTML = '<tr><td colspan="5">' + (data.available ? "No recent events." : "Cluster unavailable.") + "</td></tr>";
+      return;
+    }
+    tbody.innerHTML = data.events.map((e) =>
+      "<tr><td>" + tspan(e.at) + '</td>'
+      + '<td><span class="chip ' + (e.type === "Warning" ? "fail" : "pass") + '">' + esc(e.type) + "</span></td>"
+      + "<td>" + esc(e.reason) + (e.count > 1 ? " ×" + e.count : "") + "</td>"
+      + "<td>" + esc(e.object) + "</td>"
+      + '<td style="max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(e.message) + '">' + esc(e.message) + "</td></tr>"
+    ).join("");
+  } catch (err) {
+    $("events-table").querySelector("tbody").innerHTML = "<tr><td>failed: " + esc(String(err)) + "</td></tr>";
+  }
+}
+
+/* NL example chips + sticky action inputs */
+for (const chip of document.querySelectorAll(".nl-chip")) {
+  chip.addEventListener("click", () => { $("nl-desc").value = chip.textContent; });
+}
+const STICKY = ["run-source", "run-spec", "gen-source", "gen-spec", "disc-source", "ct-url", "ct-user", "ct-pages"];
+for (const id of STICKY) {
+  const el = $(id);
+  const saved = localStorage.getItem("zyvor-" + id);
+  if (saved !== null) el.value = saved;
+  el.addEventListener("change", () => localStorage.setItem("zyvor-" + id, el.value));
+}
+
+/* spec-path autocomplete */
+fetch("/api/dashboard/specs").then((r) => r.json()).then((d) => {
+  $("spec-list").innerHTML = (d.specs || []).map((s) => '<option value="' + esc(s) + '">').join("");
+}).catch(() => {});
 
 function renderRuns(runs) {
   $("runs-empty").style.display = runs.length ? "none" : "block";
@@ -522,12 +736,20 @@ function renderRuns(runs) {
     $("latest-run").style.color = latest.failed > 0 ? "var(--status-error)" : "var(--status-ok)";
     $("latest-run-detail").textContent = relIso(latest.timestamp) + " · source: " + latest.source;
   }
-  $("runs-table").querySelector("tbody").innerHTML = runs.slice(0, 12).map((r) =>
-    '<tr><td>' + relIso(r.timestamp) + '</td>'
+  $("runs-table").querySelector("tbody").innerHTML = runs.slice(0, 12).map((r, i) =>
+    '<tr class="expandable" data-i="' + i + '" title="click for details"><td>' + tspan(r.timestamp) + '</td>'
     + '<td><span class="chip ' + (r.failed > 0 ? "fail" : "pass") + '">' + (r.failed > 0 ? "FAIL" : "PASS") + '</span></td>'
     + '<td>' + r.passed + "/" + r.total + ' passed</td>'
+    + '<td>' + (r.duration_s != null ? rel(r.duration_s | 0) : "—") + '</td>'
     + '<td>' + esc(r.source) + '</td></tr>'
+    + '<tr class="run-detail" style="display:none"><td colspan="5">' + esc(r.summary || "(no summary)") + '</td></tr>'
   ).join("");
+  for (const row of $("runs-table").querySelectorAll("tr.expandable")) {
+    row.addEventListener("click", () => {
+      const detail = row.nextElementSibling;
+      detail.style.display = detail.style.display === "none" ? "" : "none";
+    });
+  }
   renderSpark(runs);
 }
 
@@ -541,9 +763,14 @@ function renderSpark(runs) {
   const x = (i) => PAD + (i / (pts.length - 1)) * (W - 2 * PAD);
   const y = (rate) => H - PAD - rate * (H - 2 * PAD);
   const path = pts.map((p, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p.rate).toFixed(1)).join(" ");
+  const area = path + " L" + x(pts.length - 1).toFixed(1) + " " + (H - PAD) + " L" + x(0).toFixed(1) + " " + (H - PAD) + " Z";
   const last = pts[pts.length - 1];
   svg.innerHTML =
-    '<line x1="' + PAD + '" y1="' + y(1) + '" x2="' + (W - PAD) + '" y2="' + y(1) + '" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>'
+    '<defs><linearGradient id="sparkfill" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0%" stop-color="rgba(0,122,255,0.28)"/><stop offset="100%" stop-color="rgba(0,122,255,0)"/>'
+    + '</linearGradient></defs>'
+    + '<line x1="' + PAD + '" y1="' + y(1) + '" x2="' + (W - PAD) + '" y2="' + y(1) + '" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>'
+    + '<path d="' + area + '" fill="url(#sparkfill)" stroke="none"/>'
     + '<path d="' + path + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
     + '<circle cx="' + x(pts.length - 1) + '" cy="' + y(last.rate) + '" r="3.5" fill="var(--accent)" stroke="rgb(28,28,30)" stroke-width="2"/>'
     + '<line id="spark-cross" y1="' + PAD + '" y2="' + (H - PAD) + '" stroke="var(--text-muted)" stroke-width="1" style="display:none"/>'
@@ -572,21 +799,47 @@ async function openDrawer(pod) {
   drawerPod = pod;
   $("drawer-title").textContent = "logs — " + pod;
   $("drawer-body").textContent = "loading…";
+  $("drawer-container").innerHTML = '<option value="">all containers</option>';
   $("drawer").classList.add("open");
-  await refreshDrawer();
+  await refreshDrawer(true);
 }
-async function refreshDrawer() {
-  if (!drawerPod || drawerHover) return;
+async function refreshDrawer(force) {
+  if (!drawerPod || (drawerHover && !force)) return;
   try {
-    const res = await fetch("/api/dashboard/pods/" + encodeURIComponent(drawerPod) + "/logs?lines=100");
+    const lines = $("drawer-lines").value;
+    const container = $("drawer-container").value;
+    const url = "/api/dashboard/pods/" + encodeURIComponent(drawerPod) + "/logs?lines=" + lines
+      + (container ? "&container=" + encodeURIComponent(container) : "");
+    const res = await fetch(url);
     const data = await res.json();
     $("drawer-body").textContent = data.available
       ? (data.lines.join("\n") || "(no log output)")
       : "logs unavailable: " + (data.error || "cluster offline");
+    if (data.containers && data.containers.length > 1 && $("drawer-container").options.length <= 1) {
+      for (const c of data.containers) {
+        const opt = document.createElement("option");
+        opt.value = c; opt.textContent = c;
+        $("drawer-container").appendChild(opt);
+      }
+    }
+    if ($("drawer-follow").checked) {
+      const body = $("drawer-body");
+      body.scrollTop = body.scrollHeight;
+    }
   } catch (err) {
     $("drawer-body").textContent = "failed to fetch logs: " + err;
   }
 }
+$("drawer-lines").addEventListener("change", () => refreshDrawer(true));
+$("drawer-container").addEventListener("change", () => refreshDrawer(true));
+$("drawer-download").addEventListener("click", () => {
+  const blob = new Blob([$("drawer-body").textContent], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (drawerPod || "pod") + ".log";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
 function closeDrawer() {
   drawerPod = null;
   $("drawer").classList.remove("open");
@@ -634,6 +887,8 @@ function jobParams(kind) {
 async function startJob(kind) {
   const el = $("run-status");
   el.classList.remove("err");
+  if (kind === "regression" && $("reg-update").checked
+      && !confirm("Update baselines? Current screenshots become the new reference.")) return;
   try {
     const res = await fetch("/api/dashboard/jobs", {
       method: "POST",
@@ -660,6 +915,7 @@ for (const btn of document.querySelectorAll(".act-btn")) {
 
 const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test" };
 
+let lastToastKey = "";
 function renderRunStatus(st) {
   const el = $("run-status");
   const busy = !!(st && st.running);
@@ -675,7 +931,42 @@ function renderRunStatus(st) {
     el.classList.remove("err");
     el.textContent = "";
   }
+
+  // toast once per completed job (skip page-load backfill)
+  if (st && !st.running && st.finished_at) {
+    const key = st.finished_at + (st.kind || "");
+    if (lastToastKey && key !== lastToastKey) {
+      const r = st.result || {};
+      toast(KIND_LABELS[st.kind] || st.kind, !st.error,
+        st.error ? st.error.slice(0, 80)
+        : (r.total != null ? r.passed + "/" + r.total + " passed" : "completed"));
+    }
+    lastToastKey = key;
+  } else if (st && !st.finished_at && !lastToastKey) {
+    lastToastKey = "init";
+  }
+
+  renderFeed(st && st.recent);
   renderJobResult(st);
+}
+
+function renderFeed(items) {
+  if (!items) return;
+  const el = $("feed");
+  if (!items.length) {
+    el.innerHTML = '<span class="d">No activity yet this session.</span>';
+    return;
+  }
+  el.innerHTML = items.map((it) => {
+    if (it.type === "webhook") {
+      return '<div class="feed-item"><span class="f-when">' + relIso(it.at) + '</span>'
+        + '<span class="f-kind">🪝 ' + esc(it.event) + '</span>'
+        + '<span class="f-brief">' + esc((it.repo || "") + (it.detail ? " · " + it.detail : "")) + "</span></div>";
+    }
+    return '<div class="feed-item"><span class="f-when">' + relIso(it.at) + '</span>'
+      + '<span class="f-kind">' + (it.ok ? "✅" : "❌") + " " + esc(KIND_LABELS[it.kind] || it.kind) + '</span>'
+      + '<span class="f-brief">' + esc(it.brief) + " · " + rel(it.duration_s | 0) + "</span></div>";
+  }).join("");
 }
 
 let lastResultKey = "";
@@ -686,7 +977,11 @@ function renderJobResult(st) {
   if (key === lastResultKey && panel.style.display !== "none") return;
   lastResultKey = key;
   const r = st.result || {};
-  let html = '<div class="result-title">' + esc(KIND_LABELS[st.kind] || st.kind) + " result</div>";
+  let dur = "";
+  if (st.started_at && st.finished_at) {
+    dur = ' <span class="d" style="font-weight:400">· took ' + rel(Math.max(0, (new Date(st.finished_at) - new Date(st.started_at)) / 1000 | 0)) + "</span>";
+  }
+  let html = '<div class="result-title">' + esc(KIND_LABELS[st.kind] || st.kind) + " result" + dur + "</div>";
 
   if (st.error) {
     html += '<div class="result-err">' + esc(st.error) + "</div>";
@@ -759,8 +1054,19 @@ async function sync() {
 setInterval(() => {
   if (lastSync) $("sync").textContent = "synced " + rel((Date.now() - lastSync) / 1000 | 0) + " ago";
 }, 1000);
+
+let refreshTimer = null;
+function setRefreshRate(ms) {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = ms > 0 ? setInterval(() => { sync(); if (eventsOpen) loadEvents(); }, ms) : null;
+}
+$("refresh-rate").value = String(localStorage.getItem("zyvor-refresh") || REFRESH);
+$("refresh-rate").addEventListener("change", () => {
+  localStorage.setItem("zyvor-refresh", $("refresh-rate").value);
+  setRefreshRate(parseInt($("refresh-rate").value, 10));
+});
 sync();
-setInterval(sync, REFRESH);
+setRefreshRate(parseInt($("refresh-rate").value, 10) || REFRESH);
 </script>
 </body>
 </html>

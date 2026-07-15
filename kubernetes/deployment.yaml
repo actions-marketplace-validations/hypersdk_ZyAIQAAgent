@@ -54,3 +54,10 @@ spec:
               # headroom for dashboard-triggered Playwright runs (Chromium)
               memory: "4Gi"
               cpu: "2000m"
+          volumeMounts:
+            - name: reports
+              mountPath: /app/reports
+      volumes:
+        - name: reports
+          persistentVolumeClaim:
+            claimName: zyvor-qa-reports

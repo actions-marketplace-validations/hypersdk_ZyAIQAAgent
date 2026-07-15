@@ -116,15 +116,37 @@ def trigger(kind: str, params: dict[str, Any] | None = None) -> tuple[bool, dict
     return True, status()
 
 
+def _brief(kind: str, result: Optional[dict[str, Any]], error: Optional[str]) -> str:
+    if error:
+        return error
+    r = result or {}
+    if "total" in r and r.get("total") is not None:
+        return f"{r.get('passed', 0)}/{r.get('total', 0)} passed"
+    if kind == "discover":
+        return f"{r.get('inventory', 0)} candidates, {r.get('gaps_total', 0)} gaps"
+    if "generated" in r:
+        return f"{len(r['generated'])} test file(s) generated"
+    if kind == "regression":
+        return f"{len(r.get('diffs', []))} screenshot(s) compared"
+    return "done"
+
+
 def _run(kind: str, params: dict[str, Any]) -> None:
+    import time as _time
+
+    from orchestrator.dashboard import activity
+
+    t0 = _time.time()
     result: Optional[dict[str, Any]] = None
     error: Optional[str] = None
     try:
         result = _JOBS[kind](params)
     except Exception as exc:  # surfaced in status, never crashes the server
         error = str(exc)
+    duration = _time.time() - t0
     with _lock:
         _state.update(running=False, finished_at=_now(), result=result, error=error)
+    activity.record_job(kind, error is None, _brief(kind, result, error), duration)
 
 
 # ── job implementations ──────────────────────────────────────────────
@@ -145,11 +167,14 @@ def _report_href() -> Optional[str]:
 
 
 def _job_smoke(params: dict[str, Any]) -> dict[str, Any]:
+    import time as _time
+
     from agents.common.models import PipelineReport
     from agents.execution.runner import run_playwright
     from agents.reporter.agent import generate_summary_stub
     from orchestrator.dashboard import history
 
+    t0 = _time.time()
     results = run_playwright(
         test_dirs=[str(_repo_root() / "tests" / "manual")],
         base_url=os.environ.get("ZYVOR_BASE_URL", "https://zyvor.dev"),
@@ -160,7 +185,7 @@ def _job_smoke(params: dict[str, Any]) -> dict[str, Any]:
         failed=results.failed,
         total=results.total,
     )
-    history.append_run(report, source="dashboard-smoke")
+    history.append_run(report, source="dashboard-smoke", duration_s=_time.time() - t0)
     return {"passed": results.passed, "failed": results.failed, "total": results.total}
 
 
@@ -259,11 +284,14 @@ def _job_create(params: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {"generated": [Path(p).name for p in generated]}
 
     if params.get("execute"):
+        import time as _time
+
         from agents.common.models import PipelineReport
         from agents.execution.runner import run_playwright
         from agents.reporter.agent import generate_summary_stub
         from orchestrator.dashboard import history
 
+        t0 = _time.time()
         results = run_playwright(test_dirs=generated)
         report = PipelineReport(
             summary=generate_summary_stub(results),
@@ -271,7 +299,7 @@ def _job_create(params: dict[str, Any]) -> dict[str, Any]:
             failed=results.failed,
             total=results.total,
         )
-        history.append_run(report, source="dashboard-create")
+        history.append_run(report, source="dashboard-create", duration_s=_time.time() - t0)
         result.update(passed=results.passed, failed=results.failed, total=results.total)
     return result
 
@@ -361,6 +389,9 @@ def _job_crawl_test(params: dict[str, Any]) -> dict[str, Any]:
         "ENABLE_DASHBOARD_TESTS": "true" if params.get("username") else None,
     }
 
+    import time as _time
+
+    t0 = _time.time()
     with _env_overrides(overrides):
         candidates = crawl_live_site(url)
         if not candidates:
@@ -381,7 +412,7 @@ def _job_crawl_test(params: dict[str, Any]) -> dict[str, Any]:
         failed=results.failed,
         total=results.total,
     )
-    history.append_run(report, source="dashboard-crawl")
+    history.append_run(report, source="dashboard-crawl", duration_s=_time.time() - t0)
     return {
         "url": url,
         "pages_found": len(candidates),

@@ -53,10 +53,10 @@ k8s-validate:
 	python3 scripts/validate_k8s_manifests.py
 
 k8s-validate-cluster: k8s-check
-	kubectl apply --dry-run=server -f $(K8S_DIR)/configmap.yaml -f $(K8S_DIR)/secret.yaml -f $(K8S_DIR)/rbac.yaml -f $(K8S_DIR)/deployment.yaml -f $(K8S_DIR)/service.yaml -f $(K8S_DIR)/cronjob.yaml
+	kubectl apply --dry-run=server -f $(K8S_DIR)/configmap.yaml -f $(K8S_DIR)/secret.yaml -f $(K8S_DIR)/rbac.yaml -f $(K8S_DIR)/pvc.yaml -f $(K8S_DIR)/deployment.yaml -f $(K8S_DIR)/service.yaml -f $(K8S_DIR)/cronjob.yaml
 
 k8s-apply: k8s-check
-	kubectl apply -f $(K8S_DIR)/configmap.yaml -f $(K8S_DIR)/secret.yaml -f $(K8S_DIR)/rbac.yaml -f $(K8S_DIR)/deployment.yaml -f $(K8S_DIR)/service.yaml -f $(K8S_DIR)/cronjob.yaml
+	kubectl apply -f $(K8S_DIR)/configmap.yaml -f $(K8S_DIR)/secret.yaml -f $(K8S_DIR)/rbac.yaml -f $(K8S_DIR)/pvc.yaml -f $(K8S_DIR)/deployment.yaml -f $(K8S_DIR)/service.yaml -f $(K8S_DIR)/cronjob.yaml
 
 k8s-delete: k8s-check
-	kubectl delete -f $(K8S_DIR)/configmap.yaml -f $(K8S_DIR)/secret.yaml -f $(K8S_DIR)/rbac.yaml -f $(K8S_DIR)/deployment.yaml -f $(K8S_DIR)/service.yaml -f $(K8S_DIR)/cronjob.yaml --ignore-not-found
+	kubectl delete -f $(K8S_DIR)/configmap.yaml -f $(K8S_DIR)/secret.yaml -f $(K8S_DIR)/rbac.yaml -f $(K8S_DIR)/pvc.yaml -f $(K8S_DIR)/deployment.yaml -f $(K8S_DIR)/service.yaml -f $(K8S_DIR)/cronjob.yaml --ignore-not-found

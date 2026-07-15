@@ -9,11 +9,13 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
 from jinja2 import Environment, FileSystemLoader
 
-from orchestrator.dashboard import auth, history, jobs, k8s
+from orchestrator.dashboard import activity, auth, history, jobs, k8s
 
 router = APIRouter()
 
 REFRESH_INTERVAL_MS = 5000
+SERVER_STARTED = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+VERSION = "0.1.0"
 
 
 def _repo_root() -> Path:
@@ -109,12 +111,36 @@ async def overview() -> dict[str, Any]:
         "report_available": (_repo_root() / "reports" / "qa-summary.html").is_file(),
         "pdf_available": (_repo_root() / "reports" / "qa-summary.pdf").is_file(),
         "auth": {"enabled": auth.enabled(), "user": auth.username() if auth.enabled() else None},
+        "server": {"version": VERSION, "started_at": SERVER_STARTED},
     }
 
 
 @router.get("/api/dashboard/pods")
 async def pods() -> dict[str, Any]:
     return k8s.list_pods()
+
+
+@router.delete("/api/dashboard/pods/{name}")
+async def restart_pod(name: str) -> dict[str, Any]:
+    result = k8s.delete_pod(name)
+    if result.get("ok"):
+        activity.record_job("restart-pod", True, f"pod {name} deleted (controller restarts it)", 0)
+    return result
+
+
+@router.get("/api/dashboard/events")
+async def events() -> dict[str, Any]:
+    return k8s.recent_events()
+
+
+@router.get("/api/dashboard/specs")
+async def spec_files() -> dict[str, Any]:
+    """Markdown spec candidates for the spec-path autocomplete."""
+    root = _repo_root()
+    specs: list[str] = []
+    for pattern in ("prompts/examples/*.md", "docs/specs/*.md", "tests/fixtures/fetched/*.md"):
+        specs.extend(str(p.relative_to(root)) for p in sorted(root.glob(pattern)))
+    return {"specs": specs[:50]}
 
 
 @router.get("/api/dashboard/pods/{name}/logs")
@@ -156,7 +182,9 @@ async def start_job(payload: dict[str, Any] = Body(...)) -> Response:
 
 @router.get("/api/dashboard/jobs/status")
 async def jobs_status() -> dict[str, Any]:
-    return jobs.status()
+    state = jobs.status()
+    state["recent"] = activity.recent()
+    return state
 
 
 # Back-compat aliases for the original run trigger API

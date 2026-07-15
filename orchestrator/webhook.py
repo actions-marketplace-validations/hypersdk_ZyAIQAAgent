@@ -124,6 +124,17 @@ def create_app() -> FastAPI:
             if action != "staging-deployed":
                 return {"status": "ignored", "action": action}
 
+        try:
+            from orchestrator.dashboard import activity
+
+            activity.record_webhook(
+                event,
+                payload.get("repository", {}).get("full_name"),
+                detail=f"PR #{state_pr}" if (state_pr := payload.get("pull_request", {}).get("number")) else "",
+            )
+        except Exception:
+            pass
+
         state = _build_state_from_event(event, payload)
         graph = get_compiled_graph()
         result = graph.invoke(state)

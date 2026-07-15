@@ -13,8 +13,11 @@ metadata:
     app: zyvor-qa-agent
 rules:
   - apiGroups: [""]
-    resources: ["pods", "pods/log"]
-    verbs: ["get", "list"]
+    resources: ["pods"]
+    verbs: ["get", "list", "delete"]   # delete = dashboard pod-restart button
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["list"]
@@ -23,6 +26,9 @@ rules:
     verbs: ["get", "list"]
   - apiGroups: ["batch"]
     resources: ["cronjobs", "jobs"]
+    verbs: ["get", "list"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
     verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

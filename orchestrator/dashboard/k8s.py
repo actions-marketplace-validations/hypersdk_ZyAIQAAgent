@@ -46,9 +46,60 @@ def _load_clients() -> Optional[dict[str, Any]]:
         "core": client.CoreV1Api(),
         "apps": client.AppsV1Api(),
         "batch": client.BatchV1Api(),
+        "custom": client.CustomObjectsApi(),
     }
     _client_cache["clients"] = clients
     return clients
+
+
+def _parse_cpu(raw: str) -> float:
+    """Kubernetes CPU quantity → millicores."""
+    raw = raw.strip()
+    try:
+        if raw.endswith("n"):
+            return float(raw[:-1]) / 1_000_000
+        if raw.endswith("u"):
+            return float(raw[:-1]) / 1_000
+        if raw.endswith("m"):
+            return float(raw[:-1])
+        return float(raw) * 1000
+    except ValueError:
+        return 0.0
+
+
+def _parse_mem(raw: str) -> int:
+    """Kubernetes memory quantity → bytes."""
+    raw = raw.strip()
+    units = {"Ki": 1024, "Mi": 1024**2, "Gi": 1024**3, "Ti": 1024**4, "K": 1000, "M": 1000**2, "G": 1000**3}
+    for suffix, mult in units.items():
+        if raw.endswith(suffix):
+            try:
+                return int(float(raw[: -len(suffix)]) * mult)
+            except ValueError:
+                return 0
+    try:
+        return int(raw)
+    except ValueError:
+        return 0
+
+
+def _pod_metrics(clients: dict[str, Any], namespace: str) -> dict[str, dict[str, Any]]:
+    """Pod name → {cpu_millicores, memory_bytes} via metrics-server (best effort)."""
+    usage: dict[str, dict[str, Any]] = {}
+    try:
+        data = clients["custom"].list_namespaced_custom_object(
+            "metrics.k8s.io", "v1beta1", namespace, "pods"
+        )
+    except Exception:
+        return usage
+    for item in data.get("items", []):
+        name = item.get("metadata", {}).get("name")
+        if not name:
+            continue
+        cpu = sum(_parse_cpu(c.get("usage", {}).get("cpu", "0")) for c in item.get("containers", []))
+        mem = sum(_parse_mem(c.get("usage", {}).get("memory", "0")) for c in item.get("containers", []))
+        usage[name] = {"cpu_millicores": round(cpu, 1), "memory_bytes": mem}
+    return usage
 
 
 def reset_client_cache() -> None:
@@ -112,6 +163,8 @@ def list_pods() -> dict[str, Any]:
     except Exception as exc:
         return {"available": False, "namespace": namespace, "pods": [], "error": str(exc)}
 
+    metrics = _pod_metrics(clients, namespace)
+
     pods: list[dict[str, Any]] = []
     for pod in result.items:
         ready, total = _pod_ready(pod)
@@ -128,6 +181,7 @@ def list_pods() -> dict[str, Any]:
                 "pod_ip": pod.status.pod_ip,
                 "images": _pod_images(pod),
                 "warnings": warnings.get(name, []),
+                "usage": metrics.get(name),
             }
         )
 
@@ -227,6 +281,47 @@ def pod_logs(name: str, lines: int = 100, container: Optional[str] = None) -> di
         "containers": containers,
         "lines": out,
     }
+
+
+def delete_pod(name: str) -> dict[str, Any]:
+    """Delete a pod (its Deployment/CronJob recreates it — i.e. a restart)."""
+    clients = _load_clients()
+    namespace = get_namespace()
+    if not clients:
+        return {"ok": False, "error": "cluster unavailable"}
+    try:
+        clients["core"].delete_namespaced_pod(name, namespace)
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "name": name}
+
+
+def recent_events(limit: int = 25) -> dict[str, Any]:
+    """Recent namespace events, newest first (best effort)."""
+    clients = _load_clients()
+    namespace = get_namespace()
+    if not clients:
+        return {"available": False, "events": []}
+    try:
+        result = clients["core"].list_namespaced_event(namespace)
+    except Exception as exc:
+        return {"available": False, "events": [], "error": str(exc)}
+
+    events = []
+    for ev in result.items:
+        when = ev.last_timestamp or ev.event_time or (ev.metadata.creation_timestamp if ev.metadata else None)
+        events.append(
+            {
+                "type": ev.type,
+                "reason": ev.reason,
+                "object": f"{ev.involved_object.kind}/{ev.involved_object.name}" if ev.involved_object else "",
+                "message": (ev.message or "")[:200],
+                "count": ev.count or 1,
+                "at": when.isoformat() if when else None,
+            }
+        )
+    events.sort(key=lambda e: e["at"] or "", reverse=True)
+    return {"available": True, "events": events[:limit]}
 
 
 def get_workloads() -> dict[str, Any]:
