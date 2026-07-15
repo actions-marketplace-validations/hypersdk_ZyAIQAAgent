@@ -45,5 +45,6 @@ spec:
               memory: "512Mi"
               cpu: "250m"
             limits:
-              memory: "2Gi"
-              cpu: "1000m"
+              # headroom for dashboard-triggered Playwright runs (Chromium)
+              memory: "4Gi"
+              cpu: "2000m"

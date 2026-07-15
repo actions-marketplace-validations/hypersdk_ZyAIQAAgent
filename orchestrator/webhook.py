@@ -70,9 +70,19 @@ def _build_state_from_event(event: str, payload: dict[str, Any]) -> PipelineStat
 def create_app() -> FastAPI:
     app = FastAPI(title="Zyvor QA Agent Webhook")
 
+    from pathlib import Path
+
+    from fastapi.staticfiles import StaticFiles
+
     from orchestrator.dashboard.routes import router as dashboard_router
 
     app.include_router(dashboard_router)
+
+    repo_root = Path(__file__).resolve().parents[1]
+    for mount, directory in (("/reports", "reports"), ("/screenshots", "screenshots")):
+        target = repo_root / directory
+        target.mkdir(parents=True, exist_ok=True)
+        app.mount(mount, StaticFiles(directory=target), name=directory)
 
     @app.get("/health")
     async def health() -> dict[str, str]:

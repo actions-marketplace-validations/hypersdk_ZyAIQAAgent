@@ -180,6 +180,38 @@
     font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--text-secondary);
     white-space: pre-wrap; word-break: break-all;
   }
+  .run-btn {
+    cursor: pointer; padding: 3px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600;
+    color: var(--text-primary); background: var(--surface-muted);
+    border: 1px solid var(--separator); font-family: var(--font-base);
+    transition: background .15s, border-color .15s;
+  }
+  .run-btn:hover:not(:disabled) { background: rgba(0, 122, 255, 0.18); border-color: var(--accent); }
+  .run-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .run-status { font-size: 12px; font-weight: 400; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; }
+  .run-status .spin {
+    width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 8px var(--accent); animation: pulse 1.2s infinite;
+  }
+  .run-status.err { color: var(--status-error); }
+  .acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .act-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; }
+  .act-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .act-row:last-child { margin-bottom: 0; }
+  .inp {
+    background: rgba(255, 255, 255, 0.08); border: 1px solid var(--separator); color: var(--text-primary);
+    border-radius: 0.625rem; padding: 5px 10px; font-size: 12px; font-family: var(--font-base);
+  }
+  .inp:focus { outline: none; border-color: rgba(0, 122, 255, 0.5); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.18); }
+  .inp.grow { flex: 1; min-width: 120px; }
+  textarea.inp { resize: vertical; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .chk input { accent-color: var(--accent); }
+  .result-title { font-weight: 600; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .result-files { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+  .result-err { color: var(--status-error); font-size: 13px; }
+  .rlink { color: var(--accent); text-decoration: none; font-size: 12px; }
+  .rlink:hover { text-decoration: underline; }
   footer { margin-top: 36px; color: var(--text-muted); font-size: 12px; display: flex; gap: 18px; }
   kbd {
     border: 1px solid var(--separator); border-radius: 6px; padding: 0 6px; font-size: 11px;
@@ -217,10 +249,63 @@
   <h2>Pods <span style="color:var(--text-muted);font-weight:400" id="ns"></span></h2>
   <div class="pods" id="pods"><div class="empty">No pod data yet.</div></div>
 
+  <h2 style="display:flex;align-items:center;gap:12px">Actions <span id="run-status" class="run-status"></span></h2>
+  <div class="acts">
+    <div class="glass card act">
+      <div class="act-title">▶ Run tests</div>
+      <div class="act-row">
+        <select class="inp" id="run-source"><option value="local">local</option><option value="github">github</option></select>
+        <input class="inp grow" id="run-spec" placeholder="spec path (optional)">
+      </div>
+      <div class="act-row">
+        <input class="inp" id="run-pr" type="number" placeholder="PR #" style="width:80px">
+        <label class="chk"><input type="checkbox" id="run-coverage"> expand coverage</label>
+      </div>
+      <div class="act-row">
+        <button class="run-btn act-btn" data-kind="smoke">▶ Smoke</button>
+        <button class="run-btn act-btn" data-kind="full">▶ Full pipeline</button>
+      </div>
+    </div>
+    <div class="glass card act">
+      <div class="act-title">⚙ Generate tests</div>
+      <div class="act-row">
+        <select class="inp" id="gen-source"><option value="local">local</option><option value="github">github</option></select>
+        <input class="inp grow" id="gen-spec" placeholder="spec path (optional)">
+      </div>
+      <div class="act-row"><label class="chk"><input type="checkbox" id="gen-coverage"> expand coverage</label></div>
+      <div class="act-row"><button class="run-btn act-btn" data-kind="generate">⚙ Generate</button></div>
+    </div>
+    <div class="glass card act">
+      <div class="act-title">🔎 Discover coverage</div>
+      <div class="d" style="margin-bottom:8px">Scan repo code/docs for untested routes and pages.</div>
+      <div class="act-row">
+        <select class="inp" id="disc-source"><option value="github">github</option><option value="local">local</option></select>
+        <button class="run-btn act-btn" data-kind="discover">🔎 Discover</button>
+      </div>
+    </div>
+    <div class="glass card act">
+      <div class="act-title">✨ Create from English</div>
+      <div class="act-row"><textarea class="inp grow" id="nl-desc" rows="2" placeholder="e.g. Verify /vm page mentions KubeVirt migration"></textarea></div>
+      <div class="act-row">
+        <label class="chk"><input type="checkbox" id="nl-execute"> run immediately</label>
+        <button class="run-btn act-btn" data-kind="create">✨ Create</button>
+      </div>
+    </div>
+    <div class="glass card act">
+      <div class="act-title">👁 Visual regression</div>
+      <div class="d" style="margin-bottom:8px">Pixel-compare screenshots against baselines.</div>
+      <div class="act-row">
+        <label class="chk"><input type="checkbox" id="reg-update"> update baselines</label>
+        <button class="run-btn act-btn" data-kind="regression">👁 Regression</button>
+      </div>
+    </div>
+  </div>
+  <div class="glass card" id="job-result" style="display:none;margin-top:14px"></div>
+
   <h2>QA Runs</h2>
   <div class="qa">
     <div class="glass card">
-      <div class="k">Latest run</div>
+      <div class="k">Latest run <a class="rlink" id="report-link" href="/reports/qa-summary.html" target="_blank" style="display:none">📄 report</a></div>
       <div class="v" id="latest-run">—</div>
       <div class="d" id="latest-run-detail"></div>
       <div class="spark-wrap" style="margin-top:12px">
@@ -238,7 +323,7 @@
   <footer>
     <span><kbd>r</kbd> refresh</span>
     <span><kbd>esc</kbd> close logs</span>
-    <span>read-only · auto-refresh {{ refresh_interval_ms // 1000 }}s</span>
+    <span>auto-refresh {{ refresh_interval_ms // 1000 }}s</span>
   </footer>
 </main>
 
@@ -494,18 +579,132 @@ document.addEventListener("keydown", (ev) => {
   if (ev.key === "r" && !ev.metaKey && !ev.ctrlKey) sync();
 });
 
+/* job triggers — every CLI capability, online */
+function jobParams(kind) {
+  if (kind === "smoke") return {};
+  if (kind === "full") return {
+    source: $("run-source").value,
+    spec: $("run-spec").value.trim(),
+    pr_number: $("run-pr").value ? parseInt($("run-pr").value, 10) : null,
+    expand_coverage: $("run-coverage").checked,
+  };
+  if (kind === "generate") return {
+    source: $("gen-source").value,
+    spec: $("gen-spec").value.trim(),
+    expand_coverage: $("gen-coverage").checked,
+  };
+  if (kind === "discover") return { source: $("disc-source").value };
+  if (kind === "create") return { description: $("nl-desc").value.trim(), execute: $("nl-execute").checked };
+  if (kind === "regression") return { update_baselines: $("reg-update").checked };
+  return {};
+}
+
+async function startJob(kind) {
+  const el = $("run-status");
+  el.classList.remove("err");
+  try {
+    const res = await fetch("/api/dashboard/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, params: jobParams(kind) }),
+    });
+    if (res.status === 409) { el.textContent = "a job is already in progress"; return; }
+    if (res.status === 400 || res.status === 422) {
+      const data = await res.json();
+      el.classList.add("err");
+      el.textContent = String(data.detail || "invalid request").slice(0, 90);
+      return;
+    }
+    $("job-result").style.display = "none";
+    await sync();
+  } catch (err) {
+    el.classList.add("err");
+    el.textContent = "trigger failed: " + err;
+  }
+}
+for (const btn of document.querySelectorAll(".act-btn")) {
+  btn.addEventListener("click", () => startJob(btn.dataset.kind));
+}
+
+const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression" };
+
+function renderRunStatus(st) {
+  const el = $("run-status");
+  const busy = !!(st && st.running);
+  for (const btn of document.querySelectorAll(".act-btn")) btn.disabled = busy;
+  if (busy) {
+    const secs = st.started_at ? Math.max(0, (Date.now() - new Date(st.started_at).getTime()) / 1000 | 0) : 0;
+    el.classList.remove("err");
+    el.innerHTML = '<span class="spin"></span>' + esc(KIND_LABELS[st.kind] || st.kind) + " running · " + rel(secs);
+  } else if (st && st.error) {
+    el.classList.add("err");
+    el.textContent = (KIND_LABELS[st.kind] || "job") + " failed: " + st.error.slice(0, 90);
+  } else {
+    el.classList.remove("err");
+    el.textContent = "";
+  }
+  renderJobResult(st);
+}
+
+let lastResultKey = "";
+function renderJobResult(st) {
+  const panel = $("job-result");
+  if (!st || st.running || (!st.result && !st.error)) return;
+  const key = (st.finished_at || "") + (st.kind || "");
+  if (key === lastResultKey && panel.style.display !== "none") return;
+  lastResultKey = key;
+  const r = st.result || {};
+  let html = '<div class="result-title">' + esc(KIND_LABELS[st.kind] || st.kind) + " result</div>";
+
+  if (st.error) {
+    html += '<div class="result-err">' + esc(st.error) + "</div>";
+  } else if (st.kind === "discover") {
+    html += '<div class="d">' + r.inventory + " candidates · " + r.gaps_total + " gaps · " + r.files_scanned + " files scanned</div>";
+    if (r.gaps && r.gaps.length) {
+      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+        + r.gaps.map((g) => "<tr><td>" + esc(g.kind) + "</td><td>" + esc(g.path) + "</td><td>" + esc(g.title) + "</td><td>" + esc(g.priority) + "</td></tr>").join("")
+        + "</tbody></table>";
+    }
+  } else if (st.kind === "generate" || st.kind === "create") {
+    const files = r.generated || [];
+    html += '<div class="d">' + files.length + " test file(s) generated"
+      + (r.requirements != null ? " from " + r.requirements + " requirement(s)" : "")
+      + (r.total != null ? " · executed: " + r.passed + "/" + r.total + " passed" : "") + "</div>";
+    html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
+  } else if (st.kind === "regression") {
+    html += '<div class="d">' + (r.baselines_updated ? "baselines updated · " : "") + (r.diffs || []).length + " screenshot(s) compared</div>";
+    if (r.diffs && r.diffs.length) {
+      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+        + r.diffs.map((d) => "<tr><td>" + esc(d.file) + '</td><td><span class="chip ' + (d.status === "fail" ? "fail" : "pass") + '">' + esc(d.status) + "</span></td><td>" + (d.diff_percent ?? 0) + "%</td><td>"
+          + (d.diff_href ? '<a class="rlink" href="' + esc(d.diff_href) + '" target="_blank">diff image</a>' : esc(d.message || "")) + "</td></tr>").join("")
+        + "</tbody></table>";
+    }
+  } else {
+    html += '<div class="d">' + r.passed + "/" + r.total + " passed"
+      + (r.report ? ' · <a class="rlink" href="' + esc(r.report) + '" target="_blank">📄 open report</a>' : "") + "</div>";
+    if (r.generated && r.generated.length) {
+      html += '<div class="result-files" style="margin-top:6px">' + r.generated.map(esc).join("<br>") + "</div>";
+    }
+  }
+  panel.innerHTML = html;
+  panel.style.display = "block";
+}
+
 async function sync() {
   try {
-    const [overview, pods, runs] = await Promise.all([
+    const [overview, pods, runs, runSt] = await Promise.all([
       fetch("/api/dashboard/overview").then((r) => r.json()),
       fetch("/api/dashboard/pods").then((r) => r.json()),
       fetch("/api/dashboard/runs").then((r) => r.json()),
+      fetch("/api/dashboard/jobs/status").then((r) => r.json()),
     ]);
     const runList = runs.runs || [];
     renderHero(overview, pods, runList);
     renderWorkloads(overview.workloads);
     renderPods(pods);
     renderRuns(runList);
+    renderRunStatus(runSt);
+    $("report-link").style.display = overview.report_available ? "inline" : "none";
     await refreshDrawer();
     lastSync = Date.now();
   } catch (err) {

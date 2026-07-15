@@ -5,6 +5,8 @@ const baseURL = process.env.ZYVOR_BASE_URL || 'https://zyvor.dev';
 const repoRoot = path.resolve(__dirname, '..');
 const multiBrowser = process.env.ENABLE_MULTI_BROWSER === 'true';
 const regressionMode = process.env.ENABLE_REGRESSION === 'true';
+// Chromium refuses to sandbox as root (containers) — set in docker/Dockerfile
+const noSandbox = process.env.ZYVOR_NO_SANDBOX === 'true';
 
 const projects = [
   {
@@ -25,7 +27,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI
+    ? 1
+    : process.env.ZYVOR_PW_WORKERS
+      ? parseInt(process.env.ZYVOR_PW_WORKERS, 10)
+      : undefined,
   reporter: [
     ['list'],
     ['html', { outputFolder: path.join(repoRoot, 'reports'), open: 'never' }],
@@ -41,6 +47,7 @@ export default defineConfig({
     },
     actionTimeout: 15000,
     navigationTimeout: 30000,
+    launchOptions: noSandbox ? { args: ['--no-sandbox'] } : {},
   },
   outputDir: path.join(repoRoot, 'test-results'),
   preserveOutput: 'always',

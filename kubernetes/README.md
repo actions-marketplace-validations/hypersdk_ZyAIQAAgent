@@ -68,7 +68,7 @@ Events: `push`, `pull_request`, `repository_dispatch`
 
 ## Mission Control dashboard
 
-The webhook Deployment also serves a live dashboard (pods, workloads, log tails, QA run history) at `/dashboard`. RBAC for it is in `rbac.yaml` (read-only: pods, pods/log, events, deployments, cronjobs) bound to the `zyvor-qa` ServiceAccount used by the Deployment.
+The webhook Deployment also serves a live dashboard (pods, workloads, log tails, QA run history, and an Actions panel that can trigger test runs, generation, discovery, NL test creation, and visual regression) at `/dashboard`. NL test creation requires an LLM API key in `secret.yaml`; run history and generated tests live in the pod filesystem and reset on pod restart. RBAC for it is in `rbac.yaml` (read-only: pods, pods/log, events, deployments, cronjobs) bound to the `zyvor-qa` ServiceAccount used by the Deployment.
 
 **Default access is via port-forward** — the dashboard exposes pod logs, so it is deliberately *not* routed through the ingress:
 

@@ -76,7 +76,22 @@ open http://localhost:8080/dashboard
 
 If you do want it on the ingress, add an authenticated path — see [`kubernetes/README.md`](../../kubernetes/README.md#dashboard-optional-ingress-exposure).
 
-## 5. API endpoints
+## 5. Actions — the CLI, online
+
+The **Actions** section mirrors every CLI capability. One job runs at a time; a status chip shows progress and results render in a panel under the cards.
+
+| Action card | CLI equivalent | Notes |
+|-------------|----------------|-------|
+| ▶ Smoke | `zyvor-qa test` | result recorded in run history |
+| ▶ Full pipeline | `zyvor-qa run [--source --spec --pr-number --expand-coverage]` | report link appears when done |
+| ⚙ Generate | `zyvor-qa generate [--source --spec --expand-coverage]` | lists generated `.spec.ts` files |
+| 🔎 Discover | `zyvor-qa discover` | inventory + gaps table |
+| ✨ Create from English | `zyvor-qa create "…" [--execute]` | requires an LLM key in the environment/secret |
+| 👁 Visual regression | `zyvor-qa regression [--update-baselines]` | diffs table with diff-image links |
+
+Local `spec` paths are restricted to files inside the repository — the trigger endpoint refuses anything else.
+
+## 6. API endpoints
 
 The page is a thin client over JSON endpoints you can script against:
 
@@ -84,7 +99,10 @@ The page is a thin client over JSON endpoints you can script against:
 |----------|---------|
 | `GET /api/dashboard/overview` | banner status, namespace, workloads, latest run |
 | `GET /api/dashboard/pods` | pod list with health details |
-| `GET /api/dashboard/pods/{name}/logs?lines=100` | log tail |
+| `GET /api/dashboard/pods/{name}/logs?lines=100&container=` | log tail (all containers when unspecified) |
 | `GET /api/dashboard/runs?limit=30` | QA run history |
+| `POST /api/dashboard/jobs` `{kind, params}` | trigger a job (202; 409 if one is running) |
+| `GET /api/dashboard/jobs/status` | current/last job state incl. result payload |
+| `GET /reports/…`, `GET /screenshots/…` | static artifacts: HTML report, videos, diff images |
 
-All endpoints are read-only and degrade gracefully (`"available": false`) instead of erroring when no cluster is reachable.
+Read endpoints degrade gracefully (`"available": false`) instead of erroring when no cluster is reachable.

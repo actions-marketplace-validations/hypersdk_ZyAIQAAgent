@@ -154,27 +154,78 @@ def _recent_warning_events(clients: dict[str, Any], namespace: str) -> dict[str,
     return {name: msgs[-3:] for name, msgs in warnings.items()}
 
 
-def pod_logs(name: str, lines: int = 100) -> dict[str, Any]:
-    """Return the log tail for a pod."""
+def _normalize_log_text(raw: Any) -> str:
+    """Undo the kubernetes client's occasional str(bytes) mangling of pod logs."""
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8", "replace")
+    text = str(raw)
+    if text.startswith(("b'", 'b"')) and text.endswith(("'", '"')):
+        import ast
+
+        try:
+            decoded = ast.literal_eval(text)
+            if isinstance(decoded, bytes):
+                return decoded.decode("utf-8", "replace")
+        except (ValueError, SyntaxError):
+            pass
+    return text
+
+
+def pod_logs(name: str, lines: int = 100, container: Optional[str] = None) -> dict[str, Any]:
+    """Return the log tail for a pod.
+
+    Multi-container pods (e.g. KubeVirt virt-launcher) require an explicit
+    container name — when none is given, tail every container with a header
+    separating each section.
+    """
     clients = _load_clients()
     namespace = get_namespace()
     if not clients:
         return {"available": False, "name": name, "lines": []}
 
-    try:
-        raw = clients["core"].read_namespaced_pod_log(
-            name,
-            namespace,
-            tail_lines=max(1, min(lines, 1000)),
-            timestamps=True,
-        )
-    except Exception as exc:
-        return {"available": False, "name": name, "lines": [], "error": str(exc)}
+    tail = max(1, min(lines, 1000))
+
+    containers: list[str] = []
+    if container:
+        containers = [container]
+    else:
+        try:
+            pod = clients["core"].read_namespaced_pod(name, namespace)
+            containers = [c.name for c in (pod.spec.containers or [])]
+        except Exception:
+            containers = []
+
+    out: list[str] = []
+    fetched = 0
+    last_error: Optional[str] = None
+    for cname in containers or [None]:
+        try:
+            raw = clients["core"].read_namespaced_pod_log(
+                name,
+                namespace,
+                container=cname,
+                tail_lines=tail,
+                timestamps=True,
+            )
+            raw = _normalize_log_text(raw)
+        except Exception as exc:
+            last_error = str(exc)
+            if len(containers) > 1:
+                out.append(f"────── container: {cname} — logs unavailable ──────")
+            continue
+        if len(containers) > 1:
+            out.append(f"────── container: {cname} ──────")
+        out.extend(raw.splitlines())
+        fetched += 1
+
+    if fetched == 0:
+        return {"available": False, "name": name, "lines": [], "error": last_error or "no logs"}
 
     return {
         "available": True,
         "name": name,
-        "lines": raw.splitlines(),
+        "containers": containers,
+        "lines": out,
     }
 
 

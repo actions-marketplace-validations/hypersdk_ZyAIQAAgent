@@ -50,6 +50,9 @@ COPY tests/ ./tests/
 
 ENV ZYVOR_BASE_URL=https://zyvor.dev
 ENV PLAYWRIGHT_BROWSERS_PATH=/root/.cache/ms-playwright
+ENV ZYVOR_NO_SANDBOX=true
+# Cap Playwright parallelism in containers — default (= CPU count) OOMs a 2-4Gi pod
+ENV ZYVOR_PW_WORKERS=2
 
 ENTRYPOINT ["zyvor-qa"]
 CMD ["run", "--source", "local"]
