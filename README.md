@@ -61,11 +61,18 @@ See [**Writing Tests & GitHub Integration**](docs/test-authoring.md) for the ful
 
 ## Documentation
 
+**New here? Start with the [step-by-step tutorials](docs/tutorials/README.md)** — nine hands-on guides from install to Kubernetes.
+
 | Guide | Description |
 |-------|-------------|
-| [**Writing Tests & GitHub Integration**](docs/test-authoring.md) | How tests are created (manual, spec, NL) and how to connect a GitHub repo |
-| [`.env.example`](.env.example) | Full environment variable reference |
+| [**Tutorials**](docs/tutorials/README.md) | Getting started, spec-to-test, NL tests, GitHub, coverage, regression, autofix, notifications, CI/CD, dashboard |
+| [**Architecture**](docs/architecture.md) | Pipeline internals: LangGraph nodes, state, agents, fallback design |
+| [**Configuration**](docs/configuration.md) | Complete environment variable reference with defaults |
+| [**Writing Tests & GitHub Integration**](docs/test-authoring.md) | Command reference; manual, spec-driven, and NL test creation |
+| [**Troubleshooting**](docs/troubleshooting.md) | Common errors and fixes |
+| [**Contributing**](CONTRIBUTING.md) | Dev setup, conventions, how to add a pipeline stage |
 | [`kubernetes/README.md`](kubernetes/README.md) | Kubernetes deployment |
+| [`rust/README.md`](rust/README.md) | Rust `zyvor-diff` screenshot processor |
 | [`prompts/examples/vm-create.md`](prompts/examples/vm-create.md) | Example requirement spec |
 
 ## CLI Commands
@@ -80,11 +87,13 @@ Full examples: [**docs/test-authoring.md**](docs/test-authoring.md)
 | `zyvor-qa run --source github` | Full pipeline from all GitHub specs/issues |
 | `zyvor-qa generate --spec <path>` | Generate tests from local spec (no run) |
 | `zyvor-qa generate --source github --spec <path>` | Generate tests from GitHub `.md` (no run) |
+| `zyvor-qa discover --source github` | List coverage candidates and gaps (no generation) |
+| `zyvor-qa run --source github --expand-coverage` | Pipeline + generate tests for uncovered routes/pages |
 | `zyvor-qa create "description"` | Generate tests from plain English |
 | `zyvor-qa create "description" --execute` | Generate and run NL tests |
 | `zyvor-qa regression` | Visual regression check |
 | `zyvor-qa regression --update-baselines` | Capture new screenshot baselines |
-| `zyvor-qa serve` | GitHub webhook server |
+| `zyvor-qa serve` | GitHub webhook server + Mission Control dashboard (`/dashboard`) |
 
 ## Phase Features
 
@@ -127,9 +136,14 @@ make k8s-apply      # apply to cluster
 | Feature | Flag | Description |
 |---------|------|-------------|
 | Autofix suggestions | `ENABLE_AUTOFIX=true` | LLM-powered selector repair after failures |
+| Autofix apply + re-run | `ENABLE_AUTOFIX_APPLY=true` | Patch spec files and re-execute (self-healing) |
 | NL test creation | `zyvor-qa create` | Generate tests from plain English |
 | Multi-browser | `ENABLE_MULTI_BROWSER=true` | Chromium + Firefox + WebKit |
 | Rust diff processor | `ENABLE_RUST_PROCESSOR=true` | Fast screenshot diff via `zyvor-diff` binary |
+| Coverage expansion | `ENABLE_COVERAGE_EXPANSION=true` | Discover untested routes/pages from repo code/docs |
+| Live site crawl | `ENABLE_LIVE_CRAWL=true` | BFS crawl of the deployed site into coverage inventory |
+| V8 JS coverage | `ENABLE_V8_COVERAGE=true` | Measure JS coverage of test runs, reported as % |
+| Mission Control dashboard | `zyvor-qa serve` → `/dashboard` | Live K8s pod health, log tails, QA run history + trends |
 
 ```bash
 # Natural language test
@@ -144,7 +158,7 @@ ENABLE_MULTI_BROWSER=true npx playwright test
 
 ## Environment Variables
 
-See [`.env.example`](.env.example) for the full list. Key variables:
+See [**docs/configuration.md**](docs/configuration.md) for the complete annotated reference, and [`.env.example`](.env.example) for a starting template. Key variables:
 
 | Variable | Description |
 |----------|-------------|
@@ -160,21 +174,31 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 
 ```
 ├── orchestrator/       # LangGraph pipeline, CLI, webhook
+│   └── nodes/          # One node per pipeline stage
 ├── agents/
-│   ├── parser/         # Requirement parsing
-│   ├── generator/      # Playwright test generation
-│   ├── regression/     # Screenshot diff (Phase 2)
+│   ├── common/         # Shared Pydantic models + LLM factory
+│   ├── parser/         # Requirement parsing (LLM + rule-based)
+│   ├── generator/      # Playwright test generation + quality gate
+│   ├── execution/      # Playwright subprocess bridge + artifacts
+│   ├── discover/       # Coverage discovery from code/docs + live crawl
+│   ├── coverage/       # Gap analysis + V8 coverage aggregation
+│   ├── regression/     # Screenshot diff (Pillow / Rust) (Phase 2)
 │   ├── api_validation/ # API response checks (Phase 2)
 │   ├── logs/           # Console/network log analysis (Phase 2)
 │   ├── analyzer/       # LLM failure analysis (Phase 3)
-│   ├── autofix/        # Selector repair (Phase 4)
+│   ├── autofix/        # Selector repair + apply (Phase 4)
 │   ├── nl_create/      # NL test creation (Phase 4)
-│   └── reporter/       # Reports + notifications
-├── playwright/         # Config, fixtures, utils
-├── tests/manual/         # Hand-written smoke + visual regression tests
-├── rust/                 # zyvor-diff screenshot processor (Phase 4)
-├── kubernetes/           # K8s manifests (Phase 3)
-└── docker/               # Container image
+│   └── reporter/       # HTML/PDF reports + GitHub/Slack/Teams/email
+├── github/             # GitHub API client, token resolution
+├── playwright/         # Config, fixtures, utils, crawl + PDF scripts
+├── prompts/            # LLM system prompts (markdown)
+├── templates/          # Jinja2 fallback test + HTML report
+├── tests/manual/       # Hand-written smoke + visual regression tests
+├── tests/generated/    # Generated tests (disposable)
+├── docs/               # Guides + tutorials
+├── rust/               # zyvor-diff screenshot processor (Phase 4)
+├── kubernetes/         # K8s manifests (Phase 3)
+└── docker/             # Container image
 ```
 
 ## CI/CD

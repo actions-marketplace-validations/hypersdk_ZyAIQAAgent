@@ -1,0 +1,23 @@
+# Tutorials
+
+Hands-on, step-by-step guides. Follow them in order the first time; each later tutorial assumes the setup from Tutorial 1.
+
+| # | Tutorial | You will learn | Time |
+|---|----------|----------------|------|
+| 1 | [Getting started](01-getting-started.md) | Install, run smoke tests, read your first report | ~15 min |
+| 2 | [From spec to test](02-spec-to-test.md) | Write a markdown spec and turn it into running Playwright tests | ~20 min |
+| 3 | [Natural-language tests](03-natural-language-tests.md) | Generate tests from a plain-English sentence | ~10 min |
+| 4 | [GitHub integration](04-github-integration.md) | Fetch specs from a repo, comment on PRs, run the webhook server | ~30 min |
+| 5 | [Coverage expansion](05-coverage-expansion.md) | Let the agent find untested routes/pages and generate tests for them | ~25 min |
+| 6 | [Visual regression](06-visual-regression.md) | Capture baselines and catch pixel-level changes | ~15 min |
+| 7 | [Self-healing autofix](07-self-healing-autofix.md) | Automatic selector repair and re-execution on failure | ~20 min |
+| 8 | [Notifications & reports](08-notifications-and-reports.md) | Slack, Teams, email, PDF reports | ~15 min |
+| 9 | [CI/CD & Kubernetes](09-cicd-and-kubernetes.md) | GitHub Actions workflows, Docker, K8s deployment | ~30 min |
+| 10 | [Mission Control dashboard](10-mission-control-dashboard.md) | Live pod/workload dashboard with QA run history | ~15 min |
+
+Reference documentation lives alongside these tutorials:
+
+- [Architecture](../architecture.md) — how the pipeline works internally
+- [Configuration](../configuration.md) — every environment variable
+- [Writing Tests & GitHub Integration](../test-authoring.md) — full command reference
+- [Troubleshooting](../troubleshooting.md) — common errors and fixes

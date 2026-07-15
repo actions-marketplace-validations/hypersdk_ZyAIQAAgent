@@ -8,8 +8,9 @@ Run Zyvor QA Agent on Kubernetes.
 |------|---------|
 | `configmap.yaml` | Non-secret configuration (feature flags, URLs) |
 | `secret.yaml` | API keys, tokens (use ExternalSecrets in production) |
+| `rbac.yaml` | ServiceAccount + read-only Role for the Mission Control dashboard (pods, logs, events, workloads) |
 | `cronjob.yaml` | Nightly smoke tests (`zyvor-qa test`) |
-| `deployment.yaml` | Webhook server (`zyvor-qa serve`) |
+| `deployment.yaml` | Webhook server + dashboard (`zyvor-qa serve`) |
 | `service.yaml` | ClusterIP service for webhook |
 | `ingress.yaml` | External access to GitHub webhook endpoint |
 
@@ -64,3 +65,41 @@ https://qa-webhook.zyvor.dev/webhook/github
 ```
 
 Events: `push`, `pull_request`, `repository_dispatch`
+
+## Mission Control dashboard
+
+The webhook Deployment also serves a live dashboard (pods, workloads, log tails, QA run history) at `/dashboard`. RBAC for it is in `rbac.yaml` (read-only: pods, pods/log, events, deployments, cronjobs) bound to the `zyvor-qa` ServiceAccount used by the Deployment.
+
+**Default access is via port-forward** — the dashboard exposes pod logs, so it is deliberately *not* routed through the ingress:
+
+```bash
+kubectl port-forward svc/zyvor-qa-webhook 8080:80
+open http://localhost:8080/dashboard
+```
+
+### Dashboard: optional ingress exposure
+
+Only expose it behind authentication. Example for ingress-nginx with basic auth:
+
+```yaml
+# Create the auth secret first:
+#   htpasswd -c auth qa-admin && kubectl create secret generic zyvor-qa-dashboard-auth --from-file=auth
+# Then add a second ingress with:
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: zyvor-qa-dashboard-auth
+spec:
+  rules:
+    - host: qa-webhook.zyvor.dev
+      http:
+        paths:
+          - path: /dashboard
+            pathType: Prefix
+            backend: { service: { name: zyvor-qa-webhook, port: { number: 80 } } }
+          - path: /api/dashboard
+            pathType: Prefix
+            backend: { service: { name: zyvor-qa-webhook, port: { number: 80 } } }
+```
+
+See [Tutorial 10](../docs/tutorials/10-mission-control-dashboard.md) for the full walkthrough.

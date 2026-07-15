@@ -27,6 +27,13 @@ def generate_report(state: PipelineState) -> PipelineState:
         use_llm=use_llm,
     )
 
+    try:
+        from orchestrator.dashboard.history import append_run
+
+        append_run(report, source=state.get("source", "local"))
+    except Exception:
+        pass
+
     return {
         **state,
         "report_path": report.html_path,

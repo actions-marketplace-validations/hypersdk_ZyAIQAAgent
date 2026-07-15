@@ -2,6 +2,8 @@
 
 This guide explains how Zyvor QA Agent creates and runs test cases, and how to connect a GitHub repository as the requirement source.
 
+> New to the project? The [step-by-step tutorials](tutorials/README.md) walk through everything here with worked examples. See also: [Architecture](architecture.md) · [Configuration reference](configuration.md) · [Troubleshooting](troubleshooting.md).
+
 ---
 
 ## Setup

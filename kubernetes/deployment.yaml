@@ -16,6 +16,7 @@ spec:
         app: zyvor-qa-agent
         component: webhook
     spec:
+      serviceAccountName: zyvor-qa
       containers:
         - name: zyvor-qa
           image: zyvor-qa-agent:latest

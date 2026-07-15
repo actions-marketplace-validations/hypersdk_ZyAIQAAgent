@@ -1,0 +1,204 @@
+# Architecture
+
+How Zyvor QA Agent is put together: the pipeline, the agents, the state, and the design decisions behind them.
+
+---
+
+## High-level view
+
+```
+GitHub (specs, issues, PRs, deploy events)          Natural language (CLI)
+        │                                                   │
+        ▼                                                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                LangGraph Orchestrator (Python)                       │
+│                                                                      │
+│  fetch → discover → gap_analyze → parse → generate → execute        │
+│        → regression → api_validate → log_analyze → v8_coverage      │
+│              │                                                       │
+│         pass ├──────────────────────────► report → notify           │
+│         fail └─► analyze → autofix → apply_autofix ─┐                │
+│                       ▲                             │                │
+│                       └── re-execute (≤ retries) ◄──┘                │
+└─────────────────────────────────────────────────────────────────────┘
+        │                                   │
+        ▼                                   ▼
+  Playwright (Node.js/TS)             Reports + Notifications
+  chromium/firefox/webkit             HTML, PDF, PR comment,
+  + optional Rust zyvor-diff          Slack, Teams, Email
+```
+
+Three languages, three roles:
+
+| Layer | Language | Location | Role |
+|-------|----------|----------|------|
+| Orchestrator + agents | Python | `orchestrator/`, `agents/`, `github/` | Pipeline control, LLM calls, parsing, reporting |
+| Test execution | TypeScript | `playwright/`, `tests/` | Browser automation, fixtures, artifact capture |
+| Screenshot diff (optional) | Rust | `rust/` | Fast pixel diffing (`zyvor-diff` binary) |
+
+---
+
+## The pipeline graph
+
+Defined in [`orchestrator/graph.py`](../orchestrator/graph.py) as a LangGraph `StateGraph`. Every node is a pure-ish function `PipelineState -> PipelineState` living in [`orchestrator/nodes/`](../orchestrator/nodes/).
+
+### Nodes
+
+| Node | Module | What it does |
+|------|--------|--------------|
+| `fetch` | `nodes/fetch.py` | Resolves spec sources. Local: reads markdown files (default example spec if none given). GitHub: downloads specs, labeled issues, PR bodies, and — when coverage expansion is on — discovery files into `tests/fixtures/fetched/`. |
+| `discover` | `nodes/discover.py` | Builds a coverage inventory (`CoverageCandidate` list) from downloaded code/docs; optionally merges a live site crawl. |
+| `gap_analyze` | `nodes/gap_analyze.py` | Compares the inventory against signals extracted from existing specs (`goto()` paths, `toHaveURL`, test titles) and produces `CoverageGap` items. |
+| `parse` | `nodes/parse.py` | Turns spec markdown into structured `Requirement` objects (LLM or rule-based) and converts coverage gaps into extra requirements. Persists `tests/fixtures/requirements.json`. |
+| `generate` | `nodes/generate.py` | Writes one `.spec.ts` per requirement into `tests/generated/`. LLM output goes through a quality gate; failures fall back to a Jinja2 template. |
+| `execute` | `nodes/execute.py` | Runs Playwright over `tests/manual/` (always) plus `tests/generated/` (when present) via `agents/execution/runner.py`. |
+| `regression` | `nodes/regression.py` | When `ENABLE_REGRESSION=true`, pixel-compares screenshots against `screenshots/baselines/` (Pillow, or Rust when enabled). |
+| `api_validate` | `nodes/api_validate.py` | When `ENABLE_API_VALIDATION=true`, validates captured HTTP statuses from fixtures and HAR files in `traces/`. |
+| `log_analyze` | `nodes/log_analyze.py` | Flags console errors and network failures from test sidecar logs (always on; noise like favicon/analytics is filtered). |
+| `v8_coverage` | `nodes/v8_coverage.py` | When `ENABLE_V8_COVERAGE=true`, aggregates V8 JS coverage JSON written by the Playwright fixture. |
+| `analyze` | `nodes/analyze.py` | On failure: LLM root-cause analysis with full artifact context (screenshots, traces, videos), stub summary as fallback. |
+| `autofix` | `nodes/autofix.py` | When `ENABLE_AUTOFIX=true`: LLM suggests selector repairs (`AutofixSuggestion`). |
+| `apply_autofix` | `nodes/apply_autofix.py` | When `ENABLE_AUTOFIX_APPLY=true`: patches spec files in place and loops back to `execute` (bounded by `AUTOFIX_MAX_RETRIES`). |
+| `report` | `nodes/report.py` | Renders `reports/qa-summary.html` (Jinja2), optional PDF via headless Chromium, optional LLM plain-English summary. |
+| `notify` | `nodes/notify.py` | Delivers to every configured channel: GitHub PR comment, Slack, Teams, email. |
+
+### Routing
+
+Three conditional edges (all in `graph.py`):
+
+1. **`route_on_results`** (after `v8_coverage`): "fail" if any of — test failures, regression diff over threshold, failed API validation, or error-severity log issue. Otherwise straight to `report`.
+2. **`route_after_analyze`**: goes to `autofix` only when `ENABLE_AUTOFIX=true` and retry budget remains.
+3. **`route_after_apply_autofix`**: loops back to `execute` only when `ENABLE_AUTOFIX_APPLY=true`, patches were actually applied, and retries remain.
+
+---
+
+## Pipeline state
+
+[`orchestrator/state.py`](../orchestrator/state.py) defines `PipelineState`, a `TypedDict` shared by all nodes. Key fields:
+
+| Field | Type | Set by |
+|-------|------|--------|
+| `source` | `"local" \| "github"` | CLI / webhook |
+| `spec_paths`, `spec_contents` | `list[str]` | `fetch` |
+| `requirements` | `list[Requirement]` | `parse` |
+| `generated_tests` | `list[str]` (file paths) | `generate` |
+| `test_results` | `TestResult` | `execute` (enriched by regression/api/log nodes) |
+| `coverage_inventory`, `coverage_gaps` | candidates / gaps | `discover`, `gap_analyze` |
+| `failure_analysis` | `str` | `analyze` |
+| `autofix_suggestions` | `list[AutofixSuggestion]` | `autofix` |
+| `report_path`, `pdf_report_path`, `report_summary` | `str` | `report` |
+| `metadata` | `dict` | everyone (counters, retry bookkeeping, changed files) |
+
+All data models are Pydantic (`agents/common/models.py`): `Requirement`, `RequirementStep`, `TestResult`, `TestCaseResult`, `RegressionDiff`, `ApiValidationResult`, `LogIssue`, `CoverageCandidate`, `CoverageGap`, `AutofixSuggestion`, `V8CoverageSummary`, `PipelineReport`.
+
+---
+
+## Design principle: LLM with deterministic fallback
+
+Every AI-powered stage degrades gracefully so the pipeline works with **no API key at all**:
+
+| Stage | With LLM | Without LLM (or on LLM error) |
+|-------|----------|-------------------------------|
+| Parse | `prompts/parser.md` → JSON requirements | Regex rule parser over `## Acceptance Criteria` sections |
+| Generate | `prompts/generator.md` → full TypeScript | Jinja2 template `templates/test.spec.ts.j2` |
+| Analyze | `prompts/analyzer.md` + artifact context | Stub summary echoing Playwright errors |
+| Autofix | JSON selector suggestions | Generic role-based suggestion stub |
+| Report summary | 2–4 sentence PR-ready summary | Markdown stats block |
+| NL create | `prompts/nl_create.md` | *(requires LLM — the one exception)* |
+
+The provider is selected once via `LLM_PROVIDER` in [`agents/common/llm.py`](../agents/common/llm.py) (OpenAI, Anthropic, Azure OpenAI, Google Gemini, Ollama), cached with `lru_cache`, always `temperature=0`.
+
+### Generation quality gate
+
+LLM-generated specs pass through [`agents/generator/quality.py`](../agents/generator/quality.py) before being accepted:
+
+- rejects navigation to `/` when the requirement targets another path
+- rejects brittle `toBeAttached()` assertions
+- rejects duplicate test bodies (SHA-256 of content vs existing files)
+- coarse syntax checks (balanced braces/parens, `node --check` on a stripped version)
+- coverage tests must import `playwright/fixtures/base` and call `waitForPageReady`
+
+Anything that fails the gate is regenerated from the deterministic template instead.
+
+---
+
+## Test execution bridge (Python ⇄ Node)
+
+[`agents/execution/runner.py`](../agents/execution/runner.py) spawns `npx playwright test --config=playwright/playwright.config.ts <targets>`:
+
+1. Expands test dirs to individual spec files, **skipping syntactically broken ones** so a single bad generated file can't sink the run.
+2. Playwright writes `reports/results.json` (JSON reporter) plus HTML report and `test-results/` artifacts.
+3. The JSON is parsed back into `TestResult`/`TestCaseResult`, including attachments: screenshots, traces, videos, and the sidecar `console.log` / `network-errors.log` produced by the custom fixtures.
+4. Failure artifacts are copied to `reports/artifacts/<test-slug>/` and mirrored into `videos/`, `screenshots/`, `traces/` for CI upload conventions (`agents/execution/artifacts.py`).
+
+### Custom fixtures (`playwright/fixtures/base.ts`)
+
+- `consoleLogs` — every console message, attached as `console.log`
+- `networkErrors` — every response ≥ 400, attached as `network-errors.log`
+- `apiCalls` — full request log for `validateApiCalls()` assertions
+- `page` override — starts/stops V8 JS coverage when `ENABLE_V8_COVERAGE=true`, writing per-test JSON to `reports/v8-coverage/`
+
+---
+
+## Coverage expansion subsystem
+
+The most distinctive feature: the agent figures out *what your tests are missing* by reading the product repo.
+
+```
+GitHub repo ──► download discovery files ──► extract candidates ──► gap match ──► new requirements
+ docs/, src/pages/,      tests/fixtures/        routes, pages,       vs signals     coverage-*.spec.ts
+ sidebars, openapi        fetched/code/         docs, APIs           in existing     (≤ COVERAGE_MAX_NEW_TESTS)
+                                                                     specs
+```
+
+- **Extractors** (`agents/discover/agent.py`): markdown headings → page/doc candidates; `src/pages/`, `src/routes/`, `app/` file paths → route candidates; Docusaurus sidebar ids; OpenAPI `paths`.
+- **Live crawl** (`agents/discover/crawl.py` + `playwright/scripts/crawl-site.mjs`): BFS over same-origin links of the deployed site, merged into the inventory when `ENABLE_LIVE_CRAWL=true`.
+- **Gap matching** (`agents/coverage/gap.py`): extracts signals from every existing spec (goto paths, URLs, titles) and checks each candidate against them; uncovered, routable candidates become `navigate → wait → assert` requirements tagged `coverage`.
+- **Scoping**: webhook `push`/`pull_request` events restrict discovery to changed files.
+
+---
+
+## Entry points
+
+| Entry | File | Trigger |
+|-------|------|---------|
+| CLI `zyvor-qa` | `orchestrator/cli.py` (Typer) | `run`, `test`, `generate`, `discover`, `create`, `regression`, `serve` |
+| Webhook server | `orchestrator/webhook.py` (FastAPI) | GitHub `push`, `pull_request`, `repository_dispatch: staging-deployed`; HMAC-verified via `GITHUB_WEBHOOK_SECRET`; `/health` for probes |
+| GitHub Actions | `.github/workflows/qa-smoke.yml`, `qa-post-deploy.yml` | push/PR/nightly smoke; full pipeline on staging deploy |
+| Kubernetes | `kubernetes/` | webhook Deployment + nightly smoke CronJob |
+| Docker | `docker/Dockerfile` | `zyvor-qa run --source local` by default |
+
+---
+
+## Filesystem contract
+
+Directories the pipeline reads and writes (all relative to repo root):
+
+| Path | Contents | Producer |
+|------|----------|----------|
+| `tests/manual/` | Hand-written specs — **always executed** | humans |
+| `tests/generated/` | Generated specs (`req-*`, `coverage-*`) | `generate` |
+| `tests/fixtures/requirements.json` | Last parsed requirements | `parse` |
+| `tests/fixtures/fetched/` | Downloaded GitHub specs/issues (`code/` for discovery files) | `fetch` |
+| `reports/qa-summary.html` / `.pdf` | Final report | `report` |
+| `reports/results.json` | Playwright JSON output | `execute` |
+| `reports/artifacts/` | Per-failure video/screenshot/trace | `execute` |
+| `reports/v8-coverage/` | Per-test V8 coverage JSON | Playwright fixture |
+| `reports/crawl-inventory.json` | Live crawl results | crawl script |
+| `screenshots/baselines/`, `current/`, `diffs/` | Visual regression images | `regression` |
+| `test-results/` | Raw Playwright output dir | Playwright |
+| `videos/`, `traces/` | CI-convention mirrors of failure artifacts | `execute` |
+
+---
+
+## Extending the pipeline
+
+To add a new stage:
+
+1. Add any data models to `agents/common/models.py` and state fields to `orchestrator/state.py`.
+2. Implement the logic as an agent package under `agents/<name>/` (keep LLM and non-LLM paths separate, like the existing agents).
+3. Add a thin node wrapper in `orchestrator/nodes/<name>.py` that reads/writes `PipelineState` and honors a feature flag.
+4. Register the node and its edges in `orchestrator/graph.py`.
+5. Surface results in the report template (`templates/report.html.j2`) and/or `PipelineReport`.
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for conventions.

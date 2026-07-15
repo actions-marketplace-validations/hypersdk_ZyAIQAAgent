@@ -70,6 +70,10 @@ def _build_state_from_event(event: str, payload: dict[str, Any]) -> PipelineStat
 def create_app() -> FastAPI:
     app = FastAPI(title="Zyvor QA Agent Webhook")
 
+    from orchestrator.dashboard.routes import router as dashboard_router
+
+    app.include_router(dashboard_router)
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
