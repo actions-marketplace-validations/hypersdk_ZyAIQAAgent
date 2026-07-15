@@ -16,6 +16,20 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+# Handle to the currently running Playwright subprocess so callers (e.g. the
+# dashboard job runner) can cancel a run in flight.
+_current: dict = {"proc": None}
+
+
+def terminate_current() -> bool:
+    """Terminate the in-flight Playwright subprocess, if any."""
+    proc = _current.get("proc")
+    if proc is not None and proc.poll() is None:
+        proc.terminate()
+        return True
+    return False
+
+
 def _load_env() -> None:
     load_dotenv(_repo_root() / ".env")
 
@@ -106,7 +120,15 @@ def run_playwright(
     if project:
         cmd.extend(["--project", project])
 
-    result = subprocess.run(cmd, cwd=repo_root, env=env, capture_output=True, text=True)
+    proc = subprocess.Popen(
+        cmd, cwd=repo_root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
+    _current["proc"] = proc
+    try:
+        stdout, stderr = proc.communicate()
+    finally:
+        _current["proc"] = None
+    result = subprocess.CompletedProcess(cmd, proc.returncode or 0, stdout, stderr)
 
     if json_path.exists():
         parsed = parse_playwright_json(json_path, repo_root / "test-results")

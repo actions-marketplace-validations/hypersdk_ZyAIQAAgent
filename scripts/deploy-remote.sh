@@ -410,6 +410,7 @@ sync_files() {
         # deploy-state files on the remote — excluded so --delete can't wipe them
         --exclude '.zyvor-qa-port'
         --exclude '.zyvor-qa-auth'
+        --exclude '.zyvor-qa-image-tag'
         --exclude '.git'
         --exclude '.venv' --exclude 'venv'
         --exclude 'node_modules'
@@ -648,13 +649,15 @@ ${RESOLVE_CRT}
 cd "\${REMOTE_STAGING}"
 echo "Building image zyvor-qa-agent with \$CRT..."
 \$SUDO \$CRT build -f docker/Dockerfile -t zyvor-qa-agent . 2>&1 | tail -4
-# Manifests reference zyvor-qa-agent:latest, which containerd resolves to
-# docker.io/library/… — tag explicitly so podman's localhost/ prefix can't
-# cause ErrImageNeverPull.
-\$SUDO \$CRT tag zyvor-qa-agent:latest docker.io/library/zyvor-qa-agent:latest
-echo "Importing image into k3s containerd..."
-\$SUDO \$CRT save docker.io/library/zyvor-qa-agent:latest | \$SUDO k3s ctr images import -
-\$SUDO k3s ctr images ls | grep -o 'docker.io/library/zyvor-qa-agent:latest' | head -1
+# Content-unique tag so re-importing :latest can't dedupe to a stale manifest —
+# the pod's imagePullPolicy:Never image always matches the freshly built code.
+TAG="zyvor-qa-agent:d\$(date +%Y%m%d%H%M%S)"
+DOCKER_TAG="docker.io/library/\${TAG}"
+\$SUDO \$CRT tag zyvor-qa-agent:latest "\${DOCKER_TAG}"
+echo "Importing \${TAG} into k3s containerd..."
+\$SUDO \$CRT save "\${DOCKER_TAG}" | \$SUDO k3s ctr images import -
+echo "\${TAG}" > "\${REMOTE_STAGING}/.zyvor-qa-image-tag"
+\$SUDO k3s ctr images ls | grep -o "docker.io/library/\${TAG}" | head -1
 REMOTE
 }
 
@@ -667,10 +670,13 @@ SUDO=""
 KUBECTL="$SUDO k3s kubectl"
 cd "${REMOTE_STAGING}"
 
-# Local image only — force imagePullPolicy: Never so k3s never hits a registry
+IMAGE_TAG=$(cat "${REMOTE_STAGING}/.zyvor-qa-image-tag" 2>/dev/null || echo "zyvor-qa-agent:latest")
+
+# Local image only — pin the content-unique tag + imagePullPolicy: Never so the
+# pod always runs the freshly built code and never hits a registry.
 WORK=$(mktemp -d)
 for f in configmap secret rbac pvc deployment service cronjob; do
-    sed -E 's|^([[:space:]]*)image: zyvor-qa-agent:latest|\1image: zyvor-qa-agent:latest\n\1imagePullPolicy: Never|' \
+    sed -E "s|^([[:space:]]*)image: zyvor-qa-agent:latest|\1image: ${IMAGE_TAG}\n\1imagePullPolicy: Never|" \
         "kubernetes/${f}.yaml" > "${WORK}/${f}.yaml"
 done
 $KUBECTL apply -f "${WORK}/configmap.yaml" -f "${WORK}/secret.yaml" -f "${WORK}/rbac.yaml" \
@@ -693,7 +699,8 @@ else
     echo "  ⚠️  Port ${SERVE_PORT} outside NodePort range — Service left as ClusterIP"
 fi
 
-# :latest with imagePullPolicy Never — restart so redeploys pick up the freshly imported image
+# The unique image tag already changes the pod spec, so apply triggers a fresh
+# rollout; restart as well to be safe on unchanged-tag redeploys.
 $KUBECTL rollout restart deployment/zyvor-qa-webhook
 $KUBECTL rollout status deployment/zyvor-qa-webhook --timeout=180s
 $KUBECTL get pods -l app=zyvor-qa-agent -o wide

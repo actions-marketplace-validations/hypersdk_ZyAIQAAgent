@@ -1,31 +1,34 @@
 {
-  "source": "local",
+  "source": "natural_language",
   "requirements": [
     {
-      "id": "req-administrator-creates-a-vm-marketing-sit",
-      "title": "Administrator creates a VM — marketing site validation",
-      "description": "**As a** visitor **I want to** see VM and infrastructure capabilities on zyvor.dev **So that** I can evaluate the Zyvor platform - Target: `ZYVOR_BASE_URL=https://zyvor.dev` (marketing site only) - No dashboard or staging environment required",
-      "priority": "high",
+      "id": "nl-verify-vm-page-shows-kubevirt-and-hypers",
+      "title": "Verify /vm page shows \"KubeVirt\" and HyperSDK content",
+      "description": "Verify /vm page shows \"KubeVirt\" and HyperSDK content",
+      "priority": "medium",
       "steps": [
-        {
-          "action": "navigate",
-          "target": "/",
-          "value": null,
-          "assertion": null
-        },
         {
           "action": "navigate",
           "target": "/vm",
           "value": null,
           "assertion": null
+        },
+        {
+          "action": "wait",
+          "target": null,
+          "value": null,
+          "assertion": null
+        },
+        {
+          "action": "assert",
+          "target": "content",
+          "value": null,
+          "assertion": "KubeVirt"
         }
       ],
       "tags": [
-        "vm",
-        "marketing",
-        "smoke",
-        "vm",
-        "marketing"
+        "nl-generated",
+        "heuristic"
       ]
     }
   ]

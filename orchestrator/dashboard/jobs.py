@@ -22,6 +22,8 @@ from typing import Any, Callable, Optional
 VALID_KINDS = {"smoke", "full", "generate", "discover", "create", "regression", "crawl_test"}
 
 _lock = threading.Lock()
+_cancel = threading.Event()
+_progress: list[str] = []
 _state: dict[str, Any] = {
     "running": False,
     "kind": None,
@@ -33,6 +35,10 @@ _state: dict[str, Any] = {
 }
 
 
+class JobCancelled(Exception):
+    pass
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
@@ -41,9 +47,41 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def log_progress(message: str) -> None:
+    """Append a stage line visible live in the dashboard's job panel."""
+    stamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    with _lock:
+        _progress.append(f"[{stamp}] {message}")
+        del _progress[:-200]
+
+
+def _check_cancel() -> None:
+    if _cancel.is_set():
+        raise JobCancelled("cancelled by user")
+
+
+def cancel() -> dict[str, Any]:
+    """Request cancellation of the running job (kills an in-flight Playwright run)."""
+    with _lock:
+        running = _state["running"]
+    if running:
+        _cancel.set()
+        log_progress("⏹ cancellation requested…")
+        try:
+            from agents.execution.runner import terminate_current
+
+            if terminate_current():
+                log_progress("terminated in-flight Playwright process")
+        except Exception:
+            pass
+    return status()
+
+
 def status() -> dict[str, Any]:
     with _lock:
-        return dict(_state)
+        state = dict(_state)
+        state["progress"] = _progress[-60:]
+    return state
 
 
 def _safe_local_spec(spec: str) -> str:
@@ -103,6 +141,8 @@ def trigger(kind: str, params: dict[str, Any] | None = None) -> tuple[bool, dict
     with _lock:
         if _state["running"]:
             return False, dict(_state)
+        _cancel.clear()
+        _progress.clear()
         _state.update(
             running=True,
             kind=kind,
@@ -112,6 +152,7 @@ def trigger(kind: str, params: dict[str, Any] | None = None) -> tuple[bool, dict
             result=None,
             error=None,
         )
+    log_progress(f"▶ {kind} started")
     threading.Thread(target=_run, args=(kind, clean), daemon=True).start()
     return True, status()
 
@@ -141,8 +182,13 @@ def _run(kind: str, params: dict[str, Any]) -> None:
     error: Optional[str] = None
     try:
         result = _JOBS[kind](params)
+        log_progress(f"✅ {kind} finished: {_brief(kind, result, None)}")
+    except JobCancelled:
+        error = "cancelled by user"
+        log_progress("⏹ job cancelled")
     except Exception as exc:  # surfaced in status, never crashes the server
         error = str(exc)
+        log_progress(f"❌ {kind} failed: {error}")
     duration = _time.time() - t0
     with _lock:
         _state.update(running=False, finished_at=_now(), result=result, error=error)
@@ -162,6 +208,62 @@ def _require_llm() -> None:
         )
 
 
+def _slug(text: str) -> str:
+    import re
+
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:80] or "test"
+
+
+def _persist_videos(results: Any, kind: str) -> dict[str, str]:
+    """Copy every recorded test video into the served (and PVC-backed) reports
+    tree. Returns test title → video href."""
+    import shutil
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    rel_dir = f"artifacts/videos/{stamp}-{kind}"
+    dest = _repo_root() / "reports" / rel_dir
+    hrefs: dict[str, str] = {}
+    for case in results.cases:
+        if not case.video_path:
+            continue
+        src = Path(case.video_path)
+        if not src.exists():
+            continue
+        dest.mkdir(parents=True, exist_ok=True)
+        name = f"{_slug(case.title)}.webm"
+        try:
+            shutil.copy2(src, dest / name)
+        except OSError:
+            continue
+        hrefs[case.title] = f"/reports/{rel_dir}/{name}"
+    if hrefs:
+        log_progress(f"saved {len(hrefs)} test video(s)")
+    # keep the video library bounded: newest 20 run-directories
+    video_root = _repo_root() / "reports" / "artifacts" / "videos"
+    if video_root.exists():
+        run_dirs = sorted([d for d in video_root.iterdir() if d.is_dir()])
+        for stale in run_dirs[:-20]:
+            import shutil as _sh
+
+            _sh.rmtree(stale, ignore_errors=True)
+    return hrefs
+
+
+def _cases_payload(
+    results: Any, limit: int = 40, videos: dict[str, str] | None = None
+) -> list[dict[str, Any]]:
+    """Per-test detail for the result tables: title, status, error, video."""
+    return [
+        {
+            "title": c.title[:120],
+            "status": c.status,
+            "error": (c.error_message or "")[:300] if c.status != "passed" else "",
+            "video": (videos or {}).get(c.title),
+        }
+        for c in results.cases[:limit]
+    ]
+
+
 def _report_href() -> Optional[str]:
     return "/reports/qa-summary.html" if (_repo_root() / "reports" / "qa-summary.html").is_file() else None
 
@@ -175,10 +277,16 @@ def _job_smoke(params: dict[str, Any]) -> dict[str, Any]:
     from orchestrator.dashboard import history
 
     t0 = _time.time()
-    results = run_playwright(
-        test_dirs=[str(_repo_root() / "tests" / "manual")],
-        base_url=os.environ.get("ZYVOR_BASE_URL", "https://zyvor.dev"),
-    )
+    base_url = os.environ.get("ZYVOR_BASE_URL", "https://zyvor.dev")
+    log_progress(f"running tests/manual against {base_url} (Playwright + Chromium, video on)…")
+    with _env_overrides({"ZYVOR_VIDEO": "on"}):
+        results = run_playwright(
+            test_dirs=[str(_repo_root() / "tests" / "manual")],
+            base_url=base_url,
+        )
+    _check_cancel()
+    log_progress(f"execution done: {results.passed}/{results.total} passed")
+    videos = _persist_videos(results, "smoke")
     report = PipelineReport(
         summary=generate_summary_stub(results),
         passed=results.passed,
@@ -186,7 +294,12 @@ def _job_smoke(params: dict[str, Any]) -> dict[str, Any]:
         total=results.total,
     )
     history.append_run(report, source="dashboard-smoke", duration_s=_time.time() - t0)
-    return {"passed": results.passed, "failed": results.failed, "total": results.total}
+    return {
+        "passed": results.passed,
+        "failed": results.failed,
+        "total": results.total,
+        "cases": _cases_payload(results, videos=videos),
+    }
 
 
 def _job_full(params: dict[str, Any]) -> dict[str, Any]:
@@ -200,8 +313,11 @@ def _job_full(params: dict[str, Any]) -> dict[str, Any]:
         expand_coverage=params.get("expand_coverage", False),
     )
     state["metadata"]["event"] = "dashboard-trigger"
+    log_progress(f"full pipeline: fetch → parse → generate → execute → report (source={params['source']})")
     result = get_compiled_graph().invoke(state)  # report node appends history
+    _check_cancel()
     tr = result.get("test_results")
+    log_progress("pipeline graph finished")
     if result.get("error") and not tr:
         raise RuntimeError(result["error"])
     return {
@@ -209,6 +325,7 @@ def _job_full(params: dict[str, Any]) -> dict[str, Any]:
         "failed": tr.failed if tr else 0,
         "total": tr.total if tr else 0,
         "generated": [Path(p).name for p in result.get("generated_tests", [])],
+        "cases": _cases_payload(tr) if tr else [],
         "report": _report_href(),
     }
 
@@ -225,9 +342,12 @@ def _generate_states(params: dict[str, Any]):
         spec=params.get("spec"),
         expand_coverage=params.get("expand_coverage", False),
     )
+    log_progress(f"fetching specs (source={params['source']})…")
     state = fetch_requirements(state)
     if state.get("error"):
         raise RuntimeError(state["error"])
+    _check_cancel()
+    log_progress("discovering coverage candidates…")
     state = discover_coverage(state)
     return gap_analyze(state)
 
@@ -237,9 +357,13 @@ def _job_generate(params: dict[str, Any]) -> dict[str, Any]:
     from orchestrator.nodes.parse import parse_requirements
 
     state = _generate_states(params)
+    _check_cancel()
+    log_progress("parsing requirements…")
     state = parse_requirements(state)
     if state.get("error"):
         raise RuntimeError(state["error"])
+    _check_cancel()
+    log_progress(f"generating tests for {len(state.get('requirements', []))} requirement(s)…")
     state = generate_tests(state)
     metadata = state.get("metadata", {})
     return {
@@ -273,15 +397,34 @@ def _job_discover(params: dict[str, Any]) -> dict[str, Any]:
 
 
 def _job_create(params: dict[str, Any]) -> dict[str, Any]:
-    _require_llm()
-    from agents.nl_create.agent import create_and_generate, create_from_natural_language
-    from agents.parser.agent import save_requirements
+    from agents.generator.agent import generate_tests_from_requirements
+    from agents.nl_create.agent import (
+        create_from_natural_language,
+        create_from_natural_language_heuristic,
+    )
+    from agents.parser.agent import _llm_available, save_requirements
 
     root = _repo_root()
-    parsed = create_from_natural_language(params["description"])
+    mode = "llm"
+    if _llm_available():
+        log_progress("asking the LLM to turn the description into requirements…")
+        try:
+            parsed = create_from_natural_language(params["description"])
+        except Exception as exc:
+            log_progress(f"LLM failed ({str(exc)[:80]}) — falling back to heuristic parsing")
+            parsed = create_from_natural_language_heuristic(params["description"])
+            mode = "heuristic"
+    else:
+        log_progress("no LLM key configured — using heuristic parsing")
+        parsed = create_from_natural_language_heuristic(params["description"])
+        mode = "heuristic"
+
     save_requirements(parsed, root / "tests" / "fixtures" / "requirements.json")
-    generated = create_and_generate(params["description"], str(root / "tests" / "generated"))
-    result: dict[str, Any] = {"generated": [Path(p).name for p in generated]}
+    log_progress(f"generating Playwright test(s) from {len(parsed.requirements)} requirement(s)…")
+    generated, _stats = generate_tests_from_requirements(
+        parsed.requirements, root / "tests" / "generated"
+    )
+    result: dict[str, Any] = {"generated": [Path(p).name for p in generated], "mode": mode}
 
     if params.get("execute"):
         import time as _time
@@ -292,7 +435,11 @@ def _job_create(params: dict[str, Any]) -> dict[str, Any]:
         from orchestrator.dashboard import history
 
         t0 = _time.time()
-        results = run_playwright(test_dirs=generated)
+        log_progress(f"executing {len(generated)} generated test(s) (video on)…")
+        with _env_overrides({"ZYVOR_VIDEO": "on"}):
+            results = run_playwright(test_dirs=generated)
+        _check_cancel()
+        videos = _persist_videos(results, "create")
         report = PipelineReport(
             summary=generate_summary_stub(results),
             passed=results.passed,
@@ -300,7 +447,12 @@ def _job_create(params: dict[str, Any]) -> dict[str, Any]:
             total=results.total,
         )
         history.append_run(report, source="dashboard-create", duration_s=_time.time() - t0)
-        result.update(passed=results.passed, failed=results.failed, total=results.total)
+        result.update(
+            passed=results.passed,
+            failed=results.failed,
+            total=results.total,
+            cases=_cases_payload(results, videos=videos),
+        )
     return result
 
 
@@ -312,10 +464,13 @@ def _job_regression(params: dict[str, Any]) -> dict[str, Any]:
     os.environ["ENABLE_REGRESSION"] = "true"
     os.environ["UPDATE_BASELINES"] = "true" if params.get("update_baselines") else "false"
     try:
+        log_progress("running manual suite with screenshot capture…")
         results = run_playwright(
             test_dirs=[str(_repo_root() / "tests" / "manual")],
             base_url=os.environ.get("ZYVOR_BASE_URL", "https://zyvor.dev"),
         )
+        _check_cancel()
+        log_progress("comparing screenshots against baselines…")
         state = regression_check({"test_results": results})
     finally:
         for key, value in saved.items():
@@ -393,17 +548,27 @@ def _job_crawl_test(params: dict[str, Any]) -> dict[str, Any]:
 
     t0 = _time.time()
     with _env_overrides(overrides):
+        log_progress(f"crawling {url} (max {params['max_pages']} pages, BFS)…")
         candidates = crawl_live_site(url)
         if not candidates:
             raise RuntimeError(f"crawl found no reachable pages at {url}")
+        _check_cancel()
+        log_progress(f"found {len(candidates)} page(s): " + ", ".join(c.path for c in candidates[:8]) + ("…" if len(candidates) > 8 else ""))
 
         requirements = gaps_to_requirements([CoverageGap(candidate=c) for c in candidates])
         output_dir = _repo_root() / "tests" / "generated"
         output_dir.mkdir(parents=True, exist_ok=True)
+        log_progress(f"generating {len(requirements)} validation test(s)…")
         generated, _stats = generate_tests_from_requirements(
             requirements, output_dir, coverage_mode=True
         )
-        results = run_playwright(test_dirs=generated, base_url=url)
+        _check_cancel()
+        log_progress(f"executing {len(generated)} test(s) with Playwright (video on)…")
+        with _env_overrides({"ZYVOR_VIDEO": "on"}):
+            results = run_playwright(test_dirs=generated, base_url=url)
+        _check_cancel()
+        log_progress(f"execution done: {results.passed}/{results.total} passed")
+        videos = _persist_videos(results, "crawl")
 
     report = PipelineReport(
         summary=f"Crawl of {url}: {results.passed}/{results.total} pages passed. "
@@ -420,11 +585,7 @@ def _job_crawl_test(params: dict[str, Any]) -> dict[str, Any]:
         "passed": results.passed,
         "failed": results.failed,
         "total": results.total,
-        "failed_pages": [
-            {"title": c.title, "error": (c.error_message or "")[:200]}
-            for c in results.cases
-            if c.status != "passed"
-        ][:20],
+        "cases": _cases_payload(results, limit=60, videos=videos),
     }
 
 

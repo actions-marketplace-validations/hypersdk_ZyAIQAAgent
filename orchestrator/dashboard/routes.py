@@ -133,6 +133,54 @@ async def events() -> dict[str, Any]:
     return k8s.recent_events()
 
 
+@router.get("/api/dashboard/videos")
+async def videos(limit: int = Query(60, ge=1, le=300)) -> dict[str, Any]:
+    """Recorded test videos, newest first, served from /reports."""
+    root = _repo_root() / "reports" / "artifacts" / "videos"
+    items: list[dict[str, Any]] = []
+    if root.exists():
+        for path in root.rglob("*.webm"):
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            items.append(
+                {
+                    "name": path.stem,
+                    "run": path.parent.name,
+                    "href": "/reports/" + str(path.relative_to(_repo_root() / "reports")),
+                    "size_bytes": stat.st_size,
+                    "mtime": stat.st_mtime,
+                }
+            )
+    items.sort(key=lambda v: v["mtime"], reverse=True)
+    return {"videos": items[:limit]}
+
+
+@router.get("/api/dashboard/videos.zip")
+async def videos_zip() -> Response:
+    """All recorded test videos as one zip download."""
+    import io
+    import zipfile
+
+    root = _repo_root() / "reports" / "artifacts" / "videos"
+    buffer = io.BytesIO()
+    count = 0
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as zf:
+        if root.exists():
+            for path in sorted(root.rglob("*.webm")):
+                zf.write(path, arcname=str(path.relative_to(root)))
+                count += 1
+    if count == 0:
+        raise HTTPException(status_code=404, detail="no videos recorded yet")
+    buffer.seek(0)
+    return Response(
+        content=buffer.read(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="zyvor-qa-videos.zip"'},
+    )
+
+
 @router.get("/api/dashboard/specs")
 async def spec_files() -> dict[str, Any]:
     """Markdown spec candidates for the spec-path autocomplete."""
@@ -178,6 +226,11 @@ async def start_job(payload: dict[str, Any] = Body(...)) -> Response:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return _job_response(started, state)
+
+
+@router.post("/api/dashboard/jobs/cancel")
+async def cancel_job() -> dict[str, Any]:
+    return jobs.cancel()
 
 
 @router.get("/api/dashboard/jobs/status")

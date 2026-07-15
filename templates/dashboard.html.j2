@@ -310,6 +310,16 @@
   <div class="pods" id="pods"><div class="empty">No pod data yet.</div></div>
 
   <h2 style="display:flex;align-items:center;gap:12px">Actions <span id="run-status" class="run-status"></span></h2>
+
+  <div class="glass card" id="job-live" style="display:none;margin-bottom:14px">
+    <div class="result-title" style="margin-bottom:10px">
+      <span class="spin" style="width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 1.2s infinite"></span>
+      <span id="live-kind">job</span> running
+      <span class="d" id="live-elapsed" style="font-weight:400"></span>
+      <button class="run-btn" id="btn-stop" style="margin-left:auto;color:var(--status-error);border-color:rgba(255,69,58,0.4)">⏹ Stop</button>
+    </div>
+    <pre id="live-log" style="margin:0;max-height:220px;overflow-y:auto;font-family:var(--font-mono);font-size:12px;line-height:1.7;color:var(--text-secondary);white-space:pre-wrap"></pre>
+  </div>
   <div class="acts">
     <div class="glass card act">
       <div class="act-title">▶ Run tests</div>
@@ -344,7 +354,7 @@
       </div>
     </div>
     <div class="glass card act">
-      <div class="act-title">✨ Create from English</div>
+      <div class="act-title">✨ Create from English <span class="d" style="font-weight:400">— AI when a key is set, heuristic otherwise</span></div>
       <div class="act-row"><textarea class="inp grow" id="nl-desc" rows="2" placeholder="e.g. Verify /vm page mentions KubeVirt migration"></textarea></div>
       <div class="act-row" id="nl-chips" style="gap:6px">
         <span class="chip nl-chip" style="cursor:pointer">homepage shows all products</span>
@@ -384,7 +394,13 @@
 
   <h2 style="display:flex;align-items:center;gap:10px">QA Runs
     <a class="dl-btn" href="/api/dashboard/runs?limit=200" download="qa-runs.json" style="text-decoration:none">⬇ export</a>
+    <button class="dl-btn" id="videos-toggle">🎬 videos</button>
+    <a class="dl-btn" href="/api/dashboard/videos.zip" style="text-decoration:none" title="download every recorded video">⬇ all videos (zip)</a>
   </h2>
+  <div class="glass card" id="videos-panel" style="display:none;margin-bottom:14px">
+    <div class="k" style="margin-bottom:8px">Recorded test videos</div>
+    <div class="feed" id="videos-list" style="max-height:260px"><span class="d">No videos yet — run smoke, crawl, or an executed NL test.</span></div>
+  </div>
   <div class="qa">
     <div class="glass card">
       <div class="k">Latest run
@@ -684,6 +700,32 @@ function renderPods(data) {
 }
 $("pod-search").addEventListener("input", () => { if (podsCache) renderPods(podsCache); });
 
+/* recorded videos panel */
+let videosOpen = false;
+$("videos-toggle").addEventListener("click", async () => {
+  videosOpen = !videosOpen;
+  $("videos-panel").style.display = videosOpen ? "block" : "none";
+  if (videosOpen) await loadVideos();
+});
+async function loadVideos() {
+  try {
+    const data = await fetch("/api/dashboard/videos").then((r) => r.json());
+    const el = $("videos-list");
+    if (!data.videos.length) {
+      el.innerHTML = '<span class="d">No videos yet — run smoke, crawl, or an executed NL test.</span>';
+      return;
+    }
+    el.innerHTML = data.videos.map((v) =>
+      '<div class="feed-item"><span class="f-when" title="' + esc(v.run) + '">' + relIso(new Date(v.mtime * 1000).toISOString()) + '</span>'
+      + '<span class="f-kind">🎬</span>'
+      + '<a class="rlink f-brief" href="' + esc(v.href) + '" target="_blank">' + esc(v.name) + "</a>"
+      + '<span class="f-when">' + Math.max(1, Math.round(v.size_bytes / 1024)) + " KB</span></div>"
+    ).join("");
+  } catch (err) {
+    $("videos-list").innerHTML = '<span class="d">failed: ' + esc(String(err)) + "</span>";
+  }
+}
+
 /* cluster events panel */
 let eventsOpen = false;
 $("events-toggle").addEventListener("click", async () => {
@@ -904,11 +946,18 @@ async function startJob(kind) {
     }
     $("job-result").style.display = "none";
     await sync();
+    $("job-live").scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (err) {
     el.classList.add("err");
     el.textContent = "trigger failed: " + err;
   }
 }
+$("btn-stop").addEventListener("click", async () => {
+  if (!confirm("Stop the running job?")) return;
+  await fetch("/api/dashboard/jobs/cancel", { method: "POST" });
+  toast("job", false, "cancellation requested");
+  sync();
+});
 for (const btn of document.querySelectorAll(".act-btn")) {
   btn.addEventListener("click", () => startJob(btn.dataset.kind));
 }
@@ -920,10 +969,25 @@ function renderRunStatus(st) {
   const el = $("run-status");
   const busy = !!(st && st.running);
   for (const btn of document.querySelectorAll(".act-btn")) btn.disabled = busy;
+
+  // live job panel: kind, elapsed, streaming stage log, stop button
+  const live = $("job-live");
   if (busy) {
     const secs = st.started_at ? Math.max(0, (Date.now() - new Date(st.started_at).getTime()) / 1000 | 0) : 0;
+    live.style.display = "block";
+    $("live-kind").textContent = KIND_LABELS[st.kind] || st.kind;
+    $("live-elapsed").textContent = "· " + rel(secs) + " elapsed";
+    const log = $("live-log");
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
+    log.textContent = (st.progress || []).join("\n") || "starting…";
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  } else {
+    live.style.display = "none";
+  }
+
+  if (busy) {
     el.classList.remove("err");
-    el.innerHTML = '<span class="spin"></span>' + esc(KIND_LABELS[st.kind] || st.kind) + " running · " + rel(secs);
+    el.textContent = "";
   } else if (st && st.error) {
     el.classList.add("err");
     el.textContent = (KIND_LABELS[st.kind] || "job") + " failed: " + st.error.slice(0, 90);
@@ -948,6 +1012,7 @@ function renderRunStatus(st) {
 
   renderFeed(st && st.recent);
   renderJobResult(st);
+  ensureBusyPoll(busy);
 }
 
 function renderFeed(items) {
@@ -983,8 +1048,23 @@ function renderJobResult(st) {
   }
   let html = '<div class="result-title">' + esc(KIND_LABELS[st.kind] || st.kind) + " result" + dur + "</div>";
 
+  const caseTable = (cases) => {
+    if (!cases || !cases.length) return "";
+    return '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + cases.map((c) => '<tr><td><span class="chip ' + (c.status === "passed" ? "pass" : "fail") + '">'
+        + (c.status === "passed" ? "PASS" : esc(c.status.toUpperCase())) + "</span></td>"
+        + "<td>" + esc(c.title) + "</td>"
+        + "<td>" + (c.video ? '<a class="rlink" href="' + esc(c.video) + '" target="_blank">🎬 video</a>' : "") + "</td>"
+        + '<td style="max-width:480px;color:var(--status-error)">' + esc(c.error || "") + "</td></tr>").join("")
+      + "</tbody></table>";
+  };
+
   if (st.error) {
     html += '<div class="result-err">' + esc(st.error) + "</div>";
+    if (st.progress && st.progress.length) {
+      html += '<pre style="margin:10px 0 0;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);white-space:pre-wrap">'
+        + esc(st.progress.slice(-8).join("\n")) + "</pre>";
+    }
   } else if (st.kind === "discover") {
     html += '<div class="d">' + r.inventory + " candidates · " + r.gaps_total + " gaps · " + r.files_scanned + " files scanned</div>";
     if (r.gaps && r.gaps.length) {
@@ -1001,11 +1081,7 @@ function renderJobResult(st) {
   } else if (st.kind === "crawl_test") {
     html += '<div class="d">' + esc(r.url) + " — " + r.pages_found + " page(s) found · "
       + r.passed + "/" + r.total + " passed</div>";
-    if (r.failed_pages && r.failed_pages.length) {
-      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
-        + r.failed_pages.map((f) => '<tr><td><span class="chip fail">FAIL</span></td><td>' + esc(f.title) + "</td><td>" + esc(f.error) + "</td></tr>").join("")
-        + "</tbody></table>";
-    }
+    html += caseTable(r.cases);
   } else if (st.kind === "regression") {
     html += '<div class="d">' + (r.baselines_updated ? "baselines updated · " : "") + (r.diffs || []).length + " screenshot(s) compared</div>";
     if (r.diffs && r.diffs.length) {
@@ -1020,9 +1096,29 @@ function renderJobResult(st) {
     if (r.generated && r.generated.length) {
       html += '<div class="result-files" style="margin-top:6px">' + r.generated.map(esc).join("<br>") + "</div>";
     }
+    html += caseTable(r.cases);
   }
   panel.innerHTML = html;
   panel.style.display = "block";
+}
+
+/* fast 2s status poll while a job is running, so the live log streams */
+let busyPoll = null;
+function ensureBusyPoll(busy) {
+  if (busy && !busyPoll) {
+    busyPoll = setInterval(async () => {
+      try {
+        const st = await fetch("/api/dashboard/jobs/status").then((r) => r.json());
+        renderRunStatus(st);
+        if (!st.running) {
+          clearInterval(busyPoll); busyPoll = null; sync();
+          if (videosOpen) loadVideos();
+        }
+      } catch (e) { /* next tick */ }
+    }, 2000);
+  } else if (!busy && busyPoll) {
+    clearInterval(busyPoll); busyPoll = null;
+  }
 }
 
 async function sync() {

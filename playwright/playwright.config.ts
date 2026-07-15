@@ -44,7 +44,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: regressionMode ? 'on' : 'only-on-failure',
     video: {
-      mode: 'retain-on-failure',
+      // 'on' records every test (dashboard jobs set ZYVOR_VIDEO=on)
+      mode: process.env.ZYVOR_VIDEO === 'on' ? 'on' : 'retain-on-failure',
       size: { width: 1280, height: 720 },
     },
     actionTimeout: 15000,
