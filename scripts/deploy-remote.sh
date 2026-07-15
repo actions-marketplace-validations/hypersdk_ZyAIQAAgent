@@ -34,6 +34,7 @@ INSTALL_SERVICE=false
 RUN_SMOKE=false
 VERBOSE=false
 SERVE_PORT="${ZYVOR_QA_PORT:-}"
+DEFAULT_SERVE_PORT=30080   # fixed NodePort-range default — stable across hosts and redeploys
 RUNTIME_PREF="${ZYVOR_QA_RUNTIME:-}"   # docker | podman | (auto)
 NO_AUTH=false
 DASH_USER="admin"
@@ -68,7 +69,7 @@ Options:
   --skip-verify       Skip remote verification
   --with-env          Also sync local .env (contains secrets — default: excluded)
   --service           Install + start systemd unit: zyvor-qa serve (webhook + dashboard)
-  --port N            Serve port (default: random NodePort-range 30000-32767,
+  --port N            Serve port (default: 30080 — fixed, NodePort-range,
                       persisted on the remote and reused on redeploys)
   --runtime NAME      Container runtime: docker | podman (default: auto-detect —
                       existing docker, else podman; installs docker on apt hosts
@@ -305,16 +306,15 @@ check_connectivity() {
 
 resolve_serve_port() {
     # Explicit --port / ZYVOR_QA_PORT wins; otherwise reuse the port persisted on
-    # the remote from a previous deploy; otherwise pick a random NodePort-range
-    # port (30000-32767) and persist it.
+    # the remote from a previous deploy; otherwise the fixed default (30080).
     if [ -n "${SERVE_PORT}" ]; then
         [ "$DRY_RUN" = true ] || _ssh "mkdir -p '${REMOTE_DIR}' && echo '${SERVE_PORT}' > '${REMOTE_DIR}/.zyvor-qa-port'"
         info "Serve port: ${SERVE_PORT} (explicit)"
         return 0
     fi
     if [ "$DRY_RUN" = true ]; then
-        SERVE_PORT=$(( (RANDOM % 2768) + 30000 ))
-        dry "would use random NodePort-range port: ${SERVE_PORT}"
+        SERVE_PORT="${DEFAULT_SERVE_PORT}"
+        dry "would use fixed default port: ${SERVE_PORT}"
         return 0
     fi
     local existing
@@ -324,9 +324,9 @@ resolve_serve_port() {
         info "Serve port: ${SERVE_PORT} (reused from remote)"
         return 0
     fi
-    SERVE_PORT=$(( (RANDOM % 2768) + 30000 ))
+    SERVE_PORT="${DEFAULT_SERVE_PORT}"
     _ssh "mkdir -p '${REMOTE_DIR}' && echo '${SERVE_PORT}' > '${REMOTE_DIR}/.zyvor-qa-port'"
-    info "Serve port: ${SERVE_PORT} (random NodePort range, persisted on remote)"
+    info "Serve port: ${SERVE_PORT} (fixed default, persisted on remote)"
 }
 
 resolve_dashboard_auth() {
@@ -826,7 +826,7 @@ print_deployment_summary() {
     echo "  📝  Log         ${DEPLOY_LOG}"
     echo "  📁  Remote      ${REMOTE_DIR}"
     [ -n "${SERVE_PORT}" ] && \
-    echo "  🎲  Port        ${SERVE_PORT}  ${C_DIM}(NodePort range — persisted; override with --port)${C_RST}"
+    echo "  📌  NodePort    ${SERVE_PORT}  ${C_DIM}(fixed — persisted; override with --port)${C_RST}"
     if [ "$NO_AUTH" != true ] && [ -n "${DASH_PASS}" ]; then
         echo "  🔐  Login       ${C_BOLD}${DASH_USER}${C_RST} / ${C_BOLD}${DASH_PASS}${C_RST}  ${C_DIM}(persisted in ${REMOTE_DIR}/.zyvor-qa-auth)${C_RST}"
     fi
