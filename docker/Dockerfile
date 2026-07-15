@@ -27,8 +27,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
+# Node runtime — node_modules alone are useless without node/npx binaries
+COPY --from=node-base /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-base /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+
 COPY --from=node-base /app/node_modules ./node_modules
 COPY --from=node-base /root/.cache/ms-playwright /root/.cache/ms-playwright
+# The zyvor-qa console script and installed packages, not just the source tree
+COPY --from=python-base /usr/local/bin /usr/local/bin
+COPY --from=python-base /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=python-base /app /app
 COPY package.json tsconfig.json ./
 COPY orchestrator/ ./orchestrator/

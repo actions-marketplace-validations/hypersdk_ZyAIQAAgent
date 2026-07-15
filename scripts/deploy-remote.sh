@@ -235,10 +235,23 @@ _ssh_once() {
 }
 
 _ssh() {
+    # Buffer stdin (heredoc scripts) so every retry attempt gets the full
+    # script — a plain retry would rerun ssh with stdin already consumed,
+    # executing an empty script that exits 0 and masks the real failure.
+    local _stdin=""
+    if [ ! -t 0 ]; then
+        _stdin=$(cat)
+    fi
     local attempt=1 max="${SSH_RETRIES}"
     while [ "$attempt" -le "$max" ]; do
-        if _ssh_once "$@"; then
-            return 0
+        if [ -n "${_stdin}" ]; then
+            if printf '%s' "${_stdin}" | _ssh_once "$@"; then
+                return 0
+            fi
+        else
+            if _ssh_once "$@" </dev/null; then
+                return 0
+            fi
         fi
         attempt=$((attempt + 1))
         if [ "$attempt" -le "$max" ]; then
@@ -348,6 +361,8 @@ sync_files() {
     _ssh "command -v rsync >/dev/null || { S=; [ \"\$(id -u)\" -ne 0 ] && S=sudo; \$S apt-get install -y -qq rsync 2>/dev/null || \$S dnf install -y rsync 2>/dev/null || \$S yum install -y rsync; }"
     _ssh "mkdir -p '${REMOTE_DIR}'"
     local excludes=(
+        # deploy-state file on the remote — excluded so --delete can't wipe it
+        --exclude '.zyvor-qa-port'
         --exclude '.git'
         --exclude '.venv' --exclude 'venv'
         --exclude 'node_modules'
@@ -359,6 +374,8 @@ sync_files() {
         --exclude 'tests/fixtures/fetched'
     )
     if [ "$WITH_ENV" != true ]; then
+        # excluded (not synced) AND protected from --delete, so a remote-managed
+        # .env survives redeploys
         excludes+=(--exclude '.env')
     fi
     _rsync "${excludes[@]}" "${PROJECT_DIR}/" "${TARGET_USER}@${TARGET_HOST}:${REMOTE_DIR}/"
@@ -584,8 +601,12 @@ ${RESOLVE_CRT}
 cd "\${REMOTE_STAGING}"
 echo "Building image zyvor-qa-agent with \$CRT..."
 \$SUDO \$CRT build -f docker/Dockerfile -t zyvor-qa-agent . 2>&1 | tail -4
+# Manifests reference zyvor-qa-agent:latest, which containerd resolves to
+# docker.io/library/… — tag explicitly so podman's localhost/ prefix can't
+# cause ErrImageNeverPull.
+\$SUDO \$CRT tag zyvor-qa-agent:latest docker.io/library/zyvor-qa-agent:latest
 echo "Importing image into k3s containerd..."
-\$SUDO \$CRT save zyvor-qa-agent:latest | \$SUDO k3s ctr images import -
+\$SUDO \$CRT save docker.io/library/zyvor-qa-agent:latest | \$SUDO k3s ctr images import -
 \$SUDO k3s ctr images ls | grep -o 'docker.io/library/zyvor-qa-agent:latest' | head -1
 REMOTE
 }
@@ -617,6 +638,8 @@ else
     echo "  ⚠️  Port ${SERVE_PORT} outside NodePort range — Service left as ClusterIP"
 fi
 
+# :latest with imagePullPolicy Never — restart so redeploys pick up the freshly imported image
+$KUBECTL rollout restart deployment/zyvor-qa-webhook
 $KUBECTL rollout status deployment/zyvor-qa-webhook --timeout=180s
 $KUBECTL get pods -l app=zyvor-qa-agent -o wide
 curl -sf "http://127.0.0.1:${SERVE_PORT}/health" >/dev/null \
