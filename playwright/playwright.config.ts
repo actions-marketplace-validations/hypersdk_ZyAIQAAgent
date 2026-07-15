@@ -39,6 +39,8 @@ export default defineConfig({
   ],
   use: {
     baseURL,
+    // Self-signed / invalid TLS on the target under test
+    ignoreHTTPSErrors: process.env.ZYVOR_IGNORE_HTTPS_ERRORS === 'true',
     trace: 'retain-on-failure',
     screenshot: regressionMode ? 'on' : 'only-on-failure',
     video: {

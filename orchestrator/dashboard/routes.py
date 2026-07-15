@@ -9,7 +9,7 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
 from jinja2 import Environment, FileSystemLoader
 
-from orchestrator.dashboard import history, jobs, k8s
+from orchestrator.dashboard import auth, history, jobs, k8s
 
 router = APIRouter()
 
@@ -44,6 +44,49 @@ async def favicon() -> Response:
     return Response(status_code=204)
 
 
+@router.get("/login", response_class=HTMLResponse)
+async def login_page() -> str:
+    env = Environment(loader=FileSystemLoader(_repo_root() / "templates"))
+    return env.get_template("login.html.j2").render(auth_enabled=auth.enabled())
+
+
+@router.post("/api/login")
+def api_login(payload: dict[str, Any] = Body(...)) -> Response:
+    """Sync route on purpose — the failure path sleeps for brute-force damping."""
+    import json
+
+    if not auth.enabled():
+        return Response(
+            content=json.dumps({"ok": True, "note": "auth disabled"}),
+            media_type="application/json",
+        )
+    if not auth.verify_credentials(str(payload.get("username", "")), str(payload.get("password", ""))):
+        return Response(
+            content=json.dumps({"ok": False, "detail": "invalid username or password"}),
+            status_code=401,
+            media_type="application/json",
+        )
+    token, max_age = auth.issue_token(remember=bool(payload.get("remember")))
+    response = Response(content=json.dumps({"ok": True}), media_type="application/json")
+    response.set_cookie(
+        auth.COOKIE_NAME,
+        token,
+        max_age=max_age,
+        httponly=True,
+        samesite="lax",
+    )
+    return response
+
+
+@router.post("/api/logout")
+async def api_logout() -> Response:
+    import json
+
+    response = Response(content=json.dumps({"ok": True}), media_type="application/json")
+    response.delete_cookie(auth.COOKIE_NAME)
+    return response
+
+
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard_page() -> str:
     env = Environment(loader=FileSystemLoader(_repo_root() / "templates"))
@@ -64,6 +107,8 @@ async def overview() -> dict[str, Any]:
         "workloads": workloads,
         "latest_run": runs[0] if runs else None,
         "report_available": (_repo_root() / "reports" / "qa-summary.html").is_file(),
+        "pdf_available": (_repo_root() / "reports" / "qa-summary.pdf").is_file(),
+        "auth": {"enabled": auth.enabled(), "user": auth.username() if auth.enabled() else None},
     }
 
 

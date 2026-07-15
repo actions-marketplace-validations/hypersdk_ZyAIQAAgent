@@ -41,9 +41,42 @@ async function crawl() {
   const visited = new Set();
   const candidates = [];
 
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
+  const browser = await chromium.launch({
+    headless: true,
+    args: process.env.ZYVOR_NO_SANDBOX === 'true' ? ['--no-sandbox'] : [],
+  });
+  const context = await browser.newContext({
+    ignoreHTTPSErrors: process.env.ZYVOR_IGNORE_HTTPS_ERRORS === 'true',
+  });
   const page = await context.newPage();
+
+  // Best-effort login when target credentials are provided, so the crawl can
+  // reach authenticated pages. Non-fatal: unknown login forms are skipped.
+  const user = process.env.ZYVOR_TEST_USER;
+  const password = process.env.ZYVOR_TEST_PASSWORD;
+  if (user && password) {
+    try {
+      await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      const userField = page
+        .locator('input[type="email"], input[name*="user" i], input[name*="email" i], input[type="text"]')
+        .first();
+      const passField = page.locator('input[type="password"]').first();
+      if ((await passField.count()) > 0) {
+        await userField.fill(user, { timeout: 5000 });
+        await passField.fill(password, { timeout: 5000 });
+        await Promise.all([
+          page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {}),
+          page
+            .locator('button[type="submit"], input[type="submit"], button:has-text("sign in"), button:has-text("log in")')
+            .first()
+            .click({ timeout: 5000 }),
+        ]);
+        console.error(`crawl: attempted login as ${user}`);
+      }
+    } catch (err) {
+      console.error(`crawl: login attempt skipped (${err})`);
+    }
+  }
 
   while (queue.length > 0 && visited.size < maxPages) {
     const { path: routePath, depth } = queue.shift();

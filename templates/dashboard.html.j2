@@ -230,10 +230,14 @@
         </svg>
       </div>
       <div>
+        <div style="font-size:11px;letter-spacing:0.22em;color:var(--text-secondary);font-weight:600">ZYVOR QA · MISSION CONTROL</div>
         <h1><span id="banner-title">STANDBY</span></h1>
         <div class="subtitle status-line"><span class="lamp"></span><span id="banner-sub">waiting for first sync</span></div>
       </div>
-      <span class="sync" id="sync">connecting…</span>
+      <span class="sync" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span id="sync">connecting…</span>
+        <span id="session" style="display:none">🔐 <b id="session-user"></b> · <a class="rlink" href="#" id="logout">sign out</a></span>
+      </span>
     </div>
     <div class="stat-grid">
       <div class="stat-tile"><span class="stat-label">Pods</span><span class="stat-value" id="stat-pods">—</span><span class="stat-sub" id="stat-pods-sub"></span></div>
@@ -299,13 +303,29 @@
         <button class="run-btn act-btn" data-kind="regression">👁 Regression</button>
       </div>
     </div>
+    <div class="glass card act" style="grid-column: 1 / -1">
+      <div class="act-title">🌐 Test any site — crawl every page and validate it</div>
+      <div class="act-row">
+        <input class="inp grow" id="ct-url" placeholder="https://your-app.example.com (any UX — self-signed TLS OK)">
+        <input class="inp" id="ct-pages" type="number" value="30" min="1" max="200" style="width:90px" title="max pages">
+      </div>
+      <div class="act-row">
+        <input class="inp grow" id="ct-user" placeholder="login username (optional)" autocomplete="off">
+        <input class="inp grow" id="ct-pass" type="password" placeholder="login password (optional)" autocomplete="off">
+        <label class="chk"><input type="checkbox" id="ct-insecure"> allow self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="crawl_test">🌐 Crawl &amp; test all pages</button>
+      </div>
+    </div>
   </div>
   <div class="glass card" id="job-result" style="display:none;margin-top:14px"></div>
 
   <h2>QA Runs</h2>
   <div class="qa">
     <div class="glass card">
-      <div class="k">Latest run <a class="rlink" id="report-link" href="/reports/qa-summary.html" target="_blank" style="display:none">📄 report</a></div>
+      <div class="k">Latest run
+        <a class="rlink" id="report-link" href="/reports/qa-summary.html" target="_blank" style="display:none">📄 report</a>
+        <a class="rlink" id="pdf-link" href="/reports/qa-summary.pdf" target="_blank" style="display:none">📑 pdf</a>
+      </div>
       <div class="v" id="latest-run">—</div>
       <div class="d" id="latest-run-detail"></div>
       <div class="spark-wrap" style="margin-top:12px">
@@ -576,7 +596,12 @@ $("drawer").addEventListener("mouseenter", () => { drawerHover = true; });
 $("drawer").addEventListener("mouseleave", () => { drawerHover = false; });
 document.addEventListener("keydown", (ev) => {
   if (ev.key === "Escape") closeDrawer();
-  if (ev.key === "r" && !ev.metaKey && !ev.ctrlKey) sync();
+  if (ev.key === "r" && !ev.metaKey && !ev.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) sync();
+});
+$("logout").addEventListener("click", async (ev) => {
+  ev.preventDefault();
+  await fetch("/api/logout", { method: "POST" });
+  location.href = "/login";
 });
 
 /* job triggers — every CLI capability, online */
@@ -596,6 +621,13 @@ function jobParams(kind) {
   if (kind === "discover") return { source: $("disc-source").value };
   if (kind === "create") return { description: $("nl-desc").value.trim(), execute: $("nl-execute").checked };
   if (kind === "regression") return { update_baselines: $("reg-update").checked };
+  if (kind === "crawl_test") return {
+    url: $("ct-url").value.trim(),
+    username: $("ct-user").value.trim(),
+    password: $("ct-pass").value,
+    insecure: $("ct-insecure").checked,
+    max_pages: parseInt($("ct-pages").value, 10) || 30,
+  };
   return {};
 }
 
@@ -626,7 +658,7 @@ for (const btn of document.querySelectorAll(".act-btn")) {
   btn.addEventListener("click", () => startJob(btn.dataset.kind));
 }
 
-const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression" };
+const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test" };
 
 function renderRunStatus(st) {
   const el = $("run-status");
@@ -671,6 +703,14 @@ function renderJobResult(st) {
       + (r.requirements != null ? " from " + r.requirements + " requirement(s)" : "")
       + (r.total != null ? " · executed: " + r.passed + "/" + r.total + " passed" : "") + "</div>";
     html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
+  } else if (st.kind === "crawl_test") {
+    html += '<div class="d">' + esc(r.url) + " — " + r.pages_found + " page(s) found · "
+      + r.passed + "/" + r.total + " passed</div>";
+    if (r.failed_pages && r.failed_pages.length) {
+      html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+        + r.failed_pages.map((f) => '<tr><td><span class="chip fail">FAIL</span></td><td>' + esc(f.title) + "</td><td>" + esc(f.error) + "</td></tr>").join("")
+        + "</tbody></table>";
+    }
   } else if (st.kind === "regression") {
     html += '<div class="d">' + (r.baselines_updated ? "baselines updated · " : "") + (r.diffs || []).length + " screenshot(s) compared</div>";
     if (r.diffs && r.diffs.length) {
@@ -705,6 +745,11 @@ async function sync() {
     renderRuns(runList);
     renderRunStatus(runSt);
     $("report-link").style.display = overview.report_available ? "inline" : "none";
+    $("pdf-link").style.display = overview.pdf_available ? "inline" : "none";
+    if (overview.auth && overview.auth.enabled) {
+      $("session").style.display = "inline";
+      $("session-user").textContent = overview.auth.user;
+    }
     await refreshDrawer();
     lastSync = Date.now();
   } catch (err) {

@@ -76,7 +76,19 @@ open http://localhost:8080/dashboard
 
 If you do want it on the ingress, add an authenticated path — see [`kubernetes/README.md`](../../kubernetes/README.md#dashboard-optional-ingress-exposure).
 
-## 5. Actions — the CLI, online
+## 5. Signing in
+
+Set `DASHBOARD_PASSWORD` (and optionally `DASHBOARD_USER`, default `admin`) to put the dashboard, its API, and all artifacts behind the Zyvor premium login screen — `/health` and the HMAC-verified `/webhook/github` stay open. Without a password, the dashboard is open (local-dev mode).
+
+`deploy-remote.sh` handles this automatically: it generates a random password once per host, persists it (`.zyvor-qa-auth` next to the port file), injects it into the remote `.env` / K8s secret, and prints the credentials in the deploy summary. Pass `--no-auth` to skip.
+
+Sessions are signed cookies (12 h, or 30 days with "remember me"); sign out from the chip in the header.
+
+## 5½. Test any site — any UX, all pages
+
+The **🌐 Test any site** card points the agent at *any* web app: it crawls every same-origin page (BFS, configurable page cap), generates a validation test per page, and runs them all. Optional target login credentials (best-effort form fill before crawling) and **self-signed TLS support** (`allow self-signed TLS` → Playwright's `ignoreHTTPSErrors`). Results list every failing page with its error; the run lands in history as `dashboard-crawl`.
+
+## 6. Actions — the CLI, online
 
 The **Actions** section mirrors every CLI capability. One job runs at a time; a status chip shows progress and results render in a panel under the cards.
 

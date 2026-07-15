@@ -28,18 +28,24 @@ spec:
                 name: zyvor-qa-config
             - secretRef:
                 name: zyvor-qa-secrets
+          # generous timeouts: in-pod Playwright runs briefly saturate the CPU
+          # limit and must not fail probes (1s default timeout kills the pod)
           livenessProbe:
             httpGet:
               path: /health
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 30
+            timeoutSeconds: 8
+            failureThreshold: 6
           readinessProbe:
             httpGet:
               path: /health
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 8
+            failureThreshold: 9
           resources:
             requests:
               memory: "512Mi"

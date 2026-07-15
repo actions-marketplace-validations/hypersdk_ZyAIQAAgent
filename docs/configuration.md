@@ -150,6 +150,10 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`. St
 |----------|---------|-------------|
 | `DASHBOARD_NAMESPACE` | in-cluster namespace, else `default` | Kubernetes namespace the dashboard inspects |
 | `DASHBOARD_POD_SELECTOR` | *(empty — all pods in namespace)* | Label selector filter, e.g. `app=zyvor-qa-agent` |
+| `DASHBOARD_USER` | `admin` | Login username (Zyvor premium login screen) |
+| `DASHBOARD_PASSWORD` | *(empty — auth disabled)* | Setting this **enables login** for `/dashboard`, the API, and artifacts; `/health` and `/webhook/github` stay open. `deploy-remote.sh` generates one per host automatically (skip with `--no-auth`). |
+| `DASHBOARD_SECRET` | derived from credentials | Optional explicit session-signing secret |
+| `ZYVOR_IGNORE_HTTPS_ERRORS` | `false` | Accept self-signed/invalid TLS on the target under test (the Test-any-site action sets this per job) |
 
 The dashboard is served by `zyvor-qa serve` at `/dashboard`. Cluster access resolves in-cluster config first, then local kubeconfig; with neither, the pod panels show an offline state and QA run history still works. See [Tutorial 10](tutorials/10-mission-control-dashboard.md).
 

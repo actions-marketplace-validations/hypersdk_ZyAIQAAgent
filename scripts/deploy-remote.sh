@@ -35,6 +35,9 @@ RUN_SMOKE=false
 VERBOSE=false
 SERVE_PORT="${ZYVOR_QA_PORT:-}"
 RUNTIME_PREF="${ZYVOR_QA_RUNTIME:-}"   # docker | podman | (auto)
+NO_AUTH=false
+DASH_USER="admin"
+DASH_PASS=""
 SSH_RETRIES="${ZYVOR_QA_SSH_RETRIES:-3}"
 POSITIONAL=()
 
@@ -71,6 +74,8 @@ Options:
                       existing docker, else podman; installs docker on apt hosts
                       and podman on dnf/yum hosts when neither is present)
   --podman            Shorthand for --runtime podman
+  --no-auth           Skip dashboard login setup (default: generate a random
+                      password once per host, persist it, print it in the summary)
   --smoke             Run 'zyvor-qa test' on the remote after deploy
   --key               SSH key auth (clear password)
   --uninstall         Remove zyvor-qa from host
@@ -122,6 +127,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --podman)         RUNTIME_PREF="podman"; shift ;;
+        --no-auth)        NO_AUTH=true; shift ;;
         --smoke)          RUN_SMOKE=true; shift ;;
         --verify-only)    VERIFY_ONLY=true; shift ;;
         --preflight-only) PREFLIGHT_ONLY=true; shift ;;
@@ -323,6 +329,45 @@ resolve_serve_port() {
     info "Serve port: ${SERVE_PORT} (random NodePort range, persisted on remote)"
 }
 
+resolve_dashboard_auth() {
+    # Generate a login once per host (persisted alongside the port file) and
+    # write it into the remote .env so every profile picks it up.
+    if [ "$NO_AUTH" = true ]; then
+        info "Dashboard auth: disabled (--no-auth)"
+        return 0
+    fi
+    if [ "$DRY_RUN" = true ]; then
+        DASH_PASS="<generated>"
+        dry "would generate dashboard credentials"
+        return 0
+    fi
+    local existing
+    existing=$(_ssh "cat '${REMOTE_DIR}/.zyvor-qa-auth' 2>/dev/null" | tr -d '[:space:]' || true)
+    if [[ "${existing}" == *:* ]]; then
+        DASH_USER="${existing%%:*}"
+        DASH_PASS="${existing#*:}"
+        info "Dashboard auth: reusing credentials from remote"
+    else
+        # openssl: single command, no tr|head SIGPIPE under pipefail
+        DASH_PASS=$(openssl rand -hex 8 2>/dev/null) || DASH_PASS=$(date +%s%N | shasum | cut -c1-16)
+        _ssh "mkdir -p '${REMOTE_DIR}' && umask 077 && echo '${DASH_USER}:${DASH_PASS}' > '${REMOTE_DIR}/.zyvor-qa-auth'"
+        info "Dashboard auth: generated new credentials (persisted on remote)"
+    fi
+    _ssh env REMOTE_STAGING="${REMOTE_DIR}" DASH_USER="${DASH_USER}" DASH_PASS="${DASH_PASS}" bash <<'REMOTE'
+set -e
+cd "${REMOTE_STAGING}"
+touch .env
+grep -v '^DASHBOARD_USER=\|^DASHBOARD_PASSWORD=' .env > .env.tmp || true
+{
+    cat .env.tmp
+    echo "DASHBOARD_USER=${DASH_USER}"
+    echo "DASHBOARD_PASSWORD=${DASH_PASS}"
+} > .env
+rm -f .env.tmp
+chmod 600 .env
+REMOTE
+}
+
 preflight_remote() {
     info "Preflight on ${TARGET_HOST}..."
     if [ "$DRY_RUN" = true ]; then return 0; fi
@@ -361,8 +406,9 @@ sync_files() {
     _ssh "command -v rsync >/dev/null || { S=; [ \"\$(id -u)\" -ne 0 ] && S=sudo; \$S apt-get install -y -qq rsync 2>/dev/null || \$S dnf install -y rsync 2>/dev/null || \$S yum install -y rsync; }"
     _ssh "mkdir -p '${REMOTE_DIR}'"
     local excludes=(
-        # deploy-state file on the remote — excluded so --delete can't wipe it
+        # deploy-state files on the remote — excluded so --delete can't wipe them
         --exclude '.zyvor-qa-port'
+        --exclude '.zyvor-qa-auth'
         --exclude '.git'
         --exclude '.venv' --exclude 'venv'
         --exclude 'node_modules'
@@ -612,7 +658,8 @@ REMOTE
 }
 
 apply_k8s_remote() {
-    _ssh env REMOTE_STAGING="${REMOTE_DIR}" SERVE_PORT="${SERVE_PORT}" bash <<'REMOTE'
+    _ssh env REMOTE_STAGING="${REMOTE_DIR}" SERVE_PORT="${SERVE_PORT}" \
+        DASH_USER="${DASH_USER}" DASH_PASS="${DASH_PASS}" bash <<'REMOTE'
 set -e
 SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
@@ -628,6 +675,13 @@ done
 $KUBECTL apply -f "${WORK}/configmap.yaml" -f "${WORK}/secret.yaml" -f "${WORK}/rbac.yaml" \
     -f "${WORK}/deployment.yaml" -f "${WORK}/service.yaml" -f "${WORK}/cronjob.yaml"
 rm -rf "${WORK}"
+
+# Dashboard login — patch credentials into the secret before the rollout below
+if [ -n "${DASH_PASS:-}" ] && [ "${DASH_PASS}" != "<generated>" ]; then
+    $KUBECTL patch secret zyvor-qa-secrets --type merge -p \
+        "{\"stringData\":{\"DASHBOARD_USER\":\"${DASH_USER}\",\"DASHBOARD_PASSWORD\":\"${DASH_PASS}\"}}"
+    echo "  Dashboard credentials injected into secret"
+fi
 
 # Expose the webhook + dashboard on the deploy port (NodePort range 30000-32767)
 if [ "${SERVE_PORT}" -ge 30000 ] && [ "${SERVE_PORT}" -le 32767 ]; then
@@ -773,6 +827,9 @@ print_deployment_summary() {
     echo "  📁  Remote      ${REMOTE_DIR}"
     [ -n "${SERVE_PORT}" ] && \
     echo "  🎲  Port        ${SERVE_PORT}  ${C_DIM}(NodePort range — persisted; override with --port)${C_RST}"
+    if [ "$NO_AUTH" != true ] && [ -n "${DASH_PASS}" ]; then
+        echo "  🔐  Login       ${C_BOLD}${DASH_USER}${C_RST} / ${C_BOLD}${DASH_PASS}${C_RST}  ${C_DIM}(persisted in ${REMOTE_DIR}/.zyvor-qa-auth)${C_RST}"
+    fi
     echo ""
     case "${DEPLOY_PROFILE}" in
         container)
@@ -823,6 +880,7 @@ deploy_fleet() {
         check_connectivity
         preflight_remote
         resolve_serve_port
+        resolve_dashboard_auth
         if [[ "${opts:-}" == *"--uninstall"* ]]; then
             run_step "Uninstall" do_uninstall
         elif [[ "${opts:-}" == *"--k3s"* ]]; then
@@ -867,6 +925,7 @@ main() {
     fi
 
     resolve_serve_port
+    resolve_dashboard_auth
 
     if [ "$VERIFY_ONLY" = true ]; then
         [ "$SKIP_VERIFY" != true ] && run_step "Verify" verify_remote

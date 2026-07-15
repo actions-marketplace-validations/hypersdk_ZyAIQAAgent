@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-VALID_KINDS = {"smoke", "full", "generate", "discover", "create", "regression"}
+VALID_KINDS = {"smoke", "full", "generate", "discover", "create", "regression", "crawl_test"}
 
 _lock = threading.Lock()
 _state: dict[str, Any] = {
@@ -84,6 +84,16 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["execute"] = bool(params.get("execute"))
     if kind == "regression":
         clean["update_baselines"] = bool(params.get("update_baselines"))
+    if kind == "crawl_test":
+        url = (params.get("url") or "").strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500]
+        clean["username"] = (params.get("username") or "").strip()[:200]
+        clean["password"] = (params.get("password") or "")[:200]
+        clean["insecure"] = bool(params.get("insecure"))
+        max_pages = int(params.get("max_pages") or 30)
+        clean["max_pages"] = max(1, min(max_pages, 200))
     return clean
 
 
@@ -304,6 +314,89 @@ def _job_regression(params: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _env_overrides(overrides: dict[str, Optional[str]]):
+    """Context manager: apply env overrides for a job, restore afterwards."""
+    import contextlib
+
+    @contextlib.contextmanager
+    def _ctx():
+        saved = {k: os.environ.get(k) for k in overrides}
+        for key, value in overrides.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        try:
+            yield
+        finally:
+            for key, value in saved.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+    return _ctx()
+
+
+def _job_crawl_test(params: dict[str, Any]) -> dict[str, Any]:
+    """Point the agent at ANY site: crawl every reachable page, generate a test
+    per page, run them all. Self-signed TLS and target login supported."""
+    from agents.common.models import CoverageGap, PipelineReport
+    from agents.coverage.gap import gaps_to_requirements
+    from agents.discover.crawl import crawl_live_site
+    from agents.execution.runner import run_playwright
+    from agents.generator.agent import generate_tests_from_requirements
+    from agents.reporter.agent import generate_summary_stub
+    from orchestrator.dashboard import history
+
+    url = params["url"]
+    overrides: dict[str, Optional[str]] = {
+        "ZYVOR_BASE_URL": url,
+        "ENABLE_LIVE_CRAWL": "true",
+        "CRAWL_MAX_PAGES": str(params["max_pages"]),
+        "ZYVOR_IGNORE_HTTPS_ERRORS": "true" if params.get("insecure") else None,
+        "ZYVOR_TEST_USER": params.get("username") or None,
+        "ZYVOR_TEST_PASSWORD": params.get("password") or None,
+        # target is arbitrary — don't treat it as the zyvor.dev marketing site
+        "ENABLE_DASHBOARD_TESTS": "true" if params.get("username") else None,
+    }
+
+    with _env_overrides(overrides):
+        candidates = crawl_live_site(url)
+        if not candidates:
+            raise RuntimeError(f"crawl found no reachable pages at {url}")
+
+        requirements = gaps_to_requirements([CoverageGap(candidate=c) for c in candidates])
+        output_dir = _repo_root() / "tests" / "generated"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        generated, _stats = generate_tests_from_requirements(
+            requirements, output_dir, coverage_mode=True
+        )
+        results = run_playwright(test_dirs=generated, base_url=url)
+
+    report = PipelineReport(
+        summary=f"Crawl of {url}: {results.passed}/{results.total} pages passed. "
+        + generate_summary_stub(results),
+        passed=results.passed,
+        failed=results.failed,
+        total=results.total,
+    )
+    history.append_run(report, source="dashboard-crawl")
+    return {
+        "url": url,
+        "pages_found": len(candidates),
+        "generated": [Path(p).name for p in generated],
+        "passed": results.passed,
+        "failed": results.failed,
+        "total": results.total,
+        "failed_pages": [
+            {"title": c.title, "error": (c.error_message or "")[:200]}
+            for c in results.cases
+            if c.status != "passed"
+        ][:20],
+    }
+
+
 _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "smoke": _job_smoke,
     "full": _job_full,
@@ -311,4 +404,5 @@ _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "discover": _job_discover,
     "create": _job_create,
     "regression": _job_regression,
+    "crawl_test": _job_crawl_test,
 }

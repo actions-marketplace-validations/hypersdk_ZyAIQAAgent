@@ -71,12 +71,24 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Zyvor QA Agent Webhook")
 
     from pathlib import Path
+    from urllib.parse import quote
 
+    from fastapi.responses import JSONResponse, RedirectResponse
     from fastapi.staticfiles import StaticFiles
 
+    from orchestrator.dashboard import auth
     from orchestrator.dashboard.routes import router as dashboard_router
 
     app.include_router(dashboard_router)
+
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        path = request.url.path
+        if auth.requires_auth(path) and not auth.is_authenticated(request):
+            if path.startswith(("/api/", "/reports", "/screenshots")):
+                return JSONResponse({"detail": "authentication required"}, status_code=401)
+            return RedirectResponse(f"/login?next={quote(path)}", status_code=302)
+        return await call_next(request)
 
     repo_root = Path(__file__).resolve().parents[1]
     for mount, directory in (("/reports", "reports"), ("/screenshots", "screenshots")):
