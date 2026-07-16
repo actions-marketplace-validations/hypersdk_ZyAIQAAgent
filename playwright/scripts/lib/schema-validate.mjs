@@ -49,9 +49,12 @@ export function validate(schema, data, root, path = '$', errs = [], depth = 0) {
   if (schema.type && !typeOk(schema.type, t)) { errs.push(`${path}: expected ${schema.type}, got ${t}`); return errs; }
   if (schema.enum && !schema.enum.some((e) => JSON.stringify(e) === JSON.stringify(data)))
     errs.push(`${path}: ${JSON.stringify(data)} not in enum`);
-  if (t === 'object' && schema.properties) {
+  if (t === 'object') {
+    // required must be enforced even when `properties` is absent
     for (const req of schema.required || []) if (!(req in data)) errs.push(`${path}.${req}: required property missing`);
-    for (const [k, v] of Object.entries(data)) if (schema.properties[k]) validate(schema.properties[k], v, root, `${path}.${k}`, errs, depth + 1);
+    if (schema.properties) {
+      for (const [k, v] of Object.entries(data)) if (schema.properties[k]) validate(schema.properties[k], v, root, `${path}.${k}`, errs, depth + 1);
+    }
   }
   if (t === 'array' && schema.items) data.forEach((it, i) => validate(schema.items, it, root, `${path}[${i}]`, errs, depth + 1));
   return errs;

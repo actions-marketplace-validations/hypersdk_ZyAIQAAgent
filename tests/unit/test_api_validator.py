@@ -44,6 +44,12 @@ def test_missing_required_property():
     assert any("email" in e and "required" in e for e in errs)
 
 
+def test_required_enforced_without_properties():
+    # regression: `required` must be checked even when the schema has no `properties`
+    errs = _validate({"type": "object", "required": ["NOPE"]}, {"id": 1, "name": "x"})
+    assert any("NOPE" in e and "required" in e for e in errs)
+
+
 def test_wrong_type():
     schema = {"type": "object", "properties": {"count": {"type": "integer"}}}
     errs = _validate(schema, {"count": "five"})
