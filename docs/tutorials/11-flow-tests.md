@@ -171,6 +171,8 @@ zyvor-qa serve --port 8090 --tls-cert /path/cert.pem --tls-key /path/key.pem
 
 Over HTTPS the session cookie is marked **Secure**. The deploy script takes `--tls` to do this on a host (`deploy-remote.sh <host> <user> --service --tls`). Login is also **rate-limited** — 8 failed attempts from an IP within 5 minutes triggers a 5-minute lockout — so a default password isn't a free brute-force target. Still, change `DASHBOARD_PASSWORD` from the default for any real deployment.
 
+**Target credentials never echo back.** When a flow or crawl logs in to the *site under test*, the login password you pass is used to drive the session but is redacted (`***`) everywhere it would otherwise surface — the job-status API, run history, and the live panel. It is never returned to a dashboard reader in cleartext.
+
 ---
 
 ## Configuration

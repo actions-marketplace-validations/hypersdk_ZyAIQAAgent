@@ -2,7 +2,7 @@
 
 Autonomous AI testing agent for [Zyvor](https://zyvor.dev) — an AI-first infrastructure platform. Continuously validates the Zyvor platform by reading requirements from GitHub, generating Playwright tests, executing them after deployments, detecting regressions, and producing actionable reports.
 
-Ships with **Mission Control** — a live web console (`zyvor-qa serve` → `/dashboard`) that runs 20+ QA capabilities on demand with streamed output and CSV/HTML/PDF reports: the full test pipeline, site audits (a11y/SEO/perf/security with an A–F grade), ten network & security probes, load and TLS checks, visual/environment diffs, flaky detection, screenshots, and recurring monitors. See [`docs/tutorials/10-mission-control-dashboard.md`](docs/tutorials/10-mission-control-dashboard.md).
+Ships with **Mission Control** — a live web console (`zyvor-qa serve` → `/dashboard`) that runs 20+ QA capabilities on demand with streamed output and CSV/HTML/PDF reports: the full test pipeline, **E2E flow tests** (drive a multi-step journey recorded as one video + Playwright trace), **route sweeps** (visual diff many routes at desktop/mobile), site audits (a11y/SEO/perf/security with an A–F grade), ten network & security probes, load and TLS checks, visual/environment diffs, flaky detection, screenshots, and recurring monitors. See [`docs/tutorials/10-mission-control-dashboard.md`](docs/tutorials/10-mission-control-dashboard.md) and [`11-flow-tests.md`](docs/tutorials/11-flow-tests.md).
 
 ## Architecture
 
@@ -67,7 +67,7 @@ See [**Writing Tests & GitHub Integration**](docs/test-authoring.md) for the ful
 
 | Guide | Description |
 |-------|-------------|
-| [**Tutorials**](docs/tutorials/README.md) | Getting started, spec-to-test, NL tests, GitHub, coverage, regression, autofix, notifications, CI/CD, dashboard |
+| [**Tutorials**](docs/tutorials/README.md) | Getting started, spec-to-test, NL tests, GitHub, coverage, regression, autofix, notifications, CI/CD, dashboard, E2E flow tests |
 | [**Architecture**](docs/architecture.md) | Pipeline internals: LangGraph nodes, state, agents, fallback design |
 | [**Configuration**](docs/configuration.md) | Complete environment variable reference with defaults |
 | [**Writing Tests & GitHub Integration**](docs/test-authoring.md) | Command reference; manual, spec-driven, and NL test creation |
@@ -97,7 +97,11 @@ Full examples: [**docs/test-authoring.md**](docs/test-authoring.md)
 | `zyvor-qa create "description" --execute` | Generate and run NL tests |
 | `zyvor-qa regression` | Visual regression check |
 | `zyvor-qa regression --update-baselines` | Capture new screenshot baselines |
+| `zyvor-qa flow <url> --steps <file>` | Drive a multi-step journey, recorded as one video + trace |
+| `zyvor-qa flow <url> --describe "…"` | Same, from a plain-English journey |
+| `zyvor-qa route-sweep <url> --auto` | Screenshot every crawled route (desktop/mobile), diff vs baselines |
 | `zyvor-qa serve` | GitHub webhook server + Mission Control dashboard (`/dashboard`) |
+| `zyvor-qa serve --tls` | Serve the dashboard over HTTPS (self-signed) |
 
 ## Phase Features
 
@@ -207,9 +211,18 @@ See [**docs/configuration.md**](docs/configuration.md) for the complete annotate
 
 ## CI/CD
 
+- **Lint + unit tests**: `.github/workflows/ci.yml` — ruff, pytest (`tests/unit`), and `node --check` on every push/PR
 - **Smoke tests**: `.github/workflows/qa-smoke.yml` — push, PR, nightly
 - **Multi-browser**: manual `workflow_dispatch` trigger in same workflow
 - **Post-deploy**: `.github/workflows/qa-post-deploy.yml` — `repository_dispatch: staging-deployed`
+
+Run the unit suite locally:
+
+```bash
+pip install -e ".[dev]"
+ruff check .
+pytest tests/unit -q
+```
 
 ## Roadmap Status
 
