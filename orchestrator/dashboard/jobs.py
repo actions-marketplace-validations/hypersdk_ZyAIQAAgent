@@ -965,6 +965,7 @@ def _job_audit(params: dict[str, Any]) -> dict[str, Any]:
         total=sum(sum(v.values()) for v in by_check.values()),
     )
     history.append_run(hist, source="dashboard-audit", duration_s=_time.time() - t0)
+    _auto_findings("audit", url, {"pages": pages})
     return {
         "url": url,
         "checks": checks,
@@ -1686,10 +1687,12 @@ def _auto_findings(kind: str, url: str, data: dict[str, Any]) -> None:
                                   "detail": f"{name} = {m.get('value')}{'' if name == 'CLS' else 'ms'} (target: good)", "where": name})
         elif kind == "audit":
             for p in data.get("pages") or []:
+                where = p.get("path") or p.get("url", "")
                 for chk, res in (p.get("checks") or {}).items():
-                    if isinstance(res, dict) and res.get("status") == "fail":
-                        items.append({"severity": "medium", "title": f"audit {chk} failed on {p.get('path', p.get('url', ''))}",
-                                      "detail": res.get("summary", ""), "where": p.get("path", "")})
+                    if isinstance(res, dict) and res.get("status") in ("fail", "warn"):
+                        sev = "high" if (res.get("status") == "fail" and chk in ("a11y", "console")) else "medium" if res.get("status") == "fail" else "low"
+                        items.append({"severity": sev, "title": f"audit {chk} {res.get('status')} on {where}",
+                                      "detail": "; ".join(res.get("issues") or [])[:400], "where": where})
     except Exception:
         return
     if items:
