@@ -469,6 +469,24 @@
       </div>
     </div>
     <div class="glass card act" style="grid-column: 1 / -1">
+      <div class="act-title">🧰 Probes — ten one-shot network &amp; security checks</div>
+      <div class="act-row">
+        <input class="inp grow" id="pr-target" placeholder="https://your-app.example.com  (or a hostname for DNS)">
+      </div>
+      <div class="act-row" style="gap:8px;flex-wrap:wrap">
+        <button class="run-btn act-btn" data-kind="redirects">🔗 Redirects</button>
+        <button class="run-btn act-btn" data-kind="headers">📋 Headers</button>
+        <button class="run-btn act-btn" data-kind="cookies">🍪 Cookies</button>
+        <button class="run-btn act-btn" data-kind="robots">🤖 Robots/sitemap</button>
+        <button class="run-btn act-btn" data-kind="security_paths">🔓 Exposed paths</button>
+        <button class="run-btn act-btn" data-kind="api_check">🔌 API check</button>
+        <button class="run-btn act-btn" data-kind="sitemap_test">🗺 Sitemap URLs</button>
+        <button class="run-btn act-btn" data-kind="dns_records">🌍 DNS</button>
+        <button class="run-btn act-btn" data-kind="cors">↔ CORS</button>
+        <button class="run-btn act-btn" data-kind="transport">📦 Compression</button>
+      </div>
+    </div>
+    <div class="glass card act" style="grid-column: 1 / -1">
       <div class="act-title">🌐 Test any site — crawl every page and validate it</div>
       <div class="act-row">
         <input class="inp grow" id="ct-url" placeholder="https://your-app.example.com (any UX — self-signed TLS OK)">
@@ -1225,6 +1243,11 @@ function jobParams(kind) {
   if (kind === "ping") return { urls: $("pg-urls").value };
   if (kind === "loadtest") return { url: $("lt-url").value.trim(), requests: parseInt($("lt-n").value, 10) || 100, concurrency: parseInt($("lt-c").value, 10) || 10 };
   if (kind === "tls") return { host: $("tls-host").value.trim() };
+  const PROBES = ["redirects","headers","cookies","robots","security_paths","api_check","sitemap_test","dns_records","cors","transport"];
+  if (PROBES.includes(kind)) {
+    const t = $("pr-target").value.trim();
+    return kind === "dns_records" ? { host: t } : { url: t };
+  }
   return {};
 }
 
@@ -1275,7 +1298,10 @@ for (const btn of document.querySelectorAll(".act-btn")) {
   btn.addEventListener("click", () => startJob(btn.dataset.kind));
 }
 
-const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check", screenshot: "screenshot", compare: "compare", ping: "uptime ping", loadtest: "load test", tls: "TLS check" };
+const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check", screenshot: "screenshot", compare: "compare", ping: "uptime ping", loadtest: "load test", tls: "TLS check",
+  redirects: "redirect chain", headers: "HTTP headers", cookies: "cookie audit", robots: "robots/sitemap",
+  security_paths: "exposed paths", api_check: "API check", sitemap_test: "sitemap URLs", dns_records: "DNS records",
+  cors: "CORS check", transport: "compression" };
 
 let lastToastKey = "";
 function renderRunStatus(st) {
@@ -1411,6 +1437,23 @@ function renderJobResult(st) {
       + (rep.pdf ? '<a class="dl-btn" href="/api/dashboard/jobs/report.pdf">⬇ PDF</a>' : "")
       + '<button class="dl-btn" id="btn-rerun">⟳ Rerun</button></div>';
   };
+
+  // generic probe result: {summary, status, columns, rows, issues}
+  if (!st.error && r.columns && r.rows) {
+    const sc = r.status === "ok" ? "pass" : r.status === "warn" ? "" : "fail";
+    html += '<div class="d"><span class="chip ' + sc + '" style="' + (r.status === "warn" ? "color:var(--status-warn)" : "") + '">'
+      + esc((r.status || "").toUpperCase()) + "</span> " + esc(r.summary || "") + "</div>";
+    if (r.issues && r.issues.length) {
+      html += '<div class="err-summary" style="margin:8px 0">' + r.issues.map((i) => '<div class="case-err">' + esc(i) + "</div>").join("") + "</div>";
+    }
+    html += '<div style="overflow-x:auto"><table class="runs-table" style="margin-top:6px"><tbody>'
+      + "<tr>" + r.columns.map((c) => "<th style=\"text-align:left;color:var(--text-muted);font-size:11px\">" + esc(c) + "</th>").join("") + "</tr>"
+      + r.rows.map((row) => "<tr>" + row.map((cell, ci) => "<td" + (ci === 0 ? ' class="d"' : "") + ">" + esc(String(cell)) + "</td>").join("") + "</tr>").join("")
+      + "</tbody></table></div>";
+    panel.innerHTML = html;
+    panel.style.display = "block";
+    return;
+  }
 
   if (st.error) {
     html += '<div class="result-err">' + esc(st.error) + "</div>";

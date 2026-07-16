@@ -19,11 +19,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+PROBE_KINDS = {
+    "redirects", "headers", "cookies", "robots", "security_paths",
+    "api_check", "sitemap_test", "dns_records", "cors", "transport",
+}
 VALID_KINDS = {
     "smoke", "full", "generate", "discover", "create", "regression",
     "crawl_test", "audit", "flaky", "screenshot", "compare", "ping",
     "loadtest", "tls",
-}
+} | PROBE_KINDS
 
 _lock = threading.Lock()
 _cancel = threading.Event()
@@ -231,6 +235,20 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("provide a hostname, e.g. zyvor.dev")
         clean["host"] = host[:255]
         clean["port"] = max(1, min(int(params.get("port") or 443), 65535))
+    if kind in PROBE_KINDS:
+        target = (params.get("url") or params.get("host") or "").strip()
+        if kind == "dns_records":
+            if not target:
+                raise ValueError("provide a hostname or URL")
+            clean["host"] = target[:500]
+        else:
+            if not target.startswith(("http://", "https://")):
+                raise ValueError("url must start with http:// or https://")
+            clean["url"] = target[:500]
+        if kind == "api_check":
+            clean["expect_status"] = int(params.get("expect_status") or 200)
+            clean["json_path"] = (params.get("json_path") or "").strip()[:100]
+            clean["contains"] = (params.get("contains") or "").strip()[:100]
     return clean
 
 
@@ -1150,3 +1168,18 @@ _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "loadtest": _job_loadtest,
     "tls": _job_tls,
 }
+
+
+def _make_probe_job(name: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
+    def _job(params: dict[str, Any]) -> dict[str, Any]:
+        from agents.probes.http_probes import PROBES
+
+        kwargs = {k: v for k, v in params.items()}
+        kwargs["log"] = log_progress
+        return PROBES[name](**kwargs)
+
+    return _job
+
+
+for _pk in PROBE_KINDS:
+    _JOBS[_pk] = _make_probe_job(_pk)
