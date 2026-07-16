@@ -503,6 +503,10 @@ npm install --silent --no-fund --no-audit
 npx playwright install chromium 2>&1 | tail -2
 $SUDO env PATH="$PATH" npx playwright install-deps chromium 2>/dev/null \
     || echo "  ⚠️  playwright install-deps failed (unsupported distro?) — browser may need manual libs"
+# cross-browser (flow --browser firefox|webkit) — best-effort, non-fatal
+npx playwright install firefox webkit 2>&1 | tail -1 \
+    || echo "  ⚠️  firefox/webkit install skipped — cross-browser flow will fall back to chromium"
+$SUDO env PATH="$PATH" npx playwright install-deps firefox webkit 2>/dev/null || true
 
 # Default env if none present
 if [ ! -f .env ]; then

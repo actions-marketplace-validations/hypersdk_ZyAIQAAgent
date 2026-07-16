@@ -159,8 +159,14 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`. St
 | `ZYVOR_PW_WORKERS` | *(CPU count)* | Cap Playwright parallelism (set to `2` in the image so in-pod runs don't OOM) |
 | `VISUAL_MAX_DIFF_RATIO` | `2.0` | Route-sweep pixel-diff pass threshold (percent); routes above it are flagged |
 | `VISUAL_SETTLE_MS` | `1500` | Extra settle time per route before the sweep screenshots it |
+| `ZYVOR_BROWSER` | `chromium` | Flow engine: `chromium` / `firefox` / `webkit` (set by `flow --browser`) |
+| `ZYVOR_DEVICE` | *(desktop)* | Playwright device profile for flow/vitals (set by `--device`) |
+| `ZYVOR_THROTTLE` | *(none)* | `3g` / `offline` network emulation via CDP (set by `--throttle`) |
+| `ZYVOR_SLOW_MS` | `12000` | Live-data per-request latency budget before a page is flagged `slow` |
 
 The **🎬 Flow test** action (`flow` job / `zyvor-qa flow`) drives a multi-step journey recorded as one video, with a Playwright `trace.zip` (open at trace.playwright.dev) and richer assertions (`assert_not` / `assert_count` / `assert_value`); the **🗺 Route sweep** action (`route_sweep` / `zyvor-qa route-sweep`) screenshots routes at desktop/mobile and diffs them against baselines under `reports/artifacts/route-baselines/`, and can `--auto`-discover routes by crawling. Both honour `ZYVOR_IGNORE_HTTPS_ERRORS`, `ZYVOR_NO_SANDBOX`, and (flow) `ZYVOR_VIDEO`, and both are schedulable. Serve the dashboard over HTTPS with `zyvor-qa serve --tls` (self-signed cert under `~/.zyvor-qa/tls`) or the deploy script's `--tls`. A target-site login password passed to a flow/crawl is redacted (`***`) from the job-status API, history, and live panel — it is never echoed back to a dashboard reader. See [Tutorial 11](tutorials/11-flow-tests.md).
+
+Four **product-testing** actions go beyond the page (see [Tutorial 12](tutorials/12-api-auth-realtime.md)): **🔌 API contract** (`api_contract` / `zyvor-qa api-test`) validates REST endpoints against their OpenAPI schema and runs multi-step API workflows; **🔐 Auth & session** (`auth_test` / `zyvor-qa auth-test`) logs in, saves a reusable session under `reports/artifacts/auth/`, and asserts logout/expiry/negative-auth — the saved session can be reused by `flow`/`realtime` via their `session` param; **📡 Live data** (`realtime` / `zyvor-qa realtime`) asserts WebSocket/SSE streams are live (Bearer / `Sec-WebSocket-Protocol` / one-time ticket auth); **📊 Web Vitals** (`vitals` / `zyvor-qa vitals`) grades LCP/CLS/INP with device + network throttle.
 
 The dashboard's audit, probe, screenshot, compare, ping, load-test, TLS, flaky, and schedule actions are entirely UI/API-driven — no extra environment variables. They persist artifacts (videos, screenshots, diff images, and CSV/HTML/PDF report bundles) under `reports/` (PVC-backed on Kubernetes).
 

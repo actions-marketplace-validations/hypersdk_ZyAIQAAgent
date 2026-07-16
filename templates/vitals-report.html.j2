@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Zyvor QA — Core Web Vitals</title>
+<style>
+  :root { --good: #0ca30c; --ni: #d08a1a; --poor: #d03b3b; --ink: #f1f5f9; --ink2: #98989d; --line: rgba(255,255,255,0.1); --surface: #1a1a19; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d0d0d; color: var(--ink); font-family: -apple-system, "Segoe UI", Inter, sans-serif; font-size: 14px; padding: 28px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .meta { color: var(--ink2); font-size: 13px; margin-bottom: 20px; }
+  .cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  .metric { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; min-width: 120px; }
+  .metric .k { color: var(--ink2); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .metric .v { font-size: 24px; font-weight: 700; }
+  .metric .g { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .good { color: var(--good); } .needs-improvement { color: var(--ni); } .poor { color: var(--poor); } .na { color: var(--ink2); }
+  img { max-width: 640px; width: 100%; border: 1px solid var(--line); border-radius: 10px; margin-top: 12px; }
+  @media print { body { background: #fff; color: #111; } }
+</style>
+</head>
+<body>
+  <h1>Zyvor QA — Core Web Vitals</h1>
+  <div class="meta">{{ url }} · {{ data.device }} · throttle: {{ data.throttle }} · {{ generated_at }}
+    · overall <b class="{{ data.overall }}">{{ data.overall | upper }}</b></div>
+  <div class="cards">
+    {% for name, m in data.metrics.items() %}
+    <div class="metric">
+      <div class="k">{{ name }}</div>
+      <div class="v {{ m.grade | replace('n/a','na') }}">{{ m.value if m.value is not none else '—' }}{% if name != 'CLS' and m.value is not none %} ms{% endif %}</div>
+      <div class="g {{ m.grade | replace('n/a','na') }}">{{ m.grade }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if data.shot_url %}<img src="{{ data.shot_url }}" alt="page screenshot">{% endif %}
+</body>
+</html>

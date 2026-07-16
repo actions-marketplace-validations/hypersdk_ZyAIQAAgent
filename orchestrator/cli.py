@@ -339,11 +339,24 @@ def flow(
     insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
     username: Optional[str] = typer.Option(None, help="Login username (best-effort sign-in)"),
     password: Optional[str] = typer.Option(None, help="Login password"),
+    session: Optional[str] = typer.Option(None, help="Reuse a saved session file (path or name under reports/artifacts/auth)"),
+    browser: Optional[str] = typer.Option(None, help="Browser engine: chromium | firefox | webkit"),
+    device: Optional[str] = typer.Option(None, help="Playwright device profile, e.g. 'iPhone 14'"),
+    throttle: Optional[str] = typer.Option(None, help="Network throttle: 3g | offline"),
 ) -> None:
     """Drive a multi-step user journey and record it end-to-end as one video."""
     _load_env()
+    import os as _os
+
     from agents.flow.engine import run_flow
     from agents.flow.parse import parse_flow
+
+    if browser in ("chromium", "firefox", "webkit"):
+        _os.environ["ZYVOR_BROWSER"] = browser
+    if device:
+        _os.environ["ZYVOR_DEVICE"] = device
+    if throttle in ("3g", "offline"):
+        _os.environ["ZYVOR_THROTTLE"] = throttle
 
     if steps:
         text, steps_mode = Path(steps).read_text(encoding="utf-8"), True
@@ -357,9 +370,17 @@ def flow(
     typer.echo(f"{len(parsed)} step(s) parsed ({mode})")
     repo_root = Path(__file__).resolve().parents[1]
     out_dir = repo_root / "reports" / "artifacts" / "flows" / "cli"
+    session_path = ""
+    if session:
+        cand = Path(session)
+        if not cand.exists():
+            cand = repo_root / "reports" / "artifacts" / "auth" / session
+        session_path = str(cand) if cand.exists() else ""
+        if session_path:
+            typer.echo(f"reusing session {session_path}")
     result = run_flow(
         url, parsed, out_dir, record=video, trace=trace, insecure=insecure,
-        username=username or "", password=password or "",
+        username=username or "", password=password or "", session=session_path,
         on_line=lambda line: typer.echo(line),
     )
     typer.echo(f"Result: {result['passed']}/{result['total']} steps passed")
@@ -398,6 +419,136 @@ def route_sweep(
     typer.echo(f"Swept {result['routes']} route(s): {result['fail_count']} changed, {result['new_baselines']} new baseline(s)")
     for row in result["sweep_rows"]:
         typer.echo(f"  {row['status']:8} {row['route']} [{row['viewport']}] {row['diff']}%")
+
+
+@app.command(name="api-test")
+def api_test(
+    base: str = typer.Argument(..., help="API base URL"),
+    spec: Optional[str] = typer.Option(None, help="OpenAPI spec URL or local JSON file"),
+    workflow: Optional[str] = typer.Option(None, help="JSON file with an ordered workflow of steps"),
+    include_writes: bool = typer.Option(False, help="Also exercise POST/PUT/PATCH/DELETE endpoints"),
+    token: Optional[str] = typer.Option(None, help="Bearer token for auth"),
+    api_key: Optional[str] = typer.Option(None, help="API key (sent as x-api-key)"),
+    insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
+) -> None:
+    """Validate REST endpoints against their OpenAPI schema, or run an API workflow."""
+    _load_env()
+    import json as _json
+
+    from orchestrator.dashboard.jobs import _job_api_contract
+
+    spec_val = None
+    if spec:
+        if spec.startswith(("http://", "https://")):
+            spec_val = spec
+        else:
+            spec_val = _json.loads(Path(spec).read_text(encoding="utf-8"))
+    wf = _json.loads(Path(workflow).read_text(encoding="utf-8")) if workflow else None
+    auth = {}
+    if token:
+        auth["token"] = token
+    if api_key:
+        auth["apiKey"] = api_key
+
+    result = _job_api_contract({
+        "url": base,
+        "mode": "workflow" if wf else "spec",
+        "spec": spec_val,
+        "workflow": wf,
+        "auth": auth or None,
+        "include_writes": include_writes,
+        "insecure": insecure,
+        "max_endpoints": 200,
+        "path_params": None,
+    })
+    typer.echo(f"API contract ({result['mode']}): {result['passed']}/{result['total']} passed")
+    rows = result.get("endpoints") if result["mode"] == "spec" else result.get("steps")
+    for r in rows or []:
+        mark = "✓" if r.get("ok") else "✗"
+        label = f"{r.get('method')} {r.get('path')}" if result["mode"] == "spec" else r.get("desc")
+        detail = " | ".join(r.get("schema_errors") or []) or r.get("error") or r.get("note") or ""
+        typer.echo(f"  {mark} {label} → {r.get('status')} {detail}")
+    if result["failed"] > 0:
+        raise typer.Exit(code=1)
+
+
+@app.command(name="auth-test")
+def auth_test(
+    base: str = typer.Argument(..., help="App base URL"),
+    login_url: Optional[str] = typer.Option(None, help="Login page path to drive in-browser"),
+    api_login: Optional[str] = typer.Option(None, help="API login endpoint to POST credentials to"),
+    protected: str = typer.Option("/", help="A protected path that requires auth"),
+    logout_url: Optional[str] = typer.Option(None, help="Logout endpoint (to test session clearing)"),
+    username: Optional[str] = typer.Option(None, help="Login username"),
+    password: Optional[str] = typer.Option(None, help="Login password"),
+    save_session: bool = typer.Option(True, help="Save the session for reuse by flow/realtime"),
+    insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
+) -> None:
+    """Log in, capture a reusable session, and assert auth/session behaviour."""
+    _load_env()
+    from orchestrator.dashboard.jobs import _job_auth_test
+
+    result = _job_auth_test({
+        "url": base, "login_url": login_url or "", "api_login": api_login or "",
+        "protected": protected, "logout_url": logout_url or "",
+        "username": username or "", "password": password or "",
+        "save_session": save_session, "insecure": insecure,
+    })
+    typer.echo(f"Auth & session: {result['passed']}/{result['total']} checks passed")
+    for c in result.get("checks") or []:
+        typer.echo(f"  {'✓' if c['ok'] else '✗'} {c['name']} — {c.get('detail', '')}")
+    if result.get("session_name"):
+        typer.echo(f"Session saved as: {result['session_name']} (reuse with flow/realtime --session)")
+    if result["failed"] > 0:
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def realtime(
+    url: str = typer.Argument(..., help="App base URL"),
+    ws: Optional[str] = typer.Option(None, help="WebSocket path or full ws(s):// URL"),
+    sse: Optional[str] = typer.Option(None, help="SSE endpoint path"),
+    ticket_url: Optional[str] = typer.Option(None, help="One-time WS-ticket issue endpoint"),
+    token: Optional[str] = typer.Option(None, help="Auth token (Bearer/subprotocol/query)"),
+    subprotocol_jwt: bool = typer.Option(False, help="Send token via Sec-WebSocket-Protocol: access_token,<jwt>"),
+    expect_messages: int = typer.Option(1, help="Minimum messages expected in the window"),
+    window_ms: int = typer.Option(15000, help="Observation window (ms)"),
+    live_selector: Optional[str] = typer.Option(None, help="CSS selector of a live region to watch for updates"),
+    session: Optional[str] = typer.Option(None, help="Reuse a saved session (name under reports/artifacts/auth)"),
+    insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
+) -> None:
+    """Assert WebSocket/SSE streams are live and dashboard live regions update."""
+    _load_env()
+    from orchestrator.dashboard.jobs import _job_realtime
+
+    result = _job_realtime({
+        "url": url, "ws": ws or "", "sse": sse or "", "ticket_url": ticket_url or "",
+        "ticket_query": "ticket", "token": token or "", "subprotocol_jwt": subprotocol_jwt,
+        "expect_messages": expect_messages, "window_ms": window_ms,
+        "live_selector": live_selector or "", "session": session or "", "insecure": insecure,
+    })
+    typer.echo(f"Live data: {result['passed']}/{result['total']} checks passed")
+    for c in result.get("checks") or []:
+        typer.echo(f"  {'✓' if c['ok'] else '✗'} {c['name']} — {c.get('detail', '')}")
+    if result["failed"] > 0:
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def vitals(
+    url: str = typer.Argument(..., help="URL to measure"),
+    device: Optional[str] = typer.Option(None, help="Playwright device profile, e.g. 'iPhone 14'"),
+    throttle: Optional[str] = typer.Option(None, help="Network throttle: 3g | offline"),
+    insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
+) -> None:
+    """Measure Core Web Vitals (LCP/CLS/INP/FCP/TTFB) and grade them."""
+    _load_env()
+    from orchestrator.dashboard.jobs import _job_vitals
+
+    result = _job_vitals({"url": url, "device": device or "", "throttle": throttle or "", "insecure": insecure})
+    typer.echo(f"Overall: {result.get('overall', '?').upper()}")
+    for name, m in (result.get("metrics") or {}).items():
+        typer.echo(f"  {name:5} {str(m.get('value')):>8}  [{m.get('grade')}]")
 
 
 @app.command()

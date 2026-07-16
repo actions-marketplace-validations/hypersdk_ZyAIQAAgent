@@ -10,9 +10,11 @@
  * Progress → stderr (live panel). Result JSON → stdout.
  */
 
-import { chromium } from '@playwright/test';
+import { chromium, devices, firefox, webkit } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+
+const ENGINES = { chromium, firefox, webkit };
 
 const flowFile = process.argv[2];
 const outDir = process.argv[3];
@@ -204,14 +206,35 @@ function describe(step) {
 function escapeRe(s) { return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 async function main() {
-  const browser = await chromium.launch({
+  const engineName = ENGINES[process.env.ZYVOR_BROWSER] ? process.env.ZYVOR_BROWSER : 'chromium';
+  const engine = ENGINES[engineName];
+  if (engineName !== 'chromium') emit(`flow: browser ${engineName}`);
+  const browser = await engine.launch({
     headless: true,
-    args: process.env.ZYVOR_NO_SANDBOX === 'true' ? ['--no-sandbox'] : [],
+    args: engineName === 'chromium' && process.env.ZYVOR_NO_SANDBOX === 'true' ? ['--no-sandbox'] : [],
   });
   const ctxOpts = { ignoreHTTPSErrors: process.env.ZYVOR_IGNORE_HTTPS_ERRORS === 'true', viewport: { width: 1440, height: 900 } };
+  const deviceName = process.env.ZYVOR_DEVICE;
+  if (deviceName && devices[deviceName]) { Object.assign(ctxOpts, devices[deviceName]); emit(`flow: device ${deviceName}`); }
   fs.mkdirSync(outDir, { recursive: true });
   if (record) ctxOpts.recordVideo = { dir: outDir, size: { width: 1440, height: 900 } };
+
+  // reuse a saved session (auth_test) — cookies + localStorage, plus sessionStorage re-injected
+  let savedSessionStorage = null;
+  if (flow.session && fs.existsSync(flow.session)) {
+    try {
+      const state = JSON.parse(fs.readFileSync(flow.session, 'utf-8'));
+      ctxOpts.storageState = { cookies: state.cookies || [], origins: state.origins || [] };
+      savedSessionStorage = state._sessionStorage || null;
+      emit('flow: reusing saved session');
+    } catch (e) { emit(`flow: session load failed — ${e}`); }
+  }
   const context = await browser.newContext(ctxOpts);
+  if (savedSessionStorage) {
+    await context.addInitScript((json) => {
+      try { const d = JSON.parse(json); for (const k in d) sessionStorage.setItem(k, d[k]); } catch {}
+    }, savedSessionStorage);
+  }
   // Playwright trace — time-travel debugger (DOM/network/console per step)
   const wantTrace = flow.trace !== false;
   if (wantTrace) {
@@ -221,7 +244,21 @@ async function main() {
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(String(e.message || e)));
 
-  await tryLogin(page);
+  // network throttle (chromium only — CDP)
+  const throttle = process.env.ZYVOR_THROTTLE;
+  if ((throttle === '3g' || throttle === 'offline') && engineName === 'chromium') {
+    try {
+      const cdp = await context.newCDPSession(page);
+      await cdp.send('Network.enable');
+      await cdp.send('Network.emulateNetworkConditions', throttle === 'offline'
+        ? { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 }
+        : { offline: false, latency: 400, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 });
+      emit(`flow: throttle ${throttle}`);
+    } catch (e) { emit(`flow: throttle failed — ${e}`); }
+  }
+
+  // if a session is supplied, skip the best-effort form login
+  if (!flow.session) await tryLogin(page);
 
   const results = [];
   let passed = 0, failed = 0;
@@ -277,7 +314,10 @@ async function main() {
   }
   await browser.close();
 
-  process.stdout.write(JSON.stringify({ base, passed, failed, total: steps.length, steps: results, video: videoFile, trace: traceFile }));
+  process.stdout.write(JSON.stringify({
+    base, passed, failed, total: steps.length, steps: results, video: videoFile, trace: traceFile,
+    browser: engineName, device: deviceName || 'desktop', throttle: throttle || 'none',
+  }));
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

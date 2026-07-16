@@ -75,3 +75,55 @@ def test_route_sweep_auto_and_max_pages():
 def test_unknown_kind_rejected():
     with pytest.raises(ValueError):
         _validate("not_a_real_kind", {})
+
+
+def test_new_kinds_registered():
+    for k in ("api_contract", "auth_test", "realtime", "vitals"):
+        assert k in VALID_KINDS
+
+
+def test_api_contract_requires_spec_in_spec_mode():
+    with pytest.raises(ValueError):
+        _validate("api_contract", {"url": "https://api.x.io", "mode": "spec"})
+
+
+def test_api_contract_requires_workflow_in_workflow_mode():
+    with pytest.raises(ValueError):
+        _validate("api_contract", {"url": "https://api.x.io", "mode": "workflow"})
+
+
+def test_api_contract_clean_spec():
+    clean = _validate("api_contract", {"url": "https://api.x.io", "mode": "spec", "spec": "https://api.x.io/openapi.json"})
+    assert clean["mode"] == "spec"
+    assert clean["spec"] == "https://api.x.io/openapi.json"
+    assert clean["max_endpoints"] == 60
+
+
+def test_api_contract_max_endpoints_clamped():
+    clean = _validate("api_contract", {"url": "https://api.x.io", "mode": "spec",
+                                        "spec": {"paths": {}}, "max_endpoints": 9999})
+    assert clean["max_endpoints"] == 200
+
+
+def test_vitals_requires_url_scheme():
+    with pytest.raises(ValueError):
+        _validate("vitals", {"url": "x.io"})
+
+
+def test_vitals_throttle_whitelist():
+    assert _validate("vitals", {"url": "https://x.io", "throttle": "3g"})["throttle"] == "3g"
+    assert _validate("vitals", {"url": "https://x.io", "throttle": "bogus"})["throttle"] == ""
+
+
+def test_auth_test_requires_a_login_method():
+    with pytest.raises(ValueError):
+        _validate("auth_test", {"url": "https://x.io"})
+    ok = _validate("auth_test", {"url": "https://x.io", "api_login": "https://x.io/api/login"})
+    assert ok["api_login"].endswith("/login")
+
+
+def test_realtime_requires_a_target():
+    with pytest.raises(ValueError):
+        _validate("realtime", {"url": "https://x.io"})
+    ok = _validate("realtime", {"url": "https://x.io", "ws": "/ws/flows", "expect_messages": 3})
+    assert ok["ws"] == "/ws/flows" and ok["expect_messages"] == 3

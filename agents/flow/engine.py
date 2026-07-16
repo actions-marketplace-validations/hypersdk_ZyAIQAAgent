@@ -24,6 +24,7 @@ def run_flow(
     trace: bool = True,
     username: str = "",
     password: str = "",
+    session: str = "",
     stop_on_fail: bool = False,
     on_line: Optional[Callable[[str], None]] = None,
 ) -> dict[str, Any]:
@@ -34,6 +35,8 @@ def run_flow(
         raise RuntimeError("flow-run.mjs not found")
 
     flow = {"base": url, "steps": steps, "record": record, "trace": trace, "stop_on_fail": stop_on_fail}
+    if session:
+        flow["session"] = session
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
         json.dump(flow, fh)
         flow_file = fh.name

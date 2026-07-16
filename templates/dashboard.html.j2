@@ -475,9 +475,15 @@
       <div class="act-row">
         <input class="inp grow" id="fw-user" placeholder="login user (optional)" autocomplete="off">
         <input class="inp grow" id="fw-pass" type="password" placeholder="login password (optional)" autocomplete="off">
+        <input class="inp" id="fw-session" placeholder="reuse session (e.g. app-example-com.json)" style="max-width:260px">
         <label class="chk"><input type="checkbox" id="fw-insecure"> self-signed TLS</label>
         <label class="chk"><input type="checkbox" id="fw-record" checked> record video</label>
-        <button class="run-btn act-btn" data-kind="flow">🎬 Run journey</button>
+      </div>
+      <div class="act-row" style="gap:10px">
+        <select class="inp" id="fw-browser" title="browser engine"><option value="">chromium</option><option>firefox</option><option>webkit</option></select>
+        <select class="inp" id="fw-device" title="device profile"><option value="">desktop</option><option>iPhone 14</option><option>iPhone 15 Pro</option><option>Pixel 7</option><option>iPad Pro 11</option></select>
+        <select class="inp" id="fw-throttle" title="network"><option value="">no throttle</option><option value="3g">3G</option><option value="offline">offline</option></select>
+        <button class="run-btn act-btn" data-kind="flow" style="margin-left:auto">🎬 Run journey</button>
       </div>
     </div>
     <div class="glass card act" style="grid-column: 1 / -1">
@@ -493,6 +499,68 @@
         <label class="chk"><input type="checkbox" id="rs-update"> update baselines</label>
         <label class="chk"><input type="checkbox" id="rs-insecure"> self-signed TLS</label>
         <button class="run-btn act-btn" data-kind="route_sweep" style="margin-left:auto">🗺 Sweep</button>
+      </div>
+    </div>
+    <div class="glass card act" style="grid-column: 1 / -1">
+      <div class="act-title">🔌 API contract — validate REST endpoints against their OpenAPI schema</div>
+      <div class="act-row">
+        <input class="inp grow" id="api-url" placeholder="API base, e.g. https://api.example.com">
+        <input class="inp grow" id="api-spec" placeholder="OpenAPI spec URL (…/openapi.json) or paste JSON below">
+      </div>
+      <div class="act-row"><textarea class="inp grow" id="api-spec-json" rows="2" placeholder="…or paste an inline OpenAPI JSON (optional; overrides the URL)"></textarea></div>
+      <div class="act-row" style="gap:12px">
+        <input class="inp" id="api-token" placeholder="Bearer token (optional)" style="max-width:280px">
+        <label class="chk"><input type="checkbox" id="api-writes"> include writes (POST/PUT/DELETE)</label>
+        <label class="chk"><input type="checkbox" id="api-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="api_contract" style="margin-left:auto">🔌 Test API</button>
+      </div>
+    </div>
+    <div class="glass card act">
+      <div class="act-title">📊 Web Vitals — LCP / CLS / INP graded</div>
+      <div class="act-row"><input class="inp grow" id="cwv-url" placeholder="https://…"></div>
+      <div class="act-row" style="gap:10px">
+        <select class="inp" id="cwv-device"><option value="">desktop</option><option>iPhone 14</option><option>iPhone 15 Pro</option><option>Pixel 7</option><option>iPad Pro 11</option></select>
+        <select class="inp" id="cwv-throttle"><option value="">no throttle</option><option value="3g">3G</option><option value="offline">offline</option></select>
+        <label class="chk"><input type="checkbox" id="cwv-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="vitals" style="margin-left:auto">📊 Measure</button>
+      </div>
+    </div>
+    <div class="glass card act" style="grid-column: 1 / -1">
+      <div class="act-title">📡 Live data — assert WebSocket / SSE streams update, not just load</div>
+      <div class="act-row">
+        <input class="inp grow" id="rt-url" placeholder="App URL, e.g. https://app.example.com">
+        <input class="inp grow" id="rt-ws" placeholder="WS path (e.g. /api/v1/ws/flows) or full wss:// URL">
+      </div>
+      <div class="act-row">
+        <input class="inp grow" id="rt-sse" placeholder="SSE path (optional)">
+        <input class="inp grow" id="rt-live" placeholder="live-region CSS selector to watch (optional)">
+      </div>
+      <div class="act-row" style="gap:10px">
+        <input class="inp" id="rt-token" placeholder="token (optional)" style="max-width:220px">
+        <input class="inp" id="rt-ticket" placeholder="ticket-issue path (veyron)" style="max-width:220px">
+        <input class="inp" id="rt-expect" type="number" value="1" style="max-width:130px" title="min messages">
+        <label class="chk"><input type="checkbox" id="rt-subproto"> JWT subprotocol</label>
+        <label class="chk"><input type="checkbox" id="rt-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="realtime" style="margin-left:auto">📡 Probe live</button>
+      </div>
+    </div>
+    <div class="glass card act" style="grid-column: 1 / -1">
+      <div class="act-title">🔐 Auth & session — login → reusable session → logout/expiry/negative checks</div>
+      <div class="act-row">
+        <input class="inp grow" id="au-url" placeholder="App URL, e.g. https://app.example.com">
+        <input class="inp grow" id="au-protected" placeholder="protected path (default /)">
+      </div>
+      <div class="act-row">
+        <input class="inp grow" id="au-login" placeholder="login page path (in-browser form) — e.g. /login">
+        <input class="inp grow" id="au-api" placeholder="…or API login endpoint — e.g. /api/v1/auth/login">
+      </div>
+      <div class="act-row" style="gap:10px">
+        <input class="inp" id="au-user" placeholder="username" style="max-width:200px">
+        <input class="inp" id="au-pass" type="password" placeholder="password" style="max-width:200px">
+        <input class="inp" id="au-logout" placeholder="logout path (optional)" style="max-width:220px">
+        <label class="chk"><input type="checkbox" id="au-save" checked> save session</label>
+        <label class="chk"><input type="checkbox" id="au-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="auth_test" style="margin-left:auto">🔐 Test auth</button>
       </div>
     </div>
     <div class="glass card act" style="grid-column: 1 / -1">
@@ -1146,6 +1214,10 @@ const PALETTE_CMDS = [
   { label: "Screenshot a URL", kind: "screenshot" },
   { label: "Flow test (record a journey)", kind: "flow" },
   { label: "Route sweep (visual)", kind: "route_sweep" },
+  { label: "API contract test", kind: "api_contract" },
+  { label: "Core Web Vitals", kind: "vitals" },
+  { label: "Live data / WebSocket", kind: "realtime" },
+  { label: "Auth & session test", kind: "auth_test" },
   { label: "Compare two URLs", kind: "compare" },
   { label: "Uptime ping", kind: "ping" },
   { label: "Load test", kind: "loadtest" },
@@ -1287,6 +1359,10 @@ function jobParams(kind) {
     description: $("fw-desc").value,
     username: $("fw-user").value.trim(),
     password: $("fw-pass").value,
+    session: $("fw-session").value.trim(),
+    browser: $("fw-browser").value,
+    device: $("fw-device").value,
+    throttle: $("fw-throttle").value,
     insecure: $("fw-insecure").checked,
     record: $("fw-record").checked,
   };
@@ -1297,6 +1373,48 @@ function jobParams(kind) {
     update_baselines: $("rs-update").checked,
     insecure: $("rs-insecure").checked,
     auto: $("rs-auto").checked,
+  };
+  if (kind === "api_contract") {
+    let spec = $("api-spec").value.trim();
+    const inline = $("api-spec-json").value.trim();
+    if (inline) { try { spec = JSON.parse(inline); } catch (e) { toast("api", false, "inline spec is not valid JSON"); throw e; } }
+    const tok = $("api-token").value.trim();
+    return {
+      url: $("api-url").value.trim(),
+      mode: "spec",
+      spec,
+      auth: tok ? { token: tok } : null,
+      include_writes: $("api-writes").checked,
+      insecure: $("api-insecure").checked,
+    };
+  }
+  if (kind === "vitals") return {
+    url: $("cwv-url").value.trim(),
+    device: $("cwv-device").value,
+    throttle: $("cwv-throttle").value,
+    insecure: $("cwv-insecure").checked,
+  };
+  if (kind === "realtime") return {
+    url: $("rt-url").value.trim(),
+    ws: $("rt-ws").value.trim(),
+    sse: $("rt-sse").value.trim(),
+    ticket_url: $("rt-ticket").value.trim(),
+    token: $("rt-token").value.trim(),
+    subprotocol_jwt: $("rt-subproto").checked,
+    expect_messages: parseInt($("rt-expect").value, 10) || 1,
+    live_selector: $("rt-live").value.trim(),
+    insecure: $("rt-insecure").checked,
+  };
+  if (kind === "auth_test") return {
+    url: $("au-url").value.trim(),
+    protected: $("au-protected").value.trim() || "/",
+    login_url: $("au-login").value.trim(),
+    api_login: $("au-api").value.trim(),
+    logout_url: $("au-logout").value.trim(),
+    username: $("au-user").value.trim(),
+    password: $("au-pass").value,
+    save_session: $("au-save").checked,
+    insecure: $("au-insecure").checked,
   };
   const PROBES = ["redirects","headers","cookies","robots","security_paths","api_check","sitemap_test","dns_records","cors","transport"];
   if (PROBES.includes(kind)) {
@@ -1356,7 +1474,8 @@ for (const btn of document.querySelectorAll(".act-btn")) {
 const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check", screenshot: "screenshot", compare: "compare", ping: "uptime ping", loadtest: "load test", tls: "TLS check",
   redirects: "redirect chain", headers: "HTTP headers", cookies: "cookie audit", robots: "robots/sitemap",
   security_paths: "exposed paths", api_check: "API check", sitemap_test: "sitemap URLs", dns_records: "DNS records",
-  cors: "CORS check", transport: "compression", flow: "flow test", route_sweep: "route sweep" };
+  cors: "CORS check", transport: "compression", flow: "flow test", route_sweep: "route sweep",
+  api_contract: "API contract", auth_test: "auth & session", realtime: "live data", vitals: "web vitals" };
 
 let lastToastKey = "";
 function renderRunStatus(st) {
@@ -1531,7 +1650,10 @@ function renderJobResult(st) {
     html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
   } else if (st.kind === "flow") {
     html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " steps passed</b> · "
-      + esc(r.url) + " · parsed by " + esc(r.mode) + "</div>";
+      + esc(r.url) + " · parsed by " + esc(r.mode)
+      + (r.browser && r.browser !== "chromium" ? " · " + esc(r.browser) : "")
+      + (r.device && r.device !== "desktop" ? " · " + esc(r.device) : "")
+      + (r.throttle && r.throttle !== "none" ? " · " + esc(r.throttle) : "") + "</div>";
     if (r.video) html += '<video controls src="' + esc(r.video) + '" style="max-width:520px;width:100%;border:1px solid var(--separator);border-radius:10px;margin:10px 0"></video>';
     if (r.trace) html += '<div class="dl-row" style="margin:2px 0 8px">🔍 <a class="rlink" href="' + esc(r.trace) + '" target="_blank">download trace.zip</a> <span class="d">— open at trace.playwright.dev for step-by-step DOM/network/console</span></div>';
     html += '<table class="runs-table" style="margin-top:6px"><tbody>'
@@ -1553,6 +1675,51 @@ function renderJobResult(st) {
         + "<td>" + (x.diff || 0) + "%</td>"
         + '<td><a class="rlink" href="' + esc(x.cur) + '" target="_blank">view</a></td></tr>').join("")
       + "</tbody></table></div>";
+  } else if (st.kind === "api_contract") {
+    html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total
+      + " checks passed</b> · " + esc(r.url) + " · " + esc(r.mode) + " mode</div>";
+    const rows = r.mode === "spec" ? (r.endpoints || []) : (r.steps || []);
+    html += '<div style="overflow-x:auto"><table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.mode === "spec" ? "<tr><th>method</th><th>path</th><th>status</th><th>result</th><th>schema / note</th><th>ms</th></tr>"
+                           : "<tr><th>#</th><th>step</th><th>status</th><th>result</th><th>error</th><th>ms</th></tr>")
+      + rows.map((x) => "<tr>"
+        + (r.mode === "spec"
+            ? "<td><b>" + esc(x.method) + "</b></td><td><code>" + esc(x.path) + "</code></td><td>" + x.status + "</td>"
+              + '<td><span class="chip ' + (x.ok ? "pass" : "fail") + '">' + (x.ok ? "OK" : "FAIL") + "</span></td>"
+              + '<td style="color:var(--status-error);font-size:12px;max-width:360px">' + esc((x.schema_errors || []).join("; ") || x.note || "") + "</td>"
+            : "<td>" + x.n + "</td><td>" + esc(x.desc) + "</td><td>" + x.status + "</td>"
+              + '<td><span class="chip ' + (x.ok ? "pass" : "fail") + '">' + (x.ok ? "OK" : "FAIL") + "</span></td>"
+              + '<td style="color:var(--status-error);font-size:12px;max-width:360px">' + esc(x.error || "") + "</td>")
+        + "<td>" + (x.latency_ms || 0) + "</td></tr>").join("")
+      + "</tbody></table></div>";
+  } else if (st.kind === "vitals") {
+    const gc = (g) => g === "good" ? "var(--status-ok)" : g === "poor" ? "var(--status-error)" : "var(--status-warn)";
+    html += '<div class="d">overall <b style="color:' + gc(r.overall) + '">' + esc((r.overall || "").toUpperCase()) + "</b> · "
+      + esc(r.url) + " · " + esc(r.device || "desktop") + (r.throttle && r.throttle !== "none" ? " · " + esc(r.throttle) : "") + "</div>";
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      + Object.entries(r.metrics || {}).map(([k, m]) =>
+          '<div class="stat-tile" style="padding:8px 12px"><span class="stat-label">' + k + '</span>'
+          + '<span class="stat-value" style="font-size:1rem;color:' + gc(m.grade) + '">'
+          + (m.value == null ? "—" : m.value + (k === "CLS" ? "" : "ms")) + "</span></div>").join("") + "</div>";
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:420px;width:100%;border:1px solid var(--separator);border-radius:10px;margin-top:10px">';
+  } else if (st.kind === "realtime") {
+    html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " checks passed</b> · " + esc(r.url)
+      + (r.live ? " · page <b style=\"color:" + (r.live.classification === "ok" ? "var(--status-ok)" : "var(--status-error)") + '">' + esc(r.live.classification) + "</b>" : "") + "</div>";
+    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.checks || []).map((c) => "<tr>"
+        + '<td><span class="chip ' + (c.ok ? "pass" : "fail") + '">' + (c.ok ? "OK" : "FAIL") + "</span></td>"
+        + "<td>" + esc(c.name) + '</td><td class="d">' + esc(c.detail || "") + "</td></tr>").join("")
+      + "</tbody></table>";
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:420px;width:100%;border:1px solid var(--separator);border-radius:10px;margin-top:10px">';
+  } else if (st.kind === "auth_test") {
+    html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " checks passed</b> · " + esc(r.url)
+      + (r.session_name ? ' · session <code>' + esc(r.session_name) + "</code> (reuse via <b>session</b> on flow/live-data)" : "") + "</div>";
+    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.checks || []).map((c) => "<tr>"
+        + '<td><span class="chip ' + (c.ok ? "pass" : "fail") + '">' + (c.ok ? "OK" : "FAIL") + "</span></td>"
+        + "<td>" + esc(c.name) + '</td><td class="d">' + esc(c.detail || "") + "</td></tr>").join("")
+      + "</tbody></table>";
+    if (r.shot_url) html += '<img src="' + esc(r.shot_url) + '" style="max-width:420px;width:100%;border:1px solid var(--separator);border-radius:10px;margin-top:10px">';
   } else if (st.kind === "loadtest") {
     html += '<div class="d">' + esc(r.url) + " — " + r.requests + " requests · " + r.concurrency + " concurrent · "
       + '<b>' + r.rps + " req/s</b> · <span class=\"" + (r.success_pct >= 99 ? "pass" : "fail") + '">' + r.success_pct + "% ok</span></div>";

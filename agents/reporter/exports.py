@@ -145,6 +145,137 @@ def build_flow_bundle(url: str, steps: list[dict[str, Any]], summary: dict[str, 
     return hrefs
 
 
+def build_checks_bundle(url: str, data: dict[str, Any], *, kind: str = "checks", title: str = "Checks") -> dict[str, str]:
+    """Write a generic checks-table report (name/ok/detail rows) as HTML/CSV/PDF."""
+    reports = _repo_root() / "reports" / "jobs"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    job_dir = reports / f"{stamp}-{kind}"
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["check", "ok", "detail"])
+    for c in data.get("checks") or []:
+        w.writerow([c.get("name"), c.get("ok"), c.get("detail")])
+    (job_dir / "report.csv").write_text(buf.getvalue(), encoding="utf-8")
+
+    env = Environment(loader=FileSystemLoader(_repo_root() / "templates"))
+    html = env.get_template("checks-report.html.j2").render(
+        url=url, data=data, title=title,
+        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+    )
+    html_path = job_dir / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    hrefs = {"html": f"/reports/jobs/{job_dir.name}/report.html", "csv": f"/reports/jobs/{job_dir.name}/report.csv"}
+    if os.environ.get("ENABLE_PDF_REPORT", "true").lower() == "true":
+        pdf = html_to_pdf(html_path, job_dir / "report.pdf")
+        if pdf:
+            hrefs["pdf"] = f"/reports/jobs/{job_dir.name}/report.pdf"
+    _prune(reports, 30)
+    return hrefs
+
+
+def build_realtime_bundle(url: str, data: dict[str, Any]) -> dict[str, str]:
+    """Write a live-data report (WS/SSE/live-view checks) as HTML/CSV/PDF."""
+    reports = _repo_root() / "reports" / "jobs"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    job_dir = reports / f"{stamp}-realtime"
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["check", "ok", "detail"])
+    for c in data.get("checks") or []:
+        w.writerow([c.get("name"), c.get("ok"), c.get("detail")])
+    (job_dir / "report.csv").write_text(buf.getvalue(), encoding="utf-8")
+
+    env = Environment(loader=FileSystemLoader(_repo_root() / "templates"))
+    html = env.get_template("realtime-report.html.j2").render(
+        url=url, data=data,
+        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+    )
+    html_path = job_dir / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    hrefs = {"html": f"/reports/jobs/{job_dir.name}/report.html", "csv": f"/reports/jobs/{job_dir.name}/report.csv"}
+    if os.environ.get("ENABLE_PDF_REPORT", "true").lower() == "true":
+        pdf = html_to_pdf(html_path, job_dir / "report.pdf")
+        if pdf:
+            hrefs["pdf"] = f"/reports/jobs/{job_dir.name}/report.pdf"
+    _prune(reports, 30)
+    return hrefs
+
+
+def build_vitals_bundle(url: str, data: dict[str, Any]) -> dict[str, str]:
+    """Write a Core Web Vitals report (metric grades + screenshot) as HTML/CSV/PDF."""
+    reports = _repo_root() / "reports" / "jobs"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    job_dir = reports / f"{stamp}-vitals"
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["metric", "value", "grade"])
+    for name, m in (data.get("metrics") or {}).items():
+        w.writerow([name, m.get("value"), m.get("grade")])
+    (job_dir / "report.csv").write_text(buf.getvalue(), encoding="utf-8")
+
+    env = Environment(loader=FileSystemLoader(_repo_root() / "templates"))
+    html = env.get_template("vitals-report.html.j2").render(
+        url=url, data=data,
+        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+    )
+    html_path = job_dir / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    hrefs = {"html": f"/reports/jobs/{job_dir.name}/report.html", "csv": f"/reports/jobs/{job_dir.name}/report.csv"}
+    if os.environ.get("ENABLE_PDF_REPORT", "true").lower() == "true":
+        pdf = html_to_pdf(html_path, job_dir / "report.pdf")
+        if pdf:
+            hrefs["pdf"] = f"/reports/jobs/{job_dir.name}/report.pdf"
+    _prune(reports, 30)
+    return hrefs
+
+
+def build_api_contract_bundle(url: str, mode: str, rows: list[dict[str, Any]], summary: dict[str, Any]) -> dict[str, str]:
+    """Write an API-contract report (endpoint/step table + schema violations) as HTML/CSV/PDF."""
+    reports = _repo_root() / "reports" / "jobs"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    job_dir = reports / f"{stamp}-api-contract"
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    if mode == "spec":
+        w.writerow(["method", "path", "status", "ok", "schema_errors", "latency_ms"])
+        for r in rows:
+            w.writerow([r.get("method"), r.get("path"), r.get("status"), r.get("ok"),
+                        " | ".join(r.get("schema_errors") or []) or r.get("note", ""), r.get("latency_ms")])
+    else:
+        w.writerow(["step", "desc", "method", "path", "status", "ok", "error", "latency_ms"])
+        for r in rows:
+            w.writerow([r.get("n"), r.get("desc"), r.get("method"), r.get("path"),
+                        r.get("status"), r.get("ok"), r.get("error", ""), r.get("latency_ms")])
+    (job_dir / "report.csv").write_text(buf.getvalue(), encoding="utf-8")
+
+    env = Environment(loader=FileSystemLoader(_repo_root() / "templates"))
+    html = env.get_template("api-contract-report.html.j2").render(
+        url=url, mode=mode, rows=rows, summary=summary,
+        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+    )
+    html_path = job_dir / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    hrefs = {"html": f"/reports/jobs/{job_dir.name}/report.html", "csv": f"/reports/jobs/{job_dir.name}/report.csv"}
+    if os.environ.get("ENABLE_PDF_REPORT", "true").lower() == "true":
+        pdf = html_to_pdf(html_path, job_dir / "report.pdf")
+        if pdf:
+            hrefs["pdf"] = f"/reports/jobs/{job_dir.name}/report.pdf"
+    _prune(reports, 30)
+    return hrefs
+
+
 def build_route_sweep_bundle(url: str, rows: list[dict[str, Any]], summary: dict[str, Any]) -> dict[str, str]:
     """Write a route-sweep report (route × viewport matrix + thumbnails) as HTML/CSV/PDF."""
     reports = _repo_root() / "reports" / "jobs"

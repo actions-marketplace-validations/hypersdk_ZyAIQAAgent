@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Zyvor QA — API contract</title>
+<style>
+  :root { --ok: #0ca30c; --bad: #d03b3b; --ink: #f1f5f9; --ink2: #98989d; --line: rgba(255,255,255,0.1); --surface: #1a1a19; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d0d0d; color: var(--ink); font-family: -apple-system, "Segoe UI", Inter, sans-serif; font-size: 14px; padding: 28px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .meta { color: var(--ink2); font-size: 13px; margin-bottom: 20px; }
+  .summary { display: flex; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px; }
+  .tile .k { color: var(--ink2); font-size: 12px; text-transform: uppercase; }
+  .tile .v { font-size: 22px; font-weight: 700; }
+  .pass { color: var(--ok); } .fail { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+  th { color: var(--ink2); }
+  .chip { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .err { color: #fca5a5; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .method { font-weight: 700; }
+  @media print { body { background: #fff; color: #111; } }
+</style>
+</head>
+<body>
+  <h1>Zyvor QA — API contract <span class="meta">({{ mode }})</span></h1>
+  <div class="meta">{{ url }} · {{ generated_at }}</div>
+  <div class="summary">
+    <div class="tile"><div class="k">Passed</div><div class="v pass">{{ summary.passed }}</div></div>
+    <div class="tile"><div class="k">Failed</div><div class="v {{ 'fail' if summary.failed else '' }}">{{ summary.failed }}</div></div>
+    <div class="tile"><div class="k">Total</div><div class="v">{{ summary.total }}</div></div>
+  </div>
+  {% if mode == 'spec' %}
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Status</th><th>Result</th><th>Schema / note</th><th>ms</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td class="method">{{ r.method }}</td>
+      <td><code>{{ r.path }}</code></td>
+      <td>{{ r.status }}</td>
+      <td><span class="chip {{ 'pass' if r.ok else 'fail' }}">{{ 'OK' if r.ok else 'FAIL' }}</span></td>
+      <td class="err">{{ (r.schema_errors or []) | join('; ') }}{{ r.note or '' }}</td>
+      <td>{{ r.latency_ms }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <table>
+    <tr><th>#</th><th>Step</th><th>Method</th><th>Path</th><th>Status</th><th>Result</th><th>Error</th><th>ms</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.n }}</td>
+      <td>{{ r.desc }}</td>
+      <td class="method">{{ r.method }}</td>
+      <td><code>{{ r.path }}</code></td>
+      <td>{{ r.status }}</td>
+      <td><span class="chip {{ 'pass' if r.ok else 'fail' }}">{{ 'OK' if r.ok else 'FAIL' }}</span></td>
+      <td class="err">{{ r.error or '' }}</td>
+      <td>{{ r.latency_ms }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</body>
+</html>

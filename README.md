@@ -2,7 +2,7 @@
 
 Autonomous AI testing agent for [Zyvor](https://zyvor.dev) — an AI-first infrastructure platform. Continuously validates the Zyvor platform by reading requirements from GitHub, generating Playwright tests, executing them after deployments, detecting regressions, and producing actionable reports.
 
-Ships with **Mission Control** — a live web console (`zyvor-qa serve` → `/dashboard`) that runs 20+ QA capabilities on demand with streamed output and CSV/HTML/PDF reports: the full test pipeline, **E2E flow tests** (drive a multi-step journey recorded as one video + Playwright trace), **route sweeps** (visual diff many routes at desktop/mobile), site audits (a11y/SEO/perf/security with an A–F grade), ten network & security probes, load and TLS checks, visual/environment diffs, flaky detection, screenshots, and recurring monitors. See [`docs/tutorials/10-mission-control-dashboard.md`](docs/tutorials/10-mission-control-dashboard.md) and [`11-flow-tests.md`](docs/tutorials/11-flow-tests.md).
+Ships with **Mission Control** — a live web console (`zyvor-qa serve` → `/dashboard`) that runs 20+ QA capabilities on demand with streamed output and CSV/HTML/PDF reports: the full test pipeline, **E2E flow tests** (multi-step journey → one video + Playwright trace, cross-browser/device/throttle), **API contract tests** (OpenAPI schema validation + multi-step workflows), **auth & session** tests (reusable login), **live-data** tests (WebSocket/SSE assertions), **Core Web Vitals**, **route sweeps** (visual diff at desktop/mobile), site audits (a11y/SEO/perf/security with an A–F grade), ten network & security probes, load and TLS checks, flaky detection, screenshots, and recurring monitors. See [`docs/tutorials/10-mission-control-dashboard.md`](docs/tutorials/10-mission-control-dashboard.md), [`11-flow-tests.md`](docs/tutorials/11-flow-tests.md), and [`12-api-auth-realtime.md`](docs/tutorials/12-api-auth-realtime.md).
 
 ## Architecture
 
@@ -100,6 +100,10 @@ Full examples: [**docs/test-authoring.md**](docs/test-authoring.md)
 | `zyvor-qa flow <url> --steps <file>` | Drive a multi-step journey, recorded as one video + trace |
 | `zyvor-qa flow <url> --describe "…"` | Same, from a plain-English journey |
 | `zyvor-qa route-sweep <url> --auto` | Screenshot every crawled route (desktop/mobile), diff vs baselines |
+| `zyvor-qa api-test <base> --spec <url>` | Validate REST endpoints against their OpenAPI schema; `--workflow` for multi-step API flows |
+| `zyvor-qa auth-test <base> --api-login <path>` | Log in, save a reusable session, assert logout/expiry/negative-auth |
+| `zyvor-qa realtime <url> --ws <path>` | Assert WebSocket/SSE streams are live (+ reconnect, live-view) |
+| `zyvor-qa vitals <url>` | Core Web Vitals (LCP/CLS/INP) with device + network throttle |
 | `zyvor-qa serve` | GitHub webhook server + Mission Control dashboard (`/dashboard`) |
 | `zyvor-qa serve --tls` | Serve the dashboard over HTTPS (self-signed) |
 

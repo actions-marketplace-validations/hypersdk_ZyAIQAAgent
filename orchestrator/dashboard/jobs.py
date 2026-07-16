@@ -27,6 +27,7 @@ VALID_KINDS = {
     "smoke", "full", "generate", "discover", "create", "regression",
     "crawl_test", "audit", "flaky", "screenshot", "compare", "ping",
     "loadtest", "tls", "flow", "route_sweep",
+    "api_contract", "auth_test", "realtime", "vitals",
 } | PROBE_KINDS
 
 _lock = threading.Lock()
@@ -275,6 +276,10 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["password"] = (params.get("password") or "")[:200]
         clean["insecure"] = bool(params.get("insecure"))
         clean["record"] = params.get("record", True) is not False
+        clean["session"] = (params.get("session") or "").strip()[:200]
+        clean["browser"] = params.get("browser") if params.get("browser") in ("chromium", "firefox", "webkit") else ""
+        clean["device"] = (params.get("device") or "").strip()[:60]
+        clean["throttle"] = params.get("throttle") if params.get("throttle") in ("3g", "offline") else ""
     if kind == "route_sweep":
         url = (params.get("url") or "").strip()
         if not url.startswith(("http://", "https://")):
@@ -292,6 +297,67 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["max_pages"] = max(1, min(int(params.get("max_pages") or 20), 40))
         clean["username"] = (params.get("username") or "").strip()[:200]
         clean["password"] = (params.get("password") or "")[:200]
+    if kind == "api_contract":
+        base = (params.get("url") or params.get("base") or "").strip()
+        if not base.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = base[:500]
+        clean["mode"] = "workflow" if params.get("mode") == "workflow" else "spec"
+        clean["insecure"] = bool(params.get("insecure"))
+        clean["include_writes"] = bool(params.get("include_writes"))
+        clean["max_endpoints"] = max(1, min(int(params.get("max_endpoints") or 60), 200))
+        spec = params.get("spec")
+        workflow = params.get("workflow")
+        if clean["mode"] == "spec" and not spec:
+            raise ValueError("provide an OpenAPI spec (URL or JSON)")
+        if clean["mode"] == "workflow" and not workflow:
+            raise ValueError("provide a workflow (list of steps)")
+        clean["spec"] = spec
+        clean["workflow"] = workflow if isinstance(workflow, list) else None
+        clean["auth"] = params.get("auth") if isinstance(params.get("auth"), dict) else None
+        clean["path_params"] = params.get("path_params") if isinstance(params.get("path_params"), dict) else None
+    if kind == "vitals":
+        url = (params.get("url") or "").strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500]
+        clean["insecure"] = bool(params.get("insecure"))
+        clean["device"] = (params.get("device") or "").strip()[:60]
+        clean["throttle"] = (params.get("throttle") or "").strip().lower() if params.get("throttle") in ("3g", "offline") else ""
+    if kind == "auth_test":
+        base = (params.get("url") or "").strip()
+        if not base.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = base[:500]
+        clean["login_url"] = (params.get("login_url") or "").strip()[:500]
+        clean["api_login"] = (params.get("api_login") or "").strip()[:500]
+        clean["protected"] = (params.get("protected") or "").strip()[:500]
+        clean["logout_url"] = (params.get("logout_url") or "").strip()[:500]
+        clean["username"] = (params.get("username") or "").strip()[:200]
+        clean["password"] = (params.get("password") or "")[:200]
+        clean["token_path"] = (params.get("token_path") or "token").strip()[:100]
+        clean["save_session"] = params.get("save_session", True) is not False
+        clean["insecure"] = bool(params.get("insecure"))
+        if not (clean["login_url"] or clean["api_login"]):
+            raise ValueError("provide a login page URL or an API login endpoint")
+    if kind == "realtime":
+        base = (params.get("url") or "").strip()
+        if not base.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = base[:500]
+        clean["ws"] = (params.get("ws") or "").strip()[:500]
+        clean["sse"] = (params.get("sse") or "").strip()[:500]
+        clean["ticket_url"] = (params.get("ticket_url") or "").strip()[:500]
+        clean["ticket_query"] = (params.get("ticket_query") or "ticket").strip()[:40]
+        clean["token"] = (params.get("token") or "")[:2000]
+        clean["subprotocol_jwt"] = bool(params.get("subprotocol_jwt"))
+        clean["expect_messages"] = max(1, min(int(params.get("expect_messages") or 1), 100))
+        clean["window_ms"] = max(1000, min(int(params.get("window_ms") or 15000), 120000))
+        clean["live_selector"] = (params.get("live_selector") or "").strip()[:200]
+        clean["session"] = (params.get("session") or "").strip()[:200]
+        clean["insecure"] = bool(params.get("insecure"))
+        if not (clean["ws"] or clean["sse"] or clean["live_selector"]):
+            raise ValueError("provide a ws path, sse path, or a live-view selector")
     if kind in PROBE_KINDS:
         target = (params.get("url") or params.get("host") or "").strip()
         if kind == "dns_records":
@@ -1228,14 +1294,28 @@ def _job_flow(params: dict[str, Any]) -> dict[str, Any]:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     rel_dir = f"artifacts/flows/{stamp}"
     out_dir = _repo_root() / "reports" / rel_dir
+    session_path = ""
+    if params.get("session"):
+        sp = _repo_root() / "reports" / "artifacts" / "auth" / params["session"]
+        if sp.exists():
+            session_path = str(sp)
+            log_progress(f"reusing saved session {params['session']}")
     log_progress(f"running journey against {url} (video on)…")
-    with _env_overrides({"ZYVOR_NO_SANDBOX": os.environ.get("ZYVOR_NO_SANDBOX", "false")}):
+    flow_env = {"ZYVOR_NO_SANDBOX": os.environ.get("ZYVOR_NO_SANDBOX", "false")}
+    if params.get("browser"):
+        flow_env["ZYVOR_BROWSER"] = params["browser"]
+    if params.get("device"):
+        flow_env["ZYVOR_DEVICE"] = params["device"]
+    if params.get("throttle"):
+        flow_env["ZYVOR_THROTTLE"] = params["throttle"]
+    with _env_overrides(flow_env):
         data = run_flow(
             url, steps, out_dir,
             insecure=params.get("insecure", False),
             record=params.get("record", True),
             username=params.get("username", ""),
             password=params.get("password", ""),
+            session=session_path,
             on_line=_stream_line_flow,
             stop_on_fail=False,
         )
@@ -1275,6 +1355,7 @@ def _job_flow(params: dict[str, Any]) -> dict[str, Any]:
     return {
         "url": url, "mode": mode, "passed": passed, "failed": failed, "total": total,
         "flow_steps": result_steps, "video": video, "trace": trace, "report": report,
+        "browser": data.get("browser"), "device": data.get("device"), "throttle": data.get("throttle"),
     }
 
 
@@ -1286,6 +1367,293 @@ def _flow_report_bundle(url: str, steps: list, summary: dict) -> dict[str, str]:
     except Exception as exc:
         log_progress(f"report bundle failed: {str(exc)[:80]}")
         return {}
+
+
+def _job_api_contract(params: dict[str, Any]) -> dict[str, Any]:
+    """Validate REST endpoints against their OpenAPI schema, or run an API workflow."""
+    import time as _time
+
+    from agents.apitest.engine import run_api_contract
+    from agents.common.models import PipelineReport
+    from orchestrator.dashboard import history
+
+    t0 = _time.time()
+    url = params["url"]
+    mode = params["mode"]
+    log_progress(f"api contract ({mode}) against {url}…")
+    data = run_api_contract(
+        url,
+        spec=params.get("spec"),
+        mode=mode,
+        workflow=params.get("workflow"),
+        auth=params.get("auth"),
+        include_writes=params.get("include_writes", False),
+        insecure=params.get("insecure", False),
+        path_params=params.get("path_params"),
+        max_endpoints=params.get("max_endpoints", 60),
+        on_line=_stream_line_generic,
+    )
+    _check_cancel()
+    passed, failed, total = data.get("passed", 0), data.get("failed", 0), data.get("total", 0)
+    rows = data.get("endpoints") if mode == "spec" else data.get("steps")
+    log_progress(f"api contract done: {passed}/{total} checks passed")
+
+    report = _api_contract_report_bundle(url, mode, rows or [], {"passed": passed, "failed": failed, "total": total})
+    hist = PipelineReport(summary=f"API contract {url}: {passed}/{total}", passed=passed, failed=failed, total=total)
+    history.append_run(hist, source="dashboard-api", duration_s=_time.time() - t0)
+    return {
+        "url": url, "mode": mode, "passed": passed, "failed": failed, "total": total,
+        "endpoints": data.get("endpoints"), "steps": data.get("steps"), "report": report,
+    }
+
+
+def _api_contract_report_bundle(url: str, mode: str, rows: list, summary: dict) -> dict[str, str]:
+    try:
+        from agents.reporter.exports import build_api_contract_bundle
+
+        return build_api_contract_bundle(url, mode, rows, summary)
+    except Exception as exc:
+        log_progress(f"report bundle failed: {str(exc)[:80]}")
+        return {}
+
+
+def _job_vitals(params: dict[str, Any]) -> dict[str, Any]:
+    """Measure Core Web Vitals (LCP/CLS/INP/FCP/TTFB) and grade them."""
+    import json as _json
+    import subprocess
+    import time as _time
+
+    from agents.common.models import PipelineReport
+    from orchestrator.dashboard import history
+
+    t0 = _time.time()
+    url = params["url"]
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    rel_dir = f"artifacts/vitals/{stamp}"
+    out_dir = _repo_root() / "reports" / rel_dir
+    script = _repo_root() / "playwright" / "scripts" / "vitals.mjs"
+
+    env = {**os.environ, "ZYVOR_NO_SANDBOX": os.environ.get("ZYVOR_NO_SANDBOX", "false")}
+    if params.get("insecure"):
+        env["ZYVOR_IGNORE_HTTPS_ERRORS"] = "true"
+    if params.get("device"):
+        env["ZYVOR_DEVICE"] = params["device"]
+    if params.get("throttle"):
+        env["ZYVOR_THROTTLE"] = params["throttle"]
+    log_progress(f"measuring Core Web Vitals for {url}…")
+    proc = subprocess.run(
+        ["node", str(script), url, str(out_dir)],
+        cwd=_repo_root(), env=env, capture_output=True, text=True,
+    )
+    for line in (proc.stderr or "").splitlines():
+        if line.strip():
+            log_progress(line.strip())
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise RuntimeError(f"vitals failed: {(proc.stderr or '')[:200]}")
+    data = _json.loads(proc.stdout)
+    _check_cancel()
+
+    metrics = data.get("metrics", {})
+    if data.get("shot"):
+        data["shot_url"] = f"/reports/{rel_dir}/{data['shot']}"
+    passed = sum(1 for m in metrics.values() if m.get("grade") == "good")
+    total = len(metrics)
+    log_progress(f"vitals: {data.get('overall', '?')} ({passed}/{total} good)")
+
+    # prune
+    root = _repo_root() / "reports" / "artifacts" / "vitals"
+    if root.exists():
+        import shutil
+        for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-20]:
+            shutil.rmtree(stale, ignore_errors=True)
+
+    report = _vitals_report_bundle(url, data)
+    hist = PipelineReport(summary=f"Web Vitals {url}: {data.get('overall')}", passed=passed, failed=total - passed, total=total)
+    history.append_run(hist, source="dashboard-vitals", duration_s=_time.time() - t0)
+    data["report"] = report
+    return data
+
+
+def _job_auth_test(params: dict[str, Any]) -> dict[str, Any]:
+    """Log in, capture a reusable session, and assert auth/session behaviour."""
+    import json as _json
+    import re as _re
+    import subprocess
+    import tempfile
+    import time as _time
+    from urllib.parse import urlparse
+
+    from agents.common.models import PipelineReport
+    from orchestrator.dashboard import history
+
+    t0 = _time.time()
+    url = params["url"]
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    rel_dir = f"artifacts/auth/{stamp}"
+    out_dir = _repo_root() / "reports" / rel_dir
+    script = _repo_root() / "playwright" / "scripts" / "auth-probe.mjs"
+
+    slug = _re.sub(r"[^a-z0-9]+", "-", urlparse(url).netloc.lower()).strip("-") or "session"
+    session_out = _repo_root() / "reports" / "artifacts" / "auth" / f"{slug}.json"
+
+    cfg = {
+        "base": url,
+        "login_url": params.get("login_url", ""),
+        "api_login": params.get("api_login", ""),
+        "protected": params.get("protected", "/"),
+        "logout_url": params.get("logout_url", ""),
+        "username": params.get("username", ""),
+        "password": params.get("password", ""),
+        "token_path": params.get("token_path", "token"),
+        "save_session": params.get("save_session", True),
+        "session_out": str(session_out),
+        "insecure": params.get("insecure", False),
+    }
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+        _json.dump(cfg, fh)
+        cfg_file = fh.name
+
+    env = {**os.environ, "ZYVOR_NO_SANDBOX": os.environ.get("ZYVOR_NO_SANDBOX", "false")}
+    if params.get("insecure"):
+        env["ZYVOR_IGNORE_HTTPS_ERRORS"] = "true"
+    log_progress(f"auth & session test on {url}…")
+    proc = subprocess.run(["node", str(script), cfg_file, str(out_dir)], cwd=_repo_root(), env=env, capture_output=True, text=True)
+    try:
+        os.unlink(cfg_file)
+    except OSError:
+        pass
+    for line in (proc.stderr or "").splitlines():
+        if line.strip():
+            _stream_line_generic(line.strip())
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise RuntimeError(f"auth probe failed: {(proc.stderr or '')[:200]}")
+    data = _json.loads(proc.stdout)
+    _check_cancel()
+
+    if data.get("shot"):
+        data["shot_url"] = f"/reports/{rel_dir}/{data['shot']}"
+    if data.get("session_file"):
+        data["session_name"] = Path(data["session_file"]).name  # reuse via `session` on flow/realtime
+    passed, failed, total = data.get("passed", 0), data.get("failed", 0), data.get("total", 0)
+    log_progress(f"auth test done: {passed}/{total} checks passed"
+                 + (f" · session saved as {data.get('session_name')}" if data.get("session_name") else ""))
+
+    report = _auth_report_bundle(url, data)
+    hist = PipelineReport(summary=f"Auth {url}: {passed}/{total} checks", passed=passed, failed=failed, total=total)
+    history.append_run(hist, source="dashboard-auth", duration_s=_time.time() - t0)
+    data["report"] = report
+    return data
+
+
+def _auth_report_bundle(url: str, data: dict) -> dict[str, str]:
+    try:
+        from agents.reporter.exports import build_checks_bundle
+
+        return build_checks_bundle(url, data, kind="auth", title="Auth & session")
+    except Exception as exc:
+        log_progress(f"report bundle failed: {str(exc)[:80]}")
+        return {}
+
+
+def _job_realtime(params: dict[str, Any]) -> dict[str, Any]:
+    """Assert WebSocket / SSE streams are live, and that dashboard live regions update."""
+    import json as _json
+    import subprocess
+    import tempfile
+    import time as _time
+
+    from agents.common.models import PipelineReport
+    from orchestrator.dashboard import history
+
+    t0 = _time.time()
+    url = params["url"]
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    rel_dir = f"artifacts/realtime/{stamp}"
+    out_dir = _repo_root() / "reports" / rel_dir
+    script = _repo_root() / "playwright" / "scripts" / "realtime-probe.mjs"
+
+    cfg = {k: params.get(k) for k in (
+        "url", "ws", "sse", "ticket_url", "ticket_query", "token", "subprotocol_jwt",
+        "expect_messages", "window_ms", "live_selector", "insecure",
+    )}
+    # resolve a saved session (auth_test) if named
+    sess = params.get("session")
+    if sess:
+        p = _repo_root() / "reports" / "artifacts" / "auth" / sess
+        if p.exists():
+            cfg["session"] = str(p)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+        _json.dump(cfg, fh)
+        cfg_file = fh.name
+
+    env = {**os.environ, "ZYVOR_NO_SANDBOX": os.environ.get("ZYVOR_NO_SANDBOX", "false")}
+    if params.get("insecure"):
+        env["ZYVOR_IGNORE_HTTPS_ERRORS"] = "true"
+    log_progress(f"probing live data on {url}…")
+    proc = subprocess.run(["node", str(script), cfg_file, str(out_dir)], cwd=_repo_root(), env=env, capture_output=True, text=True)
+    try:
+        os.unlink(cfg_file)
+    except OSError:
+        pass
+    for line in (proc.stderr or "").splitlines():
+        if line.strip():
+            _stream_line_generic(line.strip())
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise RuntimeError(f"realtime probe failed: {(proc.stderr or '')[:200]}")
+    data = _json.loads(proc.stdout)
+    _check_cancel()
+
+    if data.get("shot"):
+        data["shot_url"] = f"/reports/{rel_dir}/{data['shot']}"
+    passed, failed, total = data.get("passed", 0), data.get("failed", 0), data.get("total", 0)
+    log_progress(f"live-data done: {passed}/{total} checks passed")
+
+    root = _repo_root() / "reports" / "artifacts" / "realtime"
+    if root.exists():
+        import shutil
+        for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-20]:
+            shutil.rmtree(stale, ignore_errors=True)
+
+    report = _realtime_report_bundle(url, data)
+    hist = PipelineReport(summary=f"Live data {url}: {passed}/{total} checks", passed=passed, failed=failed, total=total)
+    history.append_run(hist, source="dashboard-realtime", duration_s=_time.time() - t0)
+    data["report"] = report
+    return data
+
+
+def _realtime_report_bundle(url: str, data: dict) -> dict[str, str]:
+    try:
+        from agents.reporter.exports import build_realtime_bundle
+
+        return build_realtime_bundle(url, data)
+    except Exception as exc:
+        log_progress(f"report bundle failed: {str(exc)[:80]}")
+        return {}
+
+
+def _vitals_report_bundle(url: str, data: dict) -> dict[str, str]:
+    try:
+        from agents.reporter.exports import build_vitals_bundle
+
+        return build_vitals_bundle(url, data)
+    except Exception as exc:
+        log_progress(f"report bundle failed: {str(exc)[:80]}")
+        return {}
+
+
+def _stream_line_generic(line: str) -> None:
+    """Stream a runner's stderr line into the live panel + case tally (✓/✗ prefixes)."""
+    log_progress(line)
+    import re
+
+    m = re.match(r"^([✓✗])\s+(.*)$", line)
+    if m:
+        with _lock:
+            _live_cases.append({
+                "title": m.group(2)[:120],
+                "status": "passed" if m.group(1) == "✓" else "failed",
+                "browser": None,
+            })
 
 
 def _job_route_sweep(params: dict[str, Any]) -> dict[str, Any]:
@@ -1406,6 +1774,10 @@ _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "smoke": _job_smoke,
     "flow": _job_flow,
     "route_sweep": _job_route_sweep,
+    "api_contract": _job_api_contract,
+    "vitals": _job_vitals,
+    "realtime": _job_realtime,
+    "auth_test": _job_auth_test,
     "full": _job_full,
     "generate": _job_generate,
     "discover": _job_discover,
