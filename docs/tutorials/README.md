@@ -14,6 +14,7 @@ Hands-on, step-by-step guides. Follow them in order the first time; each later t
 | 8 | [Notifications & reports](08-notifications-and-reports.md) | Slack, Teams, email, PDF reports | ~15 min |
 | 9 | [CI/CD & Kubernetes](09-cicd-and-kubernetes.md) | GitHub Actions workflows, Docker, K8s deployment | ~30 min |
 | 10 | [Mission Control dashboard](10-mission-control-dashboard.md) | The live console: 20+ QA actions, audits, probes, schedules, reports | ~20 min |
+| 11 | [E2E flow tests & route sweeps](11-flow-tests.md) | Drive a multi-step user journey recorded as one video; sweep many routes visually | ~20 min |
 
 Deployment: [**Remote deploy**](../remote-deploy.md) — `deploy-remote.sh` puts the agent + dashboard on any host (bare metal, container, or k3s) in one command.
 

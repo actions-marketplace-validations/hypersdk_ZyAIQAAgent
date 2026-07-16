@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Zyvor QA — Flow test</title>
+<style>
+  :root { --ok: #0ca30c; --bad: #d03b3b; --ink: #f1f5f9; --ink2: #98989d; --line: rgba(255,255,255,0.1); --surface: #1a1a19; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d0d0d; color: var(--ink); font-family: -apple-system, "Segoe UI", Inter, sans-serif; font-size: 14px; padding: 28px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .meta { color: var(--ink2); font-size: 13px; margin-bottom: 20px; }
+  .summary { display: flex; gap: 14px; margin-bottom: 22px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px; }
+  .tile .k { color: var(--ink2); font-size: 12px; text-transform: uppercase; }
+  .tile .v { font-size: 22px; font-weight: 700; }
+  .pass { color: var(--ok); } .fail { color: var(--bad); }
+  video { max-width: 720px; width: 100%; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 22px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+  th { color: var(--ink2); }
+  .chip { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; }
+  .err { color: #fca5a5; font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre-wrap; }
+  @media print { body { background: #fff; color: #111; } video { display: none; } }
+</style>
+</head>
+<body>
+  <h1>Zyvor QA — Flow test</h1>
+  <div class="meta">{{ url }} · {{ generated_at }}</div>
+  <div class="summary">
+    <div class="tile"><div class="k">Passed</div><div class="v pass">{{ summary.passed }}</div></div>
+    <div class="tile"><div class="k">Failed</div><div class="v {{ 'fail' if summary.failed else '' }}">{{ summary.failed }}</div></div>
+    <div class="tile"><div class="k">Steps</div><div class="v">{{ summary.total }}</div></div>
+  </div>
+  {% if summary.video %}<video controls src="{{ summary.video }}"></video>{% endif %}
+  <table>
+    <tr><th>#</th><th>Status</th><th>Step</th><th>Error</th></tr>
+    {% for s in steps %}
+    <tr>
+      <td>{{ s.n }}</td>
+      <td><span class="chip {{ 'pass' if s.status == 'passed' else 'fail' }}">{{ s.status | upper }}</span></td>
+      <td>{{ s.desc }}</td>
+      <td class="err">{{ s.error or '' }}{% if s.hint %}
+💡 {{ s.hint }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

@@ -1,0 +1,145 @@
+# Tutorial 11 — E2E flow tests & route sweeps
+
+The rest of the agent generates one test *per page* or *per requirement*. A **flow test** is different: it drives a **multi-step user journey** — log in → navigate → click through a wizard → fill fields → assert the outcome — as one continuous Playwright session, **recorded end-to-end as a single journey video**. This is the pattern real product QA lives on.
+
+This tutorial covers flow tests and their companion, the **route sweep** (screenshot many routes at desktop + mobile and pixel-diff them against baselines).
+
+Prerequisites: Tutorial 1 (install), and Playwright browsers installed (`make playwright` or `npx playwright install chromium`).
+
+---
+
+## 1. Your first flow, from the CLI
+
+Create a step file — one step per line, no LLM needed:
+
+```
+# journey.flow
+go to /
+assert "HyperSDK"
+click "Products"
+assert /products
+```
+
+Run it against any site:
+
+```bash
+zyvor-qa flow https://zyvor.dev --steps journey.flow --video
+```
+
+You get per-step pass/fail on the console and, when `--video` is set, a `journey.webm` recorded from the very first navigation to the last assertion:
+
+```
+▶ step 1: goto /                     ✓
+▶ step 2: assert "HyperSDK"          ✓
+▶ step 3: click "Products"           ✓
+▶ step 4: assert /products           ✓
+4/4 steps passed · journey.webm (1.3 MB)
+```
+
+### Plain English instead of steps
+
+Skip the file and describe the journey:
+
+```bash
+zyvor-qa flow https://zyvor.dev \
+  --describe "Go to the home page, click Products, then verify the Pro plan is visible"
+```
+
+When an LLM key is configured (`ANTHROPIC_API_KEY`) the description is parsed by the model (`prompts/flow.md`); otherwise a verb-pattern heuristic splits it into steps. Both produce the same step list the runner executes.
+
+### Logging in first
+
+```bash
+zyvor-qa flow https://app.example.com --steps checkout.flow \
+  --username qa@example.com --password 's3cret' --insecure
+```
+
+`--insecure` accepts self-signed certificates (sets `ZYVOR_IGNORE_HTTPS_ERRORS`). The runner does a best-effort login (finds an email/password field, submits) before the first step, so your steps start from an authenticated page.
+
+---
+
+## 2. The step language
+
+| Step | Playwright it drives |
+|------|----------------------|
+| `go to <path>` / `goto` / `open` / `navigate` | `page.goto(base + path)` + wait for load |
+| `click "<text>"` | `getByRole('button'/'link')` → `getByText` → CSS fallback |
+| `fill <field> = <value>` (`type`/`enter`) | `getByLabel` / `getByPlaceholder` / CSS `.fill(value)` |
+| `press <key>` | `page.keyboard.press(value)` — e.g. `press Enter` |
+| `wait [for] <selector\|ms>` | `waitForSelector` or `waitForTimeout` |
+| `assert "<text>"` / `assert /path` (`verify`/`expect`/`check`) | text visible, heading, or URL match |
+
+A bare line with no verb is treated as `assert "<that text>"`. A step **fails** not only on a Playwright error but also if a runtime error fires during it — the runner scans the page body for `Something went wrong`, `ReferenceError`, `is not defined`, and hooks `page.on('pageerror')`. That catches "the button clicked but the app threw" bugs a naive click test would miss.
+
+Every step also captures a screenshot, and the whole run is saved as one video (`context.recordVideo`, finalized with `page.video().saveAs()` after the context closes — ordering matters, Playwright only writes the file on context close).
+
+---
+
+## 3. Flow tests in Mission Control
+
+Open the dashboard (Tutorial 10) and find the **🎬 Flow test** card:
+
+1. Enter the base URL.
+2. Paste an English journey **or** one step per line into the textarea (the parser auto-detects which).
+3. Optionally set login user/pass, tick **self-signed TLS**, and toggle **record video**.
+4. **Run journey.**
+
+Steps stream live into the job panel (`✓ step 3: click "Products"`) with a running tally. When it finishes you get:
+
+- a **step table** — order, action, pass/fail, and each step's screenshot,
+- the **journey video embedded inline** (plays right in the page),
+- the **CSV / HTML / PDF** report download row (bundle under `reports/jobs/<ts>-flow/`),
+- **Rerun** to run the same journey again.
+
+On Kubernetes the video and report persist on the PVC-backed `reports/`, so they survive pod restarts and show up in the **🎬 videos** panel and **⬇ all videos (zip)**.
+
+---
+
+## 4. Route sweep — visual coverage across many pages
+
+The **🗺 Route sweep** card (and `zyvor-qa route-sweep`) screenshots a list of routes at chosen viewports and, on later runs, diffs them against baselines.
+
+```bash
+# first run captures baselines
+zyvor-qa route-sweep https://zyvor.dev --routes "/,/products,/pricing" --mobile
+
+# later runs diff against them; flags any route over the threshold
+zyvor-qa route-sweep https://zyvor.dev --routes "/,/products,/pricing" --mobile
+
+# accept the new look as the baseline
+zyvor-qa route-sweep https://zyvor.dev --routes "/,/products,/pricing" --update-baselines
+```
+
+- Desktop is **1440×900**, mobile is **375×812**.
+- Dynamic content that flakes pixel diffs — `canvas`, charts (`.recharts-*`), clocks, timestamps, skeletons — is **masked**, and CSS animations are disabled.
+- The sweep waits for skeletons/`.animate-pulse` to disappear rather than `networkidle` (live apps never go idle).
+- Diffs use the same Pillow differ as visual regression (Tutorial 6); routes over `VISUAL_MAX_DIFF_RATIO` are flagged.
+- Baselines live under `reports/artifacts/route-baselines/` (PVC-backed).
+
+The result is a route × viewport matrix with each cell's diff % and thumbnail — a fast way to catch layout drift across an entire site after a deploy.
+
+---
+
+## 5. When to reach for which
+
+- **Flow test** — a specific critical path must keep working: signup, checkout, the create-resource wizard. One journey, asserted step by step, with a video you can hand to whoever needs to see the failure.
+- **Route sweep** — broad "did anything shift visually?" coverage across many pages after a CSS/library change.
+- **Crawl (`🌐 Test any site`)** — discovery: generate and run a check on *every* page without naming them.
+
+Use flow tests for the paths you can't afford to break, and route sweeps + crawl for breadth.
+
+---
+
+## Configuration
+
+Relevant environment variables (see [configuration](../configuration.md)):
+
+| Variable | Effect |
+|----------|--------|
+| `ZYVOR_VIDEO` | `on` records journey video by default |
+| `ZYVOR_IGNORE_HTTPS_ERRORS` | accept self-signed certs (set by `--insecure`) |
+| `ZYVOR_NO_SANDBOX` | Chromium `--no-sandbox` (needed as root / in-cluster) |
+| `ZYVOR_PW_WORKERS` | Playwright worker cap (default 2 in-cluster to bound memory) |
+| `VISUAL_MAX_DIFF_RATIO` | route-sweep pixel-diff pass threshold |
+| `VISUAL_SETTLE_MS` | extra settle time per route before screenshot |
+| `ANTHROPIC_API_KEY` | enables LLM journey parsing (heuristic otherwise) |

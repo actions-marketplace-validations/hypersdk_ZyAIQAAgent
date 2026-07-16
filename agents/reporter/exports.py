@@ -114,6 +114,37 @@ def audit_to_csv(checks: list[str], pages: list[dict[str, Any]]) -> str:
     return buffer.getvalue()
 
 
+def build_flow_bundle(url: str, steps: list[dict[str, Any]], summary: dict[str, Any]) -> dict[str, str]:
+    """Write a flow report (step table + embedded journey video) as HTML/CSV/PDF."""
+    reports = _repo_root() / "reports" / "jobs"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    job_dir = reports / f"{stamp}-flow"
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["step", "action", "description", "status", "error"])
+    for s in steps:
+        w.writerow([s.get("n"), s.get("action"), s.get("desc"), s.get("status"), (s.get("error") or "").replace("\n", " ")])
+    (job_dir / "report.csv").write_text(buf.getvalue(), encoding="utf-8")
+
+    env = Environment(loader=FileSystemLoader(_repo_root() / "templates"))
+    html = env.get_template("flow-report.html.j2").render(
+        url=url, steps=steps, summary=summary,
+        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+    )
+    html_path = job_dir / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    hrefs = {"html": f"/reports/jobs/{job_dir.name}/report.html", "csv": f"/reports/jobs/{job_dir.name}/report.csv"}
+    if os.environ.get("ENABLE_PDF_REPORT", "true").lower() == "true":
+        pdf = html_to_pdf(html_path, job_dir / "report.pdf")
+        if pdf:
+            hrefs["pdf"] = f"/reports/jobs/{job_dir.name}/report.pdf"
+    _prune(reports, 30)
+    return hrefs
+
+
 def build_audit_bundle(
     url: str, checks: list[str], pages: list[dict[str, Any]], summary: dict[str, Any]
 ) -> dict[str, str]:

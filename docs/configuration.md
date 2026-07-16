@@ -157,6 +157,10 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`. St
 | `ZYVOR_VIDEO` | *(off)* | `on` records a video for every test (dashboard job runs set this) |
 | `ZYVOR_NO_SANDBOX` | *(off)* | `true` runs Chromium with `--no-sandbox` (required in containers/as root; set in the image) |
 | `ZYVOR_PW_WORKERS` | *(CPU count)* | Cap Playwright parallelism (set to `2` in the image so in-pod runs don't OOM) |
+| `VISUAL_MAX_DIFF_RATIO` | `2.0` | Route-sweep pixel-diff pass threshold (percent); routes above it are flagged |
+| `VISUAL_SETTLE_MS` | `1500` | Extra settle time per route before the sweep screenshots it |
+
+The **🎬 Flow test** action (`flow` job / `zyvor-qa flow`) drives a multi-step journey recorded as one video; the **🗺 Route sweep** action (`route_sweep` / `zyvor-qa route-sweep`) screenshots routes at desktop/mobile and diffs them against baselines under `reports/artifacts/route-baselines/`. Both honour `ZYVOR_IGNORE_HTTPS_ERRORS`, `ZYVOR_NO_SANDBOX`, and (flow) `ZYVOR_VIDEO`. See [Tutorial 11](tutorials/11-flow-tests.md).
 
 The dashboard's audit, probe, screenshot, compare, ping, load-test, TLS, flaky, and schedule actions are entirely UI/API-driven — no extra environment variables. They persist artifacts (videos, screenshots, diff images, and CSV/HTML/PDF report bundles) under `reports/` (PVC-backed on Kubernetes).
 

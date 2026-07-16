@@ -104,6 +104,8 @@ A green run pops confetti and a rising sound cue (both mutable / reduced-motion 
 | 🔎 Discover | `zyvor-qa discover` |
 | ✨ Create from English | `zyvor-qa create "…" [--execute]` — LLM when a key is set, heuristic parser otherwise |
 | 👁 Visual regression | `zyvor-qa regression [--update-baselines]` |
+| 🎬 Flow test | `zyvor-qa flow <url> --describe "…" \| --steps <file> [--video/--no-video --insecure --username --password]` |
+| 🗺 Route sweep | `zyvor-qa route-sweep <url> --routes "/,/pricing" [--mobile --update-baselines --insecure]` |
 
 ### Web-quality & site actions
 
@@ -114,6 +116,29 @@ A green run pops confetti and a rising sound cue (both mutable / reduced-motion 
 | 🔀 Compare | Visual pixel-diff two URLs (staging vs prod) — side-by-side + diff image + % |
 | 🎲 Flaky check | Run a suite N times; rank tests by flake rate |
 | 📸 Screenshot | Capture any URL at desktop / tablet / mobile, full-page optional |
+
+### 🎬 Flow test — drive a user journey, recorded end-to-end
+
+The marquee action. Describe a **multi-step journey** — log in → navigate → click through a wizard → fill fields → assert the outcome — and the agent drives it as one continuous Playwright session **recorded as a single journey video**.
+
+Two input styles (auto-detected):
+
+- **Plain English** — `Go to /products, click Pricing, verify the Pro plan is visible`. Parsed by the LLM when a key is set, otherwise a verb-pattern heuristic.
+- **One step per line** — explicit and LLM-free:
+  ```
+  go to /
+  click "Products"
+  fill email = qa@example.com
+  press Enter
+  assert "HyperSDK"
+  ```
+  Verbs: `goto`/`go to`/`open`/`navigate`, `click`, `fill|type|enter <field> = <value>`, `press`, `wait [for] <sel|ms>`, `assert|verify|expect|check`.
+
+Steps stream live (`✓ step 3: click "Products"`) into the job panel with a running pass/fail tally. The result is a **step table** (order · action · pass/fail · per-step screenshot) with the **journey video embedded inline** and the CSV/HTML/PDF download row. Login user/pass and self-signed TLS are supported; toggle **record video** off for a faster headless pass. A step only "passes" if no runtime error (`ReferenceError`, `Something went wrong`, `page.on('pageerror')`) fired during it.
+
+### 🗺 Route sweep — screenshot many routes, diff vs baselines
+
+Give a URL and a comma/newline list of routes; the sweep screenshots each at **desktop (1440×900)** and/or **mobile (375×812)**. On the first run it captures baselines; on later runs it pixel-diffs each shot against its baseline and flags routes over the diff threshold. Dynamic content (canvas, charts, clocks, skeletons) is masked and animations disabled so live apps don't flake the diff. **Update baselines** re-captures. Result is a route × viewport matrix with diff % and thumbnails. Baselines persist under `reports/artifacts/route-baselines/` (PVC-backed).
 
 ### Network & security probes (🧰 Probes card)
 

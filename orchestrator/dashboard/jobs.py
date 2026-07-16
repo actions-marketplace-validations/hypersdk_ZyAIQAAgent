@@ -26,7 +26,7 @@ PROBE_KINDS = {
 VALID_KINDS = {
     "smoke", "full", "generate", "discover", "create", "regression",
     "crawl_test", "audit", "flaky", "screenshot", "compare", "ping",
-    "loadtest", "tls",
+    "loadtest", "tls", "flow", "route_sweep",
 } | PROBE_KINDS
 
 _lock = threading.Lock()
@@ -81,6 +81,18 @@ def _stream_line(line: str) -> None:
     status = "passed" if mark == "✓" else "failed"
     with _lock:
         _live_cases.append({"title": title.strip()[:120], "status": status, "browser": browser})
+
+
+def _stream_line_flow(line: str) -> None:
+    """Flow step line (▶/✓/✗ step N: desc) → live log + per-step tally chip."""
+    import re
+
+    log_progress(line)
+    m = re.match(r"^([✓✗])\s+step\s+\d+:\s+(.+?)(?:\s+—.*)?$", line)
+    if not m:
+        return
+    with _lock:
+        _live_cases.append({"title": m.group(2)[:80], "status": "passed" if m.group(1) == "✓" else "failed", "browser": None})
 
 
 def _stream_line_audit(line: str) -> None:
@@ -235,6 +247,32 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("provide a hostname, e.g. zyvor.dev")
         clean["host"] = host[:255]
         clean["port"] = max(1, min(int(params.get("port") or 443), 65535))
+    if kind == "flow":
+        url = (params.get("url") or "").strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500]
+        clean["description"] = (params.get("description") or "").strip()[:2000]
+        clean["steps_mode"] = bool(params.get("steps_mode"))
+        if not clean["description"]:
+            raise ValueError("describe the journey or provide steps")
+        clean["username"] = (params.get("username") or "").strip()[:200]
+        clean["password"] = (params.get("password") or "")[:200]
+        clean["insecure"] = bool(params.get("insecure"))
+        clean["record"] = params.get("record", True) is not False
+    if kind == "route_sweep":
+        url = (params.get("url") or "").strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500]
+        raw = params.get("routes") or ""
+        if isinstance(raw, str):
+            raw = raw.replace(",", "\n").split("\n")
+        clean["routes"] = [r.strip() for r in raw if r.strip().startswith("/")][:40] or ["/"]
+        vps = params.get("viewports") or ["desktop"]
+        clean["viewports"] = [v for v in vps if v in ("desktop", "mobile")] or ["desktop"]
+        clean["update_baselines"] = bool(params.get("update_baselines"))
+        clean["insecure"] = bool(params.get("insecure"))
     if kind in PROBE_KINDS:
         target = (params.get("url") or params.get("host") or "").strip()
         if kind == "dns_records":
@@ -1152,8 +1190,163 @@ def _job_tls(params: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _job_flow(params: dict[str, Any]) -> dict[str, Any]:
+    """Drive a multi-step user journey and record the whole thing as one video."""
+    import time as _time
+
+    from agents.common.models import PipelineReport
+    from agents.flow.engine import run_flow
+    from agents.flow.parse import parse_flow
+    from orchestrator.dashboard import history
+
+    t0 = _time.time()
+    url = params["url"]
+    log_progress("planning the journey…")
+    steps, mode = parse_flow(params["description"], steps_mode=params.get("steps_mode", False))
+    log_progress(f"{len(steps)} step(s) parsed ({mode})")
+    _check_cancel()
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    rel_dir = f"artifacts/flows/{stamp}"
+    out_dir = _repo_root() / "reports" / rel_dir
+    log_progress(f"running journey against {url} (video on)…")
+    with _env_overrides({"ZYVOR_NO_SANDBOX": os.environ.get("ZYVOR_NO_SANDBOX", "false")}):
+        data = run_flow(
+            url, steps, out_dir,
+            insecure=params.get("insecure", False),
+            record=params.get("record", True),
+            username=params.get("username", ""),
+            password=params.get("password", ""),
+            on_line=_stream_line_flow,
+            stop_on_fail=False,
+        )
+    _check_cancel()
+
+    base = f"/reports/{rel_dir}"
+    result_steps = []
+    for s in data.get("steps", []):
+        result_steps.append({
+            "n": s["n"], "action": s["action"], "desc": s["desc"],
+            "status": s["status"], "error": s.get("error", ""),
+            "hint": _explain_failure(s.get("error", "")) if s["status"] != "passed" else "",
+            "shot": f"{base}/{s['shot']}" if s.get("shot") else None,
+        })
+    video = f"{base}/{data['video']}" if data.get("video") else None
+    passed, failed, total = data.get("passed", 0), data.get("failed", 0), data.get("total", 0)
+    log_progress(f"journey done: {passed}/{total} steps passed" + (" · video saved" if video else ""))
+
+    # prune old flow dirs
+    root = _repo_root() / "reports" / "artifacts" / "flows"
+    if root.exists():
+        import shutil
+        for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-20]:
+            shutil.rmtree(stale, ignore_errors=True)
+
+    report = _flow_report_bundle(url, result_steps, {"passed": passed, "failed": failed, "total": total, "video": video})
+    hist = PipelineReport(
+        summary=f"Flow of {url}: {passed}/{total} steps passed",
+        passed=passed, failed=failed, total=total,
+    )
+    history.append_run(hist, source="dashboard-flow", duration_s=_time.time() - t0)
+    return {
+        "url": url, "mode": mode, "passed": passed, "failed": failed, "total": total,
+        "flow_steps": result_steps, "video": video, "report": report,
+    }
+
+
+def _flow_report_bundle(url: str, steps: list, summary: dict) -> dict[str, str]:
+    try:
+        from agents.reporter.exports import build_flow_bundle
+
+        return build_flow_bundle(url, steps, summary)
+    except Exception as exc:
+        log_progress(f"report bundle failed: {str(exc)[:80]}")
+        return {}
+
+
+def _job_route_sweep(params: dict[str, Any]) -> dict[str, Any]:
+    """Screenshot a list of routes at desktop/mobile; diff vs baselines."""
+    import json as _json
+    import subprocess
+
+    url = params["url"].rstrip("/")
+    routes, viewports = params["routes"], params["viewports"]
+    update = params["update_baselines"]
+
+    baseline_root = _repo_root() / "reports" / "artifacts" / "route-baselines"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    cur_rel = f"artifacts/route-sweep/{stamp}"
+    cur_dir = _repo_root() / "reports" / cur_rel
+    cur_dir.mkdir(parents=True, exist_ok=True)
+
+    env = {**os.environ}
+    if params.get("insecure"):
+        env["ZYVOR_IGNORE_HTTPS_ERRORS"] = "true"
+    script = _repo_root() / "playwright" / "scripts" / "route-sweep.mjs"
+    log_progress(f"capturing {len(routes)} route(s) × {len(viewports)} viewport(s)…")
+    proc = subprocess.run(
+        ["node", str(script), url, str(cur_dir), ",".join(routes), ",".join(viewports)],
+        cwd=_repo_root(), env=env, capture_output=True, text=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise RuntimeError(f"route sweep failed: {(proc.stderr or '')[:200]}")
+    shots = _json.loads(proc.stdout).get("shots", [])
+
+    from agents.regression.compare_screenshots import _diff_percent
+
+    try:
+        from PIL import Image
+    except ImportError:
+        raise RuntimeError("Pillow required for route sweep")
+
+    threshold = float(os.environ.get("VISUAL_MAX_DIFF_RATIO", "2.0"))
+    rows, fails, new_baselines = [], 0, 0
+    baseline_root.mkdir(parents=True, exist_ok=True)
+    for s in shots:
+        _check_cancel()
+        name = s["file"]
+        cur_path = cur_dir / name
+        base_path = baseline_root / name
+        if update or not base_path.exists():
+            import shutil
+            shutil.copy2(cur_path, base_path)
+            rows.append({"route": s["route"], "viewport": s["viewport"], "status": "baseline", "diff": 0.0,
+                         "cur": f"/reports/{cur_rel}/{name}"})
+            new_baselines += 1
+            continue
+        try:
+            a = Image.open(base_path).convert("RGB")
+            b = Image.open(cur_path).convert("RGB")
+            if a.size != b.size:
+                b = b.resize(a.size)
+            pct = round(_diff_percent(a, b), 3)
+        except Exception:
+            pct = 0.0
+        status = "fail" if pct > threshold else "ok"
+        if status == "fail":
+            fails += 1
+        rows.append({"route": s["route"], "viewport": s["viewport"], "status": status, "diff": pct,
+                     "cur": f"/reports/{cur_rel}/{name}"})
+        log_progress(f"{s['route']} [{s['viewport']}] {status} {pct}%")
+
+    # prune current-sweep dirs
+    root = _repo_root() / "reports" / "artifacts" / "route-sweep"
+    if root.exists():
+        import shutil
+        for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-10]:
+            shutil.rmtree(stale, ignore_errors=True)
+
+    return {
+        "url": url, "routes": len(routes), "viewports": viewports,
+        "baselines_updated": update or new_baselines > 0, "new_baselines": new_baselines,
+        "fail_count": fails, "sweep_rows": rows,
+    }
+
+
 _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "smoke": _job_smoke,
+    "flow": _job_flow,
+    "route_sweep": _job_route_sweep,
     "full": _job_full,
     "generate": _job_generate,
     "discover": _job_discover,

@@ -330,6 +330,63 @@ def regression(
 
 
 @app.command()
+def flow(
+    url: str = typer.Argument(..., help="Base URL to run the journey against"),
+    describe: Optional[str] = typer.Option(None, help="Journey in plain English"),
+    steps: Optional[str] = typer.Option(None, help="Path to a file with one step per line"),
+    video: bool = typer.Option(True, help="Record the journey as a video"),
+    insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
+) -> None:
+    """Drive a multi-step user journey and record it end-to-end as one video."""
+    _load_env()
+    from agents.flow.engine import run_flow
+    from agents.flow.parse import parse_flow
+
+    if steps:
+        text, steps_mode = Path(steps).read_text(encoding="utf-8"), True
+    elif describe:
+        text, steps_mode = describe, False
+    else:
+        typer.echo("Provide --describe or --steps", err=True)
+        raise typer.Exit(code=2)
+
+    parsed, mode = parse_flow(text, steps_mode=steps_mode)
+    typer.echo(f"{len(parsed)} step(s) parsed ({mode})")
+    repo_root = Path(__file__).resolve().parents[1]
+    out_dir = repo_root / "reports" / "artifacts" / "flows" / "cli"
+    result = run_flow(url, parsed, out_dir, record=video, insecure=insecure, on_line=lambda line: typer.echo(line))
+    typer.echo(f"Result: {result['passed']}/{result['total']} steps passed")
+    if result.get("video"):
+        typer.echo(f"Journey video: {out_dir / result['video']}")
+    if result["failed"] > 0:
+        raise typer.Exit(code=1)
+
+
+@app.command(name="route-sweep")
+def route_sweep(
+    url: str = typer.Argument(..., help="Base URL"),
+    routes: str = typer.Option("/", help="Comma-separated routes to screenshot"),
+    mobile: bool = typer.Option(False, help="Also capture mobile viewport"),
+    update_baselines: bool = typer.Option(False, help="Capture/replace baselines"),
+) -> None:
+    """Screenshot a list of routes and diff against baselines."""
+    _load_env()
+    from orchestrator.dashboard.jobs import _job_route_sweep
+
+    vps = ["desktop"] + (["mobile"] if mobile else [])
+    result = _job_route_sweep({
+        "url": url,
+        "routes": [r.strip() for r in routes.split(",") if r.strip()],
+        "viewports": vps,
+        "update_baselines": update_baselines,
+        "insecure": False,
+    })
+    typer.echo(f"Swept {result['routes']} route(s): {result['fail_count']} changed, {result['new_baselines']} new baseline(s)")
+    for row in result["sweep_rows"]:
+        typer.echo(f"  {row['status']:8} {row['route']} [{row['viewport']}] {row['diff']}%")
+
+
+@app.command()
 def serve(
     port: int = typer.Option(8080, help="Webhook server port"),
     host: str = typer.Option("0.0.0.0", help="Bind host"),
