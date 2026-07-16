@@ -61,9 +61,11 @@ async function main() {
     let wsUrl = absWs(cfg.ws);
     const q = [];
     if (ticket) q.push(`${cfg.ticket_query || 'ticket'}=${encodeURIComponent(ticket)}`);
-    if (cfg.token && !cfg.subprotocol_jwt) q.push(`token=${encodeURIComponent(cfg.token)}`);
+    // token query param name is configurable (packetwolf: token, zeus-os: zeus_os_token)
+    if (cfg.token && !cfg.subprotocol_jwt) q.push(`${cfg.token_query || 'token'}=${encodeURIComponent(cfg.token)}`);
     if (q.length) wsUrl += (wsUrl.includes('?') ? '&' : '?') + q.join('&');
-    const protocols = cfg.subprotocol_jwt && cfg.token ? ['access_token', cfg.token] : undefined;
+    // subprotocol name is configurable (packetwolf: access_token, zeus-os: zeus-os-auth)
+    const protocols = cfg.subprotocol_jwt && cfg.token ? [cfg.ws_subprotocol || 'access_token', cfg.token] : undefined;
 
     const wsRes = await page.evaluate(async ({ wsUrl, protocols, expect, windowMs }) => {
       return await new Promise((resolve) => {

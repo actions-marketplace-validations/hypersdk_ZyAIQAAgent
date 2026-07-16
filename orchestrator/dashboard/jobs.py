@@ -353,6 +353,8 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["ticket_url"] = (params.get("ticket_url") or "").strip()[:500]
         clean["ticket_query"] = (params.get("ticket_query") or "ticket").strip()[:40]
         clean["token"] = (params.get("token") or "")[:2000]
+        clean["token_query"] = (params.get("token_query") or "token").strip()[:40]
+        clean["ws_subprotocol"] = (params.get("ws_subprotocol") or "access_token").strip()[:60]
         clean["subprotocol_jwt"] = bool(params.get("subprotocol_jwt"))
         clean["expect_messages"] = max(1, min(int(params.get("expect_messages") or 1), 100))
         clean["window_ms"] = max(1000, min(int(params.get("window_ms") or 15000), 120000))
@@ -1404,10 +1406,12 @@ def _job_api_contract(params: dict[str, Any]) -> dict[str, Any]:
     report = _api_contract_report_bundle(url, mode, rows or [], {"passed": passed, "failed": failed, "total": total})
     hist = PipelineReport(summary=f"API contract {url}: {passed}/{total}", passed=passed, failed=failed, total=total)
     history.append_run(hist, source="dashboard-api", duration_s=_time.time() - t0)
-    return {
+    result = {
         "url": url, "mode": mode, "passed": passed, "failed": failed, "total": total,
         "endpoints": data.get("endpoints"), "steps": data.get("steps"), "report": report,
     }
+    _auto_findings("api_contract", url, result)
+    return result
 
 
 def _api_contract_report_bundle(url: str, mode: str, rows: list, summary: dict) -> dict[str, str]:
@@ -1474,6 +1478,7 @@ def _job_vitals(params: dict[str, Any]) -> dict[str, Any]:
     hist = PipelineReport(summary=f"Web Vitals {url}: {data.get('overall')}", passed=passed, failed=total - passed, total=total)
     history.append_run(hist, source="dashboard-vitals", duration_s=_time.time() - t0)
     data["report"] = report
+    _auto_findings("vitals", url, data)
     return data
 
 
@@ -1545,6 +1550,7 @@ def _job_auth_test(params: dict[str, Any]) -> dict[str, Any]:
     hist = PipelineReport(summary=f"Auth {url}: {passed}/{total} checks", passed=passed, failed=failed, total=total)
     history.append_run(hist, source="dashboard-auth", duration_s=_time.time() - t0)
     data["report"] = report
+    _auto_findings("auth_test", url, data)
     return data
 
 
@@ -1576,8 +1582,8 @@ def _job_realtime(params: dict[str, Any]) -> dict[str, Any]:
     script = _repo_root() / "playwright" / "scripts" / "realtime-probe.mjs"
 
     cfg = {k: params.get(k) for k in (
-        "url", "ws", "sse", "ticket_url", "ticket_query", "token", "subprotocol_jwt",
-        "expect_messages", "window_ms", "live_selector", "insecure",
+        "url", "ws", "sse", "ticket_url", "ticket_query", "token", "token_query",
+        "ws_subprotocol", "subprotocol_jwt", "expect_messages", "window_ms", "live_selector", "insecure",
     )}
     # resolve a saved session (auth_test) if named
     sess = params.get("session")
@@ -1621,6 +1627,7 @@ def _job_realtime(params: dict[str, Any]) -> dict[str, Any]:
     hist = PipelineReport(summary=f"Live data {url}: {passed}/{total} checks", passed=passed, failed=failed, total=total)
     history.append_run(hist, source="dashboard-realtime", duration_s=_time.time() - t0)
     data["report"] = report
+    _auto_findings("realtime", url, data)
     return data
 
 
@@ -1642,6 +1649,52 @@ def _vitals_report_bundle(url: str, data: dict) -> dict[str, str]:
     except Exception as exc:
         log_progress(f"report bundle failed: {str(exc)[:80]}")
         return {}
+
+
+def _auto_findings(kind: str, url: str, data: dict[str, Any]) -> None:
+    """Turn a job result into developer-facing findings (the 'what's broken' list)."""
+    from orchestrator.dashboard import findings
+
+    items: list[dict[str, Any]] = []
+    try:
+        if kind == "api_contract":
+            for e in data.get("endpoints") or []:
+                if not e.get("ok"):
+                    errs = e.get("schema_errors") or []
+                    sev = "high" if errs or (e.get("status", 0) >= 500) else "medium"
+                    items.append({
+                        "severity": sev,
+                        "title": f"{e.get('method')} {e.get('path')} — {'schema violation' if errs else 'unexpected status ' + str(e.get('status'))}",
+                        "detail": "; ".join(errs) or e.get("note", ""),
+                        "where": f"{e.get('method')} {e.get('path')}",
+                    })
+            for s in data.get("steps") or []:
+                if not s.get("ok"):
+                    items.append({"severity": "high", "title": f"workflow step failed: {s.get('desc')}",
+                                  "detail": s.get("error", ""), "where": f"{s.get('method')} {s.get('path')}"})
+        elif kind in ("realtime", "auth_test"):
+            sev_map = {"auth_test": "high", "realtime": "medium"}
+            for c in data.get("checks") or []:
+                if not c.get("ok"):
+                    items.append({"severity": sev_map[kind], "title": f"{kind.replace('_', ' ')}: {c.get('name')} failed",
+                                  "detail": c.get("detail", ""), "where": c.get("name", "")})
+        elif kind == "vitals":
+            for name, m in (data.get("metrics") or {}).items():
+                if m.get("grade") in ("poor", "needs-improvement"):
+                    items.append({"severity": "high" if m.get("grade") == "poor" else "medium",
+                                  "title": f"Web Vitals {name} {m.get('grade')}: {m.get('value')}",
+                                  "detail": f"{name} = {m.get('value')}{'' if name == 'CLS' else 'ms'} (target: good)", "where": name})
+        elif kind == "audit":
+            for p in data.get("pages") or []:
+                for chk, res in (p.get("checks") or {}).items():
+                    if isinstance(res, dict) and res.get("status") == "fail":
+                        items.append({"severity": "medium", "title": f"audit {chk} failed on {p.get('path', p.get('url', ''))}",
+                                      "detail": res.get("summary", ""), "where": p.get("path", "")})
+    except Exception:
+        return
+    if items:
+        findings.record_batch(kind, url, items)
+        log_progress(f"⚠ recorded {len(items)} finding(s) → see the Findings panel")
 
 
 def _stream_line_generic(line: str) -> None:

@@ -624,6 +624,15 @@
     <div class="feed" id="schedules"><span class="d">No schedules — add one to monitor on a loop.</span></div>
   </div>
 
+  <h2 style="display:flex;align-items:center;gap:10px">🐞 Findings — what's broken
+    <span id="find-counts" class="d" style="font-weight:400"></span>
+    <a class="dl-btn" href="/api/dashboard/findings?limit=500" download="findings.json" style="text-decoration:none;margin-left:auto">⬇ export</a>
+    <button class="dl-btn" id="find-clear">clear</button>
+  </h2>
+  <div class="glass card" style="margin-bottom:14px">
+    <div id="findings"><span class="d">No findings yet — run API-contract, auth, live-data, vitals or audit and issues will collect here.</span></div>
+  </div>
+
   <datalist id="spec-list"></datalist>
 
   <h2 style="display:flex;align-items:center;gap:10px">QA Runs
@@ -988,6 +997,37 @@ async function loadSchedules() {
       b.addEventListener("click", async () => { await fetch("/api/dashboard/schedules/" + b.dataset.sid, { method: "DELETE" }); loadSchedules(); });
   } catch (e) { /* offline */ }
 }
+
+/* findings — the developer-facing "what's broken" list */
+const SEV_COLOR = { critical: "var(--status-error)", high: "var(--status-error)", medium: "var(--status-warn)", low: "var(--accent-2)", info: "var(--label-secondary)" };
+async function loadFindings() {
+  try {
+    const data = await fetch("/api/dashboard/findings?limit=200").then((r) => r.json());
+    const el = $("findings"), counts = $("find-counts");
+    const c = data.counts || {};
+    counts.innerHTML = ["critical", "high", "medium", "low"].filter((s) => c[s])
+      .map((s) => '<span style="color:' + SEV_COLOR[s] + '">' + c[s] + " " + s + "</span>").join(" · ") || "";
+    if (!data.findings || !data.findings.length) {
+      el.innerHTML = '<span class="d">No findings yet — run API-contract, auth, live-data, vitals or audit and issues will collect here.</span>';
+      return;
+    }
+    el.innerHTML = '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+      + "<tr><th>severity</th><th>source</th><th>what's broken</th><th>detail</th><th>where</th><th>when</th></tr>"
+      + data.findings.map((f) => "<tr>"
+        + '<td><span class="chip" style="color:' + (SEV_COLOR[f.severity] || "") + '">' + esc(f.severity) + "</span></td>"
+        + '<td class="d">' + esc(KIND_LABELS[f.source] || f.source) + "</td>"
+        + "<td>" + esc(f.title) + (f.url ? ' <span class="d">· ' + esc(f.url) + "</span>" : "") + "</td>"
+        + '<td class="d" style="max-width:340px">' + esc(f.detail || "") + "</td>"
+        + '<td class="d"><code>' + esc(f.where || "") + "</code></td>"
+        + '<td class="d">' + relIso(f.at) + "</td></tr>").join("")
+      + "</tbody></table></div>";
+  } catch (e) { /* offline */ }
+}
+$("find-clear").addEventListener("click", async () => {
+  await fetch("/api/dashboard/findings", { method: "DELETE" });
+  loadFindings();
+});
+
 $("sc-add").addEventListener("click", async () => {
   const kind = $("sc-kind").value, arg = $("sc-arg").value.trim();
   // card-driven kinds pull their params from their own action cards
@@ -1901,7 +1941,9 @@ $("refresh-rate").addEventListener("change", () => {
 sync();
 loadTestHealth();
 loadSchedules();
+loadFindings();
 setInterval(loadSchedules, 15000);
+setInterval(loadFindings, 15000);
 setRefreshRate(parseInt($("refresh-rate").value, 10) || REFRESH);
 </script>
 </body>

@@ -74,20 +74,37 @@ async function main() {
   }
 
   // ── (1) protected access works with the session ──
+  // Two flavours: header-bearer APIs (token in Authorization) and cookie/session apps.
+  // Pass if EITHER an authenticated API request OR a browser navigation reaches the resource.
   try {
-    const resp = await page.goto(protectedUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    const status = resp ? resp.status() : 0;
-    const onLogin = /login|signin|sign-in/i.test(page.url()) || (await page.locator('input[type="password"]').count()) > 0;
-    add('authenticated access', status < 400 && !onLogin, onLogin ? 'redirected to login' : `status ${status}`);
+    let ok = false, detail = '';
+    if (token) {
+      // realistic check for a bearer-token API: send the Authorization header
+      const resp = await page.request.get(protectedUrl, { headers: { Authorization: `Bearer ${token}` } });
+      ok = resp.status() < 400;
+      detail = `api ${resp.status()} (Bearer)`;
+    }
+    if (!ok) {
+      const resp = await page.goto(protectedUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      const status = resp ? resp.status() : 0;
+      const onLogin = /login|signin|sign-in/i.test(page.url()) || (await page.locator('input[type="password"]').count()) > 0;
+      ok = status < 400 && !onLogin;
+      detail = onLogin ? 'redirected to login' : `nav ${status}`;
+    }
+    add('authenticated access', ok, detail);
   } catch (e) { add('authenticated access', false, String(e).slice(0, 120)); }
 
   // ── save storageState (cookies + localStorage + sessionStorage) ──
   let sessionFile = '';
   if (cfg.save_session !== false && cfg.session_out) {
     try {
+      // ensure we're on an app HTML origin (not a JSON API response) so sessionStorage is readable
+      if (!/text\/html/i.test((await page.evaluate(() => document.contentType).catch(() => '')) || '')) {
+        await page.goto(base + '/', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
+      }
       const state = await context.storageState();
       // storageState() misses sessionStorage — capture it manually and merge
-      const ss = await page.evaluate(() => JSON.stringify(sessionStorage));
+      const ss = await page.evaluate(() => { try { return JSON.stringify(sessionStorage); } catch { return '{}'; } });
       state._sessionStorage = ss;
       if (token) state._token = token;
       fs.mkdirSync(path.dirname(cfg.session_out), { recursive: true });

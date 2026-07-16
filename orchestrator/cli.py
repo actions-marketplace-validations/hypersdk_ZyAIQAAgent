@@ -510,7 +510,9 @@ def realtime(
     sse: Optional[str] = typer.Option(None, help="SSE endpoint path"),
     ticket_url: Optional[str] = typer.Option(None, help="One-time WS-ticket issue endpoint"),
     token: Optional[str] = typer.Option(None, help="Auth token (Bearer/subprotocol/query)"),
-    subprotocol_jwt: bool = typer.Option(False, help="Send token via Sec-WebSocket-Protocol: access_token,<jwt>"),
+    subprotocol_jwt: bool = typer.Option(False, help="Send token via Sec-WebSocket-Protocol: <name>,<jwt>"),
+    ws_subprotocol: str = typer.Option("access_token", help="WS subprotocol name (packetwolf: access_token, zeus-os: zeus-os-auth)"),
+    token_query: str = typer.Option("token", help="Query-param name for the token (zeus-os: zeus_os_token)"),
     expect_messages: int = typer.Option(1, help="Minimum messages expected in the window"),
     window_ms: int = typer.Option(15000, help="Observation window (ms)"),
     live_selector: Optional[str] = typer.Option(None, help="CSS selector of a live region to watch for updates"),
@@ -523,7 +525,8 @@ def realtime(
 
     result = _job_realtime({
         "url": url, "ws": ws or "", "sse": sse or "", "ticket_url": ticket_url or "",
-        "ticket_query": "ticket", "token": token or "", "subprotocol_jwt": subprotocol_jwt,
+        "ticket_query": "ticket", "token": token or "", "token_query": token_query,
+        "ws_subprotocol": ws_subprotocol, "subprotocol_jwt": subprotocol_jwt,
         "expect_messages": expect_messages, "window_ms": window_ms,
         "live_selector": live_selector or "", "session": session or "", "insecure": insecure,
     })

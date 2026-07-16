@@ -160,6 +160,21 @@ async def events() -> dict[str, Any]:
     return k8s.recent_events()
 
 
+@router.get("/api/dashboard/findings")
+async def get_findings(limit: int = Query(200, ge=1, le=500), severity: str = Query("")) -> dict[str, Any]:
+    """Developer-facing 'what's broken' list, auto-collected from every run."""
+    from orchestrator.dashboard import findings
+
+    return findings.listing(limit=limit, severity=severity or None)
+
+
+@router.delete("/api/dashboard/findings")
+async def clear_findings() -> dict[str, Any]:
+    from orchestrator.dashboard import findings
+
+    return {"cleared": findings.clear()}
+
+
 @router.get("/api/dashboard/videos")
 async def videos(limit: int = Query(60, ge=1, le=300)) -> dict[str, Any]:
     """Recorded test videos, newest first, served from /reports."""
