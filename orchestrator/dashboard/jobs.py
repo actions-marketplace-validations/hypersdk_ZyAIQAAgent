@@ -22,6 +22,7 @@ from typing import Any, Callable, Optional
 VALID_KINDS = {
     "smoke", "full", "generate", "discover", "create", "regression",
     "crawl_test", "audit", "flaky", "screenshot", "compare", "ping",
+    "loadtest", "tls",
 }
 
 _lock = threading.Lock()
@@ -213,6 +214,23 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         if not urls:
             raise ValueError("provide at least one http(s) URL")
         clean["urls"] = urls[:30]
+    if kind == "loadtest":
+        url = (params.get("url") or "").strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500]
+        clean["requests"] = max(10, min(int(params.get("requests") or 100), 1000))
+        clean["concurrency"] = max(1, min(int(params.get("concurrency") or 10), 50))
+    if kind == "tls":
+        host = (params.get("host") or "").strip()
+        if host.startswith(("http://", "https://")):
+            from urllib.parse import urlparse
+
+            host = urlparse(host).hostname or ""
+        if not host or "/" in host or " " in host:
+            raise ValueError("provide a hostname, e.g. zyvor.dev")
+        clean["host"] = host[:255]
+        clean["port"] = max(1, min(int(params.get("port") or 443), 65535))
     return clean
 
 
@@ -1008,6 +1026,114 @@ def _job_ping(params: dict[str, Any]) -> dict[str, Any]:
     return {"total": len(results), "up": up, "down": len(results) - up, "results": results}
 
 
+def _job_loadtest(params: dict[str, Any]) -> dict[str, Any]:
+    """Fire N requests at a URL with C workers; report latency percentiles."""
+    import concurrent.futures
+    import time as _time
+
+    import httpx
+
+    url = params["url"]
+    n, conc = params["requests"], params["concurrency"]
+    log_progress(f"load test: {n} requests, {conc} concurrent → {url}")
+    latencies: list[float] = []
+    ok = 0
+    codes: dict[int, int] = {}
+    lock = threading.Lock()
+    t_start = _time.time()
+
+    def _one(_i: int) -> None:
+        nonlocal ok
+        with httpx.Client(timeout=20, verify=False, follow_redirects=True) as client:
+            t0 = _time.time()
+            try:
+                resp = client.get(url)
+                ms = (_time.time() - t0) * 1000
+                with lock:
+                    latencies.append(ms)
+                    codes[resp.status_code] = codes.get(resp.status_code, 0) + 1
+                    if resp.status_code < 400:
+                        ok += 1
+            except Exception:
+                with lock:
+                    codes[0] = codes.get(0, 0) + 1
+
+    done = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=conc) as pool:
+        futures = [pool.submit(_one, i) for i in range(n)]
+        for _ in concurrent.futures.as_completed(futures):
+            _check_cancel()
+            done += 1
+            if done % max(1, n // 5) == 0:
+                log_progress(f"  {done}/{n} done")
+    elapsed = _time.time() - t_start
+
+    def _pct(p: float) -> float:
+        if not latencies:
+            return 0.0
+        s = sorted(latencies)
+        return round(s[min(len(s) - 1, int(p / 100 * len(s)))], 1)
+
+    return {
+        "url": url, "requests": n, "concurrency": conc,
+        "success": ok, "success_pct": round(100 * ok / n) if n else 0,
+        "rps": round(n / elapsed, 1) if elapsed else 0,
+        "p50": _pct(50), "p95": _pct(95), "p99": _pct(99),
+        "min": round(min(latencies), 1) if latencies else 0,
+        "max": round(max(latencies), 1) if latencies else 0,
+        "mean": round(sum(latencies) / len(latencies), 1) if latencies else 0,
+        "codes": codes,
+    }
+
+
+def _job_tls(params: dict[str, Any]) -> dict[str, Any]:
+    """DNS + TLS certificate inspection: issuer, expiry, protocol, SANs."""
+    import socket
+    import ssl
+    from datetime import datetime as _dt
+
+    host, port = params["host"], params["port"]
+    log_progress(f"resolving {host}…")
+    try:
+        infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+        ips = sorted({i[4][0] for i in infos})
+    except Exception as exc:
+        raise RuntimeError(f"DNS resolution failed: {exc}")
+    log_progress(f"{host} → {', '.join(ips)}")
+
+    ctx = ssl.create_default_context()
+    log_progress(f"TLS handshake with {host}:{port}…")
+    with socket.create_connection((host, port), timeout=15) as sock:
+        with ctx.wrap_socket(sock, server_hostname=host) as ssock:
+            cert = ssock.getpeercert()
+            proto = ssock.version()
+            cipher = ssock.cipher()
+
+    def _name(field: Any) -> str:
+        return ", ".join("=".join(x) for rdn in (field or ()) for x in rdn)
+
+    not_after = cert.get("notAfter")
+    expiry = _dt.strptime(not_after, "%b %d %H:%M:%S %Y %Z") if not_after else None
+    days_left = (expiry - _dt.utcnow()).days if expiry else None
+    sans = [v for k, v in cert.get("subjectAltName", []) if k == "DNS"]
+
+    status = "ok"
+    if days_left is not None:
+        if days_left < 0:
+            status = "fail"
+        elif days_left < 30:
+            status = "warn"
+    log_progress(f"cert valid {days_left} more day(s) · {proto}")
+
+    return {
+        "host": host, "port": port, "ips": ips,
+        "issuer": _name(cert.get("issuer")), "subject": _name(cert.get("subject")),
+        "expiry": not_after, "days_left": days_left,
+        "protocol": proto, "cipher": cipher[0] if cipher else "",
+        "sans": sans[:20], "status": status,
+    }
+
+
 _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "smoke": _job_smoke,
     "full": _job_full,
@@ -1021,4 +1147,6 @@ _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "screenshot": _job_screenshot,
     "compare": _job_compare,
     "ping": _job_ping,
+    "loadtest": _job_loadtest,
+    "tls": _job_tls,
 }

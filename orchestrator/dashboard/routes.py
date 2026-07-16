@@ -210,6 +210,34 @@ async def tests() -> dict[str, Any]:
     return {"tests": history.test_health()}
 
 
+@router.get("/api/dashboard/schedules")
+async def list_schedules() -> dict[str, Any]:
+    from orchestrator.dashboard import scheduler
+
+    return {"schedules": scheduler.listing()}
+
+
+@router.post("/api/dashboard/schedules", status_code=201)
+async def add_schedule(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    from orchestrator.dashboard import scheduler
+
+    kind = str(payload.get("kind", ""))
+    interval = int(payload.get("interval_s") or 300)
+    params = payload.get("params") or {}
+    try:
+        jobs._validate(kind, params)  # reuse job validation
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return scheduler.add(kind, params, interval)
+
+
+@router.delete("/api/dashboard/schedules/{sid}")
+async def delete_schedule(sid: str) -> dict[str, Any]:
+    from orchestrator.dashboard import scheduler
+
+    return {"removed": scheduler.remove(sid)}
+
+
 def _job_response(started: bool, state: dict[str, Any]) -> Response:
     import json
 

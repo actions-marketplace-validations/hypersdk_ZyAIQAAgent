@@ -440,6 +440,22 @@
       <div class="act-row"><button class="run-btn act-btn" data-kind="ping" style="margin-left:auto">📡 Ping all</button></div>
     </div>
     <div class="glass card act">
+      <div class="act-title">⏱ Load test — latency under concurrency</div>
+      <div class="act-row"><input class="inp grow" id="lt-url" placeholder="https://…"></div>
+      <div class="act-row">
+        <span class="d">requests</span><input class="inp" id="lt-n" type="number" value="100" min="10" max="1000" style="width:80px">
+        <span class="d">concurrent</span><input class="inp" id="lt-c" type="number" value="10" min="1" max="50" style="width:70px">
+        <button class="run-btn act-btn" data-kind="loadtest" style="margin-left:auto">⏱ Run</button>
+      </div>
+    </div>
+    <div class="glass card act">
+      <div class="act-title">🔒 TLS check — certificate &amp; DNS</div>
+      <div class="act-row">
+        <input class="inp grow" id="tls-host" placeholder="hostname, e.g. zyvor.dev">
+        <button class="run-btn act-btn" data-kind="tls">🔒 Check</button>
+      </div>
+    </div>
+    <div class="glass card act">
       <div class="act-title">📸 Screenshot — capture any URL</div>
       <div class="act-row">
         <input class="inp grow" id="sh-url" placeholder="https://…">
@@ -467,6 +483,28 @@
     </div>
   </div>
   <div class="glass card" id="job-result" style="display:none;margin-top:14px"></div>
+
+  <h2>Schedules — run on a loop</h2>
+  <div class="glass card">
+    <div class="act-row" style="margin-bottom:10px">
+      <select class="inp" id="sc-kind">
+        <option value="smoke">smoke tests</option>
+        <option value="audit">site audit (zyvor.dev)</option>
+        <option value="ping">uptime ping</option>
+        <option value="tls">TLS check</option>
+      </select>
+      <span class="d">every</span>
+      <select class="inp" id="sc-interval">
+        <option value="300">5 min</option>
+        <option value="900">15 min</option>
+        <option value="3600">1 hour</option>
+        <option value="21600">6 hours</option>
+      </select>
+      <input class="inp grow" id="sc-arg" placeholder="URL / host (for audit / ping / TLS)">
+      <button class="dl-btn" id="sc-add">＋ Schedule</button>
+    </div>
+    <div class="feed" id="schedules"><span class="d">No schedules — add one to monitor on a loop.</span></div>
+  </div>
 
   <datalist id="spec-list"></datalist>
 
@@ -815,6 +853,38 @@ async function loadTestHealth() {
 }
 $("th-refresh").addEventListener("click", loadTestHealth);
 
+/* schedules — recurring monitors */
+async function loadSchedules() {
+  try {
+    const data = await fetch("/api/dashboard/schedules").then((r) => r.json());
+    const el = $("schedules");
+    if (!data.schedules.length) {
+      el.innerHTML = '<span class="d">No schedules — add one to monitor on a loop.</span>';
+      return;
+    }
+    el.innerHTML = data.schedules.map((s) =>
+      '<div class="feed-item"><span class="f-kind">🔁 ' + esc(KIND_LABELS[s.kind] || s.kind) + "</span>"
+      + '<span class="f-brief">every ' + rel(s.interval_s) + " · " + s.runs + " runs · next in " + rel(s.due_in_s) + "</span>"
+      + '<button class="copy-btn" data-sid="' + s.id + '" title="remove">✕</button></div>').join("");
+    for (const b of el.querySelectorAll("[data-sid]"))
+      b.addEventListener("click", async () => { await fetch("/api/dashboard/schedules/" + b.dataset.sid, { method: "DELETE" }); loadSchedules(); });
+  } catch (e) { /* offline */ }
+}
+$("sc-add").addEventListener("click", async () => {
+  const kind = $("sc-kind").value, arg = $("sc-arg").value.trim();
+  const params = kind === "audit" ? { url: arg || "https://zyvor.dev", max_pages: 5 }
+    : kind === "ping" ? { urls: arg || "https://zyvor.dev" }
+    : kind === "tls" ? { host: arg || "zyvor.dev" }
+    : {};
+  const res = await fetch("/api/dashboard/schedules", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, interval_s: parseInt($("sc-interval").value, 10), params }),
+  });
+  if (res.status === 400) { const d = await res.json(); toast("schedule", false, d.detail || "invalid"); return; }
+  toast("schedule", true, "added — running " + (KIND_LABELS[kind] || kind) + " on a loop");
+  loadSchedules();
+});
+
 /* sound toggle */
 function syncSoundBtn() { $("sound-toggle").textContent = soundOn ? "🔔 sound" : "🔕 muted"; }
 $("sound-toggle").addEventListener("click", () => {
@@ -1021,6 +1091,8 @@ const PALETTE_CMDS = [
   { label: "Screenshot a URL", kind: "screenshot" },
   { label: "Compare two URLs", kind: "compare" },
   { label: "Uptime ping", kind: "ping" },
+  { label: "Load test", kind: "loadtest" },
+  { label: "TLS certificate check", kind: "tls" },
   { label: "Generate tests", kind: "generate" },
   { label: "Discover coverage", kind: "discover" },
   { label: "Visual regression", kind: "regression" },
@@ -1151,6 +1223,8 @@ function jobParams(kind) {
   };
   if (kind === "compare") return { url_a: $("cmp-a").value.trim(), url_b: $("cmp-b").value.trim(), insecure: $("cmp-insecure").checked };
   if (kind === "ping") return { urls: $("pg-urls").value };
+  if (kind === "loadtest") return { url: $("lt-url").value.trim(), requests: parseInt($("lt-n").value, 10) || 100, concurrency: parseInt($("lt-c").value, 10) || 10 };
+  if (kind === "tls") return { host: $("tls-host").value.trim() };
   return {};
 }
 
@@ -1201,7 +1275,7 @@ for (const btn of document.querySelectorAll(".act-btn")) {
   btn.addEventListener("click", () => startJob(btn.dataset.kind));
 }
 
-const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check", screenshot: "screenshot", compare: "compare", ping: "uptime ping" };
+const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check", screenshot: "screenshot", compare: "compare", ping: "uptime ping", loadtest: "load test", tls: "TLS check" };
 
 let lastToastKey = "";
 function renderRunStatus(st) {
@@ -1357,6 +1431,22 @@ function renderJobResult(st) {
       + (r.requirements != null ? " from " + r.requirements + " requirement(s)" : "")
       + (r.total != null ? " · executed: " + r.passed + "/" + r.total + " passed" : "") + "</div>";
     html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
+  } else if (st.kind === "loadtest") {
+    html += '<div class="d">' + esc(r.url) + " — " + r.requests + " requests · " + r.concurrency + " concurrent · "
+      + '<b>' + r.rps + " req/s</b> · <span class=\"" + (r.success_pct >= 99 ? "pass" : "fail") + '">' + r.success_pct + "% ok</span></div>";
+    const cell = (k, v) => '<div class="stat-tile" style="padding:8px 12px"><span class="stat-label">' + k + '</span><span class="stat-value" style="font-size:1rem">' + v + "ms</span></div>";
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      + cell("p50", r.p50) + cell("p95", r.p95) + cell("p99", r.p99) + cell("max", r.max) + cell("mean", r.mean) + "</div>";
+  } else if (st.kind === "tls") {
+    const sc = r.status === "ok" ? "pass" : "fail";
+    html += '<div class="d"><span class="chip ' + sc + '">' + esc(r.status.toUpperCase()) + "</span> "
+      + esc(r.host) + ":" + r.port + " → " + esc((r.ips || []).join(", ")) + "</div>";
+    const row = (k, v) => "<tr><td class=\"d\" style=\"width:130px\">" + k + "</td><td>" + esc(String(v)) + "</td></tr>";
+    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + row("expires in", (r.days_left != null ? r.days_left + " days" : "?") + " (" + esc(r.expiry || "") + ")")
+      + row("issuer", r.issuer) + row("subject", r.subject)
+      + row("protocol", r.protocol + " · " + r.cipher)
+      + row("SANs", (r.sans || []).slice(0, 8).join(", ")) + "</tbody></table>";
   } else if (st.kind === "compare") {
     const same = r.identical;
     html += '<div class="d">' + (same ? '<span class="pass">identical</span>' : '<span class="fail">' + r.diff_percent + "% different</span>")
@@ -1517,6 +1607,8 @@ $("refresh-rate").addEventListener("change", () => {
 });
 sync();
 loadTestHealth();
+loadSchedules();
+setInterval(loadSchedules, 15000);
 setRefreshRate(parseInt($("refresh-rate").value, 10) || REFRESH);
 </script>
 </body>
