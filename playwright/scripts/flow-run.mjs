@@ -219,21 +219,26 @@ async function main() {
   fs.mkdirSync(outDir, { recursive: true });
   if (record) ctxOpts.recordVideo = { dir: outDir, size: { width: 1440, height: 900 } };
 
-  // reuse a saved session (auth_test) — cookies + localStorage, plus sessionStorage re-injected
-  let savedSessionStorage = null;
+  // reuse a saved session (auth_test) — cookies + localStorage, plus sessionStorage + token re-injected
+  let savedSessionStorage = null, savedToken = '';
   if (flow.session && fs.existsSync(flow.session)) {
     try {
       const state = JSON.parse(fs.readFileSync(flow.session, 'utf-8'));
       ctxOpts.storageState = { cookies: state.cookies || [], origins: state.origins || [] };
       savedSessionStorage = state._sessionStorage || null;
+      savedToken = state._token || '';
       emit('flow: reusing saved session');
     } catch (e) { emit(`flow: session load failed — ${e}`); }
   }
   const context = await browser.newContext(ctxOpts);
-  if (savedSessionStorage) {
-    await context.addInitScript((json) => {
-      try { const d = JSON.parse(json); for (const k in d) sessionStorage.setItem(k, d[k]); } catch {}
-    }, savedSessionStorage);
+  if (savedSessionStorage || savedToken) {
+    await context.addInitScript(({ json, token }) => {
+      try { const d = JSON.parse(json || '{}'); for (const k in d) sessionStorage.setItem(k, d[k]); } catch {}
+      if (token) {
+        const keys = ['token', 'access_token', 'auth_token', 'authToken', 'jwt', 'id_token', 'zeus_os_token', 'zyvor_token', 'apiToken'];
+        for (const k of keys) { try { localStorage.setItem(k, token); } catch {} try { sessionStorage.setItem(k, token); } catch {} }
+      }
+    }, { json: savedSessionStorage, token: savedToken });
   }
   // Playwright trace — time-travel debugger (DOM/network/console per step)
   const wantTrace = flow.trace !== false;

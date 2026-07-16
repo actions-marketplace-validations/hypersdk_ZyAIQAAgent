@@ -126,6 +126,25 @@ zyvor-qa flow https://app.example.com --steps signup.flow --throttle offline   #
 
 ---
 
+## 8. 🤖 AI test — describe a goal, the agent drives the app itself
+
+The autonomous tester. Type a plain-English goal and the agent drives a real browser to accomplish it — no pre-written steps. It works as a **ReAct loop**: each turn it *observes* the page (the visible interactive elements), a decider *chooses* the next action, and the browser *executes* it — repeating until the goal is met. The whole journey is recorded as video + Playwright trace.
+
+```bash
+# needs a saved session for anything behind login (see §2)
+zyvor-qa ai-test https://app.example.com/vms/new \
+  --goal "create a ubuntu vm with 1 vcpu and 2gb ram" \
+  --session app-example-com.json --insecure
+```
+
+In the dashboard, the **🤖 AI test** card takes a URL, the goal, an optional session, and a max-steps cap. The result is the agent's action transcript (what it clicked/filled and why), the embedded journey video, the trace, and per-step screenshots. If the goal isn't achieved it records a **finding**.
+
+**Two brains:**
+- **LLM decider** (primary) — uses the configured model (`LLM_PROVIDER` + key, or a local `ollama` model) via `prompts/ai_flow.md`. Best for bespoke UIs: it reasons about the page, navigates wizards, maps "1 vcpu / 2gb" to the right fields, and knows when it's done.
+- **Heuristic decider** (fallback, no LLM) — rule-based: opens a create wizard, fills name/OS/CPU/RAM from the goal keywords, advances `Next`, and submits. Handles standard forms; bespoke UIs need the LLM.
+
+The agent dismisses onboarding overlays, waits for async modals to settle, references elements by a stable index (no brittle selectors), and reuses a saved session (cookies + localStorage + the raw token injected under every common key, so token-in-storage apps authenticate).
+
 ## When to use which
 
 | Surface | Action |

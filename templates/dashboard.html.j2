@@ -487,6 +487,17 @@
       </div>
     </div>
     <div class="glass card act" style="grid-column: 1 / -1">
+      <div class="act-title">🤖 AI test — describe a goal, the agent drives the app itself</div>
+      <div class="act-row"><input class="inp grow" id="ai-url" placeholder="App URL, e.g. https://app.example.com"></div>
+      <div class="act-row"><textarea class="inp grow" id="ai-goal" rows="2" placeholder="Describe the goal in plain English, e.g. create a ubuntu vm with 1 vcpu and 2gb ram"></textarea></div>
+      <div class="act-row" style="gap:10px">
+        <input class="inp" id="ai-session" placeholder="reuse session (e.g. app-example-com.json)" style="max-width:260px">
+        <input class="inp" id="ai-steps" type="number" value="20" title="max steps" style="max-width:120px">
+        <label class="chk"><input type="checkbox" id="ai-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="ai_flow" style="margin-left:auto">🤖 Run agent</button>
+      </div>
+    </div>
+    <div class="glass card act" style="grid-column: 1 / -1">
       <div class="act-title">🗺 Route sweep — screenshot many routes, diff vs baselines</div>
       <div class="act-row">
         <input class="inp grow" id="rs-url" placeholder="https://…">
@@ -1258,6 +1269,7 @@ const PALETTE_CMDS = [
   { label: "Screenshot a URL", kind: "screenshot" },
   { label: "Flow test (record a journey)", kind: "flow" },
   { label: "Route sweep (visual)", kind: "route_sweep" },
+  { label: "AI test (describe a goal)", kind: "ai_flow" },
   { label: "API contract test", kind: "api_contract" },
   { label: "Core Web Vitals", kind: "vitals" },
   { label: "Live data / WebSocket", kind: "realtime" },
@@ -1410,6 +1422,13 @@ function jobParams(kind) {
     insecure: $("fw-insecure").checked,
     record: $("fw-record").checked,
   };
+  if (kind === "ai_flow") return {
+    url: $("ai-url").value.trim(),
+    goal: $("ai-goal").value.trim(),
+    session: $("ai-session").value.trim(),
+    max_steps: parseInt($("ai-steps").value, 10) || 20,
+    insecure: $("ai-insecure").checked,
+  };
   if (kind === "route_sweep") return {
     url: $("rs-url").value.trim(),
     routes: $("rs-routes").value,
@@ -1519,7 +1538,7 @@ const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "ge
   redirects: "redirect chain", headers: "HTTP headers", cookies: "cookie audit", robots: "robots/sitemap",
   security_paths: "exposed paths", api_check: "API check", sitemap_test: "sitemap URLs", dns_records: "DNS records",
   cors: "CORS check", transport: "compression", flow: "flow test", route_sweep: "route sweep",
-  api_contract: "API contract", auth_test: "auth & session", realtime: "live data", vitals: "web vitals" };
+  api_contract: "API contract", auth_test: "auth & session", realtime: "live data", vitals: "web vitals", ai_flow: "AI test" };
 
 let lastToastKey = "";
 function renderRunStatus(st) {
@@ -1692,6 +1711,19 @@ function renderJobResult(st) {
       + (r.requirements != null ? " from " + r.requirements + " requirement(s)" : "")
       + (r.total != null ? " · executed: " + r.passed + "/" + r.total + " passed" : "") + "</div>";
     html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
+  } else if (st.kind === "ai_flow") {
+    html += '<div class="d"><b class="' + (r.success ? "pass" : "fail") + '">' + (r.success ? "✅ goal achieved" : "⚠ stopped") + "</b> · "
+      + esc(r.goal) + ' <span class="d">· ' + esc(r.mode || "") + " agent</span></div>";
+    if (r.summary) html += '<div class="d" style="margin:4px 0">' + esc(r.summary) + "</div>";
+    if (r.video) html += '<video controls src="' + esc(r.video) + '" style="max-width:520px;width:100%;border:1px solid var(--separator);border-radius:10px;margin:10px 0"></video>';
+    if (r.trace) html += '<div class="dl-row" style="margin:2px 0 8px">🔍 <a class="rlink" href="' + esc(r.trace) + '" target="_blank">download trace.zip</a></div>';
+    html += '<table class="runs-table" style="margin-top:6px"><tbody>'
+      + (r.ai_steps || []).map((s) => "<tr><td>" + s.n + "</td>"
+        + '<td><span class="chip ' + (s.status === "passed" ? "pass" : "fail") + '">' + (s.status === "passed" ? "OK" : "FAIL") + "</span></td>"
+        + "<td>" + esc(s.desc || s.action) + "</td>"
+        + "<td>" + (s.shot ? '<a class="rlink" href="' + esc(s.shot) + '" target="_blank">shot</a>' : "")
+        + '</td><td class="d" style="color:var(--status-error);max-width:300px">' + esc(s.error || "") + "</td></tr>").join("")
+      + "</tbody></table>";
   } else if (st.kind === "flow") {
     html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " steps passed</b> · "
       + esc(r.url) + " · parsed by " + esc(r.mode)

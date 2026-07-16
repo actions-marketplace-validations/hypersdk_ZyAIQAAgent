@@ -27,7 +27,7 @@ VALID_KINDS = {
     "smoke", "full", "generate", "discover", "create", "regression",
     "crawl_test", "audit", "flaky", "screenshot", "compare", "ping",
     "loadtest", "tls", "flow", "route_sweep",
-    "api_contract", "auth_test", "realtime", "vitals",
+    "api_contract", "auth_test", "realtime", "vitals", "ai_flow",
 } | PROBE_KINDS
 
 _lock = threading.Lock()
@@ -327,6 +327,17 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["insecure"] = bool(params.get("insecure"))
         clean["device"] = (params.get("device") or "").strip()[:60]
         clean["throttle"] = (params.get("throttle") or "").strip().lower() if params.get("throttle") in ("3g", "offline") else ""
+    if kind == "ai_flow":
+        url = (params.get("url") or "").strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500]
+        clean["goal"] = (params.get("goal") or "").strip()[:600]
+        if not clean["goal"]:
+            raise ValueError("describe the goal for the AI agent")
+        clean["session"] = (params.get("session") or "").strip()[:200]
+        clean["max_steps"] = max(1, min(int(params.get("max_steps") or 20), 40))
+        clean["insecure"] = bool(params.get("insecure"))
     if kind == "auth_test":
         base = (params.get("url") or "").strip()
         if not base.startswith(("http://", "https://")):
@@ -1375,6 +1386,74 @@ def _flow_report_bundle(url: str, steps: list, summary: dict) -> dict[str, str]:
         return {}
 
 
+def _job_ai_flow(params: dict[str, Any]) -> dict[str, Any]:
+    """Autonomous AI tester — drive the browser toward a plain-English goal."""
+    import time as _time
+
+    from agents.aiflow.engine import run_ai_flow
+    from agents.common.models import PipelineReport
+    from orchestrator.dashboard import history
+
+    t0 = _time.time()
+    url, goal = params["url"], params["goal"]
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    rel_dir = f"artifacts/ai/{stamp}"
+    out_dir = _repo_root() / "reports" / rel_dir
+
+    session_path = ""
+    if params.get("session"):
+        sp = _repo_root() / "reports" / "artifacts" / "auth" / params["session"]
+        if sp.exists():
+            session_path = str(sp)
+            log_progress(f"reusing saved session {params['session']}")
+    log_progress(f"AI agent goal: {goal}")
+    with _env_overrides({"ZYVOR_NO_SANDBOX": os.environ.get("ZYVOR_NO_SANDBOX", "false")}):
+        data = run_ai_flow(
+            url, goal, out_dir,
+            insecure=params.get("insecure", False),
+            session=session_path,
+            max_steps=params.get("max_steps", 20),
+            on_line=_stream_line_generic,
+        )
+    _check_cancel()
+
+    base = f"/reports/{rel_dir}"
+    steps = []
+    for s in data.get("steps", []):
+        steps.append({
+            "n": s.get("n"), "action": s.get("action"), "desc": s.get("desc") or s.get("action"),
+            "status": "passed" if s.get("status") == "ok" else "failed",
+            "error": s.get("error", ""), "reason": s.get("reason", ""),
+            "shot": f"{base}/{s['shot']}" if s.get("shot") else None,
+        })
+    video = f"{base}/{data['video']}" if data.get("video") else None
+    trace = f"{base}/{data['trace']}" if data.get("trace") else None
+    passed_flag = bool(data.get("passed"))
+    ok = sum(1 for s in steps if s["status"] == "passed")
+    total = len(steps)
+    log_progress(f"AI agent {'succeeded' if passed_flag else 'stopped'}: {data.get('done_summary', '')}")
+
+    root = _repo_root() / "reports" / "artifacts" / "ai"
+    if root.exists():
+        import shutil
+        for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-20]:
+            shutil.rmtree(stale, ignore_errors=True)
+
+    report = _flow_report_bundle(url, steps, {"passed": ok, "failed": total - ok, "total": total, "video": video})
+    if not passed_flag:
+        from orchestrator.dashboard import findings
+        findings.add("ai_flow", "high", f"AI goal not achieved: {goal}",
+                     data.get("done_summary", ""), url, "goal")
+    hist = PipelineReport(summary=f"AI flow {url}: {data.get('done_summary', '')[:80]}",
+                          passed=ok, failed=total - ok, total=total)
+    history.append_run(hist, source="dashboard-ai", duration_s=_time.time() - t0)
+    return {
+        "url": url, "goal": goal, "mode": data.get("mode"), "success": passed_flag,
+        "summary": data.get("done_summary", ""), "ai_steps": steps,
+        "video": video, "trace": trace, "report": report,
+    }
+
+
 def _job_api_contract(params: dict[str, Any]) -> dict[str, Any]:
     """Validate REST endpoints against their OpenAPI schema, or run an API workflow."""
     import time as _time
@@ -1837,6 +1916,7 @@ _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "vitals": _job_vitals,
     "realtime": _job_realtime,
     "auth_test": _job_auth_test,
+    "ai_flow": _job_ai_flow,
     "full": _job_full,
     "generate": _job_generate,
     "discover": _job_discover,

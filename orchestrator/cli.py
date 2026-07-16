@@ -472,6 +472,28 @@ def api_test(
         raise typer.Exit(code=1)
 
 
+@app.command(name="ai-test")
+def ai_test(
+    url: str = typer.Argument(..., help="App URL to drive"),
+    goal: str = typer.Option(..., "--goal", "-g", help="Plain-English goal, e.g. 'create a ubuntu vm 1 vcpu 2gb ram'"),
+    session: Optional[str] = typer.Option(None, help="Reuse a saved session (name under reports/artifacts/auth)"),
+    max_steps: int = typer.Option(20, help="Max agent steps"),
+    insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
+) -> None:
+    """Autonomous AI tester — describe a goal and the agent drives the browser to do it."""
+    _load_env()
+    from orchestrator.dashboard.jobs import _job_ai_flow
+
+    result = _job_ai_flow({"url": url, "goal": goal, "session": session or "",
+                           "max_steps": max_steps, "insecure": insecure})
+    typer.echo(f"\nAI agent ({result.get('mode')}): {'✅ ' + result['summary'] if result['success'] else '⚠ ' + result['summary']}")
+    for s in result.get("ai_steps", []):
+        mark = "✓" if s["status"] == "passed" else "✗"
+        typer.echo(f"  {mark} step {s['n']}: {s['desc']}")
+    if not result["success"]:
+        raise typer.Exit(code=1)
+
+
 @app.command(name="auth-test")
 def auth_test(
     base: str = typer.Argument(..., help="App base URL"),
