@@ -24,6 +24,7 @@ VALID_KINDS = {"smoke", "full", "generate", "discover", "create", "regression", 
 _lock = threading.Lock()
 _cancel = threading.Event()
 _progress: list[str] = []
+_live_cases: list[dict[str, Any]] = []
 _state: dict[str, Any] = {
     "running": False,
     "kind": None,
@@ -60,6 +61,20 @@ def _check_cancel() -> None:
         raise JobCancelled("cancelled by user")
 
 
+def _stream_line(line: str) -> None:
+    """Feed a Playwright stdout line into the live log and per-test tally."""
+    import re
+
+    log_progress(line)
+    m = re.match(r"^\s*(✓|✗|✘|×)\s+\d+\s+(?:\[([^\]]+)\]\s+)?›?\s*(.+?)(?:\s+\(([\d.]+m?s)\))?\s*$", line)
+    if not m:
+        return
+    mark, browser, title = m.group(1), m.group(2), m.group(3)
+    status = "passed" if mark == "✓" else "failed"
+    with _lock:
+        _live_cases.append({"title": title.strip()[:120], "status": status, "browser": browser})
+
+
 def cancel() -> dict[str, Any]:
     """Request cancellation of the running job (kills an in-flight Playwright run)."""
     with _lock:
@@ -80,7 +95,12 @@ def cancel() -> dict[str, Any]:
 def status() -> dict[str, Any]:
     with _lock:
         state = dict(_state)
-        state["progress"] = _progress[-60:]
+        state["progress"] = _progress[-80:]
+        state["live_cases"] = list(_live_cases)
+        state["live_tally"] = {
+            "passed": sum(1 for c in _live_cases if c["status"] == "passed"),
+            "failed": sum(1 for c in _live_cases if c["status"] != "passed"),
+        }
     return state
 
 
@@ -143,6 +163,7 @@ def trigger(kind: str, params: dict[str, Any] | None = None) -> tuple[bool, dict
             return False, dict(_state)
         _cancel.clear()
         _progress.clear()
+        _live_cases.clear()
         _state.update(
             running=True,
             kind=kind,
@@ -214,54 +235,97 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:80] or "test"
 
 
-def _persist_videos(results: Any, kind: str) -> dict[str, str]:
-    """Copy every recorded test video into the served (and PVC-backed) reports
-    tree. Returns test title → video href."""
+def _persist_artifacts(results: Any, kind: str) -> tuple[dict[str, str], dict[str, str]]:
+    """Copy every test video + trace into the PVC-backed reports tree.
+    Returns (title→video href, title→trace href)."""
     import shutil
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    rel_dir = f"artifacts/videos/{stamp}-{kind}"
-    dest = _repo_root() / "reports" / rel_dir
-    hrefs: dict[str, str] = {}
+    videos: dict[str, str] = {}
+    traces: dict[str, str] = {}
     for case in results.cases:
-        if not case.video_path:
-            continue
-        src = Path(case.video_path)
-        if not src.exists():
-            continue
-        dest.mkdir(parents=True, exist_ok=True)
-        name = f"{_slug(case.title)}.webm"
-        try:
-            shutil.copy2(src, dest / name)
-        except OSError:
-            continue
-        hrefs[case.title] = f"/reports/{rel_dir}/{name}"
-    if hrefs:
-        log_progress(f"saved {len(hrefs)} test video(s)")
-    # keep the video library bounded: newest 20 run-directories
-    video_root = _repo_root() / "reports" / "artifacts" / "videos"
-    if video_root.exists():
-        run_dirs = sorted([d for d in video_root.iterdir() if d.is_dir()])
-        for stale in run_dirs[:-20]:
-            import shutil as _sh
+        for kind_name, path_attr, ext, sink in (
+            ("videos", "video_path", "webm", videos),
+            ("traces", "trace_path", "zip", traces),
+        ):
+            src_val = getattr(case, path_attr, None)
+            if not src_val:
+                continue
+            src = Path(src_val)
+            if not src.exists():
+                continue
+            rel_dir = f"artifacts/{kind_name}/{stamp}-{kind}"
+            dest = _repo_root() / "reports" / rel_dir
+            dest.mkdir(parents=True, exist_ok=True)
+            name = f"{_slug(case.title)}.{ext}"
+            try:
+                shutil.copy2(src, dest / name)
+            except OSError:
+                continue
+            sink[case.title] = f"/reports/{rel_dir}/{name}"
+    if videos:
+        log_progress(f"saved {len(videos)} test video(s)")
+    if traces:
+        log_progress(f"saved {len(traces)} trace(s)")
+    # keep the libraries bounded: newest 20 run-directories each
+    for kind_name in ("videos", "traces"):
+        root = _repo_root() / "reports" / "artifacts" / kind_name
+        if root.exists():
+            for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-20]:
+                shutil.rmtree(stale, ignore_errors=True)
+    return videos, traces
 
-            _sh.rmtree(stale, ignore_errors=True)
-    return hrefs
+
+# back-compat: some callers still expect the video-only helper
+def _persist_videos(results: Any, kind: str) -> dict[str, str]:
+    return _persist_artifacts(results, kind)[0]
 
 
 def _cases_payload(
-    results: Any, limit: int = 40, videos: dict[str, str] | None = None
+    results: Any,
+    limit: int = 60,
+    videos: dict[str, str] | None = None,
+    traces: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Per-test detail for the result tables: title, status, error, video."""
+    """Full per-test detail for the result tables and downloadable reports."""
     return [
         {
             "title": c.title[:120],
             "status": c.status,
-            "error": (c.error_message or "")[:300] if c.status != "passed" else "",
+            "browser": c.browser,
+            "duration_ms": round(c.duration_ms or 0),
+            "error": (c.error_message or "")[:1200] if c.status != "passed" else "",
+            "console_logs": [line for line in (c.console_logs or []) if line.startswith("[error]")][:8],
+            "network_errors": (c.network_errors or [])[:8],
             "video": (videos or {}).get(c.title),
+            "trace": (traces or {}).get(c.title),
         }
         for c in results.cases[:limit]
     ]
+
+
+def _finalize(kind: str, results: Any, videos, traces, duration_s: float | None = None) -> dict[str, Any]:
+    """Build the case list + a downloadable CSV/HTML/PDF report bundle."""
+    cases = _cases_payload(results, videos=videos, traces=traces)
+    report: dict[str, str] = {}
+    try:
+        from agents.reporter.exports import build_report_bundle
+
+        log_progress("building CSV / HTML / PDF report…")
+        report = build_report_bundle(
+            kind,
+            cases,
+            {
+                "passed": results.passed,
+                "failed": results.failed,
+                "total": results.total,
+                "duration_s": round(duration_s, 1) if duration_s is not None else None,
+                "target": os.environ.get("ZYVOR_BASE_URL"),
+            },
+        )
+    except Exception as exc:
+        log_progress(f"report bundle failed: {str(exc)[:80]}")
+    return {"cases": cases, "report": report}
 
 
 def _report_href() -> Optional[str]:
@@ -283,10 +347,12 @@ def _job_smoke(params: dict[str, Any]) -> dict[str, Any]:
         results = run_playwright(
             test_dirs=[str(_repo_root() / "tests" / "manual")],
             base_url=base_url,
+            on_line=_stream_line,
         )
     _check_cancel()
     log_progress(f"execution done: {results.passed}/{results.total} passed")
-    videos = _persist_videos(results, "smoke")
+    videos, traces = _persist_artifacts(results, "smoke")
+    final = _finalize("smoke", results, videos, traces, duration_s=_time.time() - t0)
     report = PipelineReport(
         summary=generate_summary_stub(results),
         passed=results.passed,
@@ -298,7 +364,7 @@ def _job_smoke(params: dict[str, Any]) -> dict[str, Any]:
         "passed": results.passed,
         "failed": results.failed,
         "total": results.total,
-        "cases": _cases_payload(results, videos=videos),
+        **final,
     }
 
 
@@ -325,8 +391,7 @@ def _job_full(params: dict[str, Any]) -> dict[str, Any]:
         "failed": tr.failed if tr else 0,
         "total": tr.total if tr else 0,
         "generated": [Path(p).name for p in result.get("generated_tests", [])],
-        "cases": _cases_payload(tr) if tr else [],
-        "report": _report_href(),
+        **(_finalize("full", tr, {}, {}) if tr else {"cases": [], "report": {}}),
     }
 
 
@@ -437,9 +502,9 @@ def _job_create(params: dict[str, Any]) -> dict[str, Any]:
         t0 = _time.time()
         log_progress(f"executing {len(generated)} generated test(s) (video on)…")
         with _env_overrides({"ZYVOR_VIDEO": "on"}):
-            results = run_playwright(test_dirs=generated)
+            results = run_playwright(test_dirs=generated, on_line=_stream_line)
         _check_cancel()
-        videos = _persist_videos(results, "create")
+        videos, traces = _persist_artifacts(results, "create")
         report = PipelineReport(
             summary=generate_summary_stub(results),
             passed=results.passed,
@@ -451,7 +516,7 @@ def _job_create(params: dict[str, Any]) -> dict[str, Any]:
             passed=results.passed,
             failed=results.failed,
             total=results.total,
-            cases=_cases_payload(results, videos=videos),
+            **_finalize("create", results, videos, traces, duration_s=_time.time() - t0),
         )
     return result
 
@@ -468,6 +533,7 @@ def _job_regression(params: dict[str, Any]) -> dict[str, Any]:
         results = run_playwright(
             test_dirs=[str(_repo_root() / "tests" / "manual")],
             base_url=os.environ.get("ZYVOR_BASE_URL", "https://zyvor.dev"),
+            on_line=_stream_line,
         )
         _check_cancel()
         log_progress("comparing screenshots against baselines…")
@@ -565,10 +631,10 @@ def _job_crawl_test(params: dict[str, Any]) -> dict[str, Any]:
         _check_cancel()
         log_progress(f"executing {len(generated)} test(s) with Playwright (video on)…")
         with _env_overrides({"ZYVOR_VIDEO": "on"}):
-            results = run_playwright(test_dirs=generated, base_url=url)
+            results = run_playwright(test_dirs=generated, base_url=url, on_line=_stream_line)
         _check_cancel()
         log_progress(f"execution done: {results.passed}/{results.total} passed")
-        videos = _persist_videos(results, "crawl")
+        videos, traces = _persist_artifacts(results, "crawl")
 
     report = PipelineReport(
         summary=f"Crawl of {url}: {results.passed}/{results.total} pages passed. "
@@ -585,7 +651,7 @@ def _job_crawl_test(params: dict[str, Any]) -> dict[str, Any]:
         "passed": results.passed,
         "failed": results.failed,
         "total": results.total,
-        "cases": _cases_payload(results, limit=60, videos=videos),
+        **_finalize("crawl", results, videos, traces),
     }
 
 

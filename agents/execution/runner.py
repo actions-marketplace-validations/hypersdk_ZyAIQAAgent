@@ -84,8 +84,13 @@ def run_playwright(
     test_dirs: list[str] | None = None,
     base_url: str | None = None,
     project: str | None = None,
+    on_line=None,
 ) -> TestResult:
-    """Execute Playwright tests and parse JSON results."""
+    """Execute Playwright tests and parse JSON results.
+
+    ``on_line`` (optional callable) receives each stdout line as it is emitted,
+    enabling live streaming of Playwright's `list` reporter output.
+    """
     _load_env()
     repo_root = _repo_root()
     config = repo_root / "playwright" / "playwright.config.ts"
@@ -121,14 +126,47 @@ def run_playwright(
         cmd.extend(["--project", project])
 
     proc = subprocess.Popen(
-        cmd, cwd=repo_root, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        cmd,
+        cwd=repo_root,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
     )
     _current["proc"] = proc
+
+    import threading
+
+    stderr_chunks: list[str] = []
+
+    def _drain_stderr() -> None:
+        assert proc.stderr is not None
+        for line in proc.stderr:
+            stderr_chunks.append(line)
+
+    stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
+    stderr_thread.start()
+
+    stdout_lines: list[str] = []
     try:
-        stdout, stderr = proc.communicate()
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            stdout_lines.append(line)
+            if on_line is not None:
+                stripped = line.rstrip("\n")
+                if stripped.strip():
+                    try:
+                        on_line(stripped)
+                    except Exception:
+                        pass
+        proc.wait()
     finally:
         _current["proc"] = None
-    result = subprocess.CompletedProcess(cmd, proc.returncode or 0, stdout, stderr)
+    stderr_thread.join(timeout=2)
+    result = subprocess.CompletedProcess(
+        cmd, proc.returncode or 0, "".join(stdout_lines), "".join(stderr_chunks)
+    )
 
     if json_path.exists():
         parsed = parse_playwright_json(json_path, repo_root / "test-results")

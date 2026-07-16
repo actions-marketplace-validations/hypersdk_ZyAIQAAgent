@@ -233,6 +233,42 @@ async def cancel_job() -> dict[str, Any]:
     return jobs.cancel()
 
 
+@router.post("/api/dashboard/jobs/rerun", status_code=202)
+async def rerun_job() -> Response:
+    """Re-trigger the last job with the same kind and params."""
+    state = jobs.status()
+    kind = state.get("kind")
+    params = state.get("params") or {}
+    if not kind:
+        raise HTTPException(status_code=400, detail="no previous job to rerun")
+    try:
+        started, new_state = jobs.trigger(kind, params)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return _job_response(started, new_state)
+
+
+@router.get("/api/dashboard/jobs/report.{fmt}")
+async def job_report(fmt: str) -> Response:
+    """Download the most recent job's report (csv | html | pdf)."""
+    if fmt not in {"csv", "html", "pdf"}:
+        raise HTTPException(status_code=404, detail="format must be csv, html, or pdf")
+    state = jobs.status()
+    result = state.get("result") or {}
+    href = (result.get("report") or {}).get(fmt)
+    if not href:
+        raise HTTPException(status_code=404, detail=f"no {fmt} report for the last job")
+    path = _repo_root() / href.lstrip("/")
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="report file missing")
+    media = {"csv": "text/csv", "html": "text/html", "pdf": "application/pdf"}[fmt]
+    return Response(
+        content=path.read_bytes(),
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="zyvor-qa-report.{fmt}"'},
+    )
+
+
 @router.get("/api/dashboard/jobs/status")
 async def jobs_status() -> dict[str, Any]:
     state = jobs.status()

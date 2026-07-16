@@ -195,6 +195,18 @@
     box-shadow: 0 0 8px var(--accent); animation: pulse 1.2s infinite;
   }
   .run-status.err { color: var(--status-error); }
+  .livecase { display: inline-flex; align-items: center; gap: 5px; margin: 2px 6px 2px 0; font-size: 12px; }
+  .livecase .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .livecase.pass .dot { background: var(--status-ok); }
+  .livecase.fail .dot { background: var(--status-error); }
+  .livecase.fail { color: var(--status-error); }
+  .err-summary { border: 1px solid rgba(255,69,58,0.35); background: rgba(255,69,58,0.06); border-radius: 12px; padding: 12px 14px; margin: 10px 0; }
+  .err-summary .k { color: var(--status-error); font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+  .case-err { color: #fca5a5; font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; max-width: 640px; }
+  .copy-btn { cursor: pointer; font-size: 11px; color: var(--text-muted); background: none; border: none; padding: 0 4px; }
+  .copy-btn:hover { color: var(--text-primary); }
+  .dl-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .dl-row a, .dl-row button { text-decoration: none; }
   .acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
   .act-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; }
   .act-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -316,9 +328,13 @@
       <span class="spin" style="width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 1.2s infinite"></span>
       <span id="live-kind">job</span> running
       <span class="d" id="live-elapsed" style="font-weight:400"></span>
-      <button class="run-btn" id="btn-stop" style="margin-left:auto;color:var(--status-error);border-color:rgba(255,69,58,0.4)">⏹ Stop</button>
+      <span id="live-tally" style="font-weight:400"></span>
+      <button class="dl-btn" id="btn-copylog" style="margin-left:auto">⧉ copy log</button>
+      <button class="dl-btn" id="btn-dllog">⬇ .txt</button>
+      <button class="run-btn" id="btn-stop" style="color:var(--status-error);border-color:rgba(255,69,58,0.4)">⏹ Stop</button>
     </div>
-    <pre id="live-log" style="margin:0;max-height:220px;overflow-y:auto;font-family:var(--font-mono);font-size:12px;line-height:1.7;color:var(--text-secondary);white-space:pre-wrap"></pre>
+    <div id="live-cases" style="margin-bottom:10px"></div>
+    <pre id="live-log" style="margin:0;max-height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:12px;line-height:1.7;color:var(--text-secondary);white-space:pre-wrap"></pre>
   </div>
   <div class="acts">
     <div class="glass card act">
@@ -958,6 +974,17 @@ $("btn-stop").addEventListener("click", async () => {
   toast("job", false, "cancellation requested");
   sync();
 });
+$("btn-copylog").addEventListener("click", () => {
+  navigator.clipboard.writeText(window._lastLog || "").then(() => toast("copied", true, "log copied to clipboard"));
+});
+$("btn-dllog").addEventListener("click", () => {
+  const blob = new Blob([window._lastLog || ""], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "zyvor-qa-job.log";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
 for (const btn of document.querySelectorAll(".act-btn")) {
   btn.addEventListener("click", () => startJob(btn.dataset.kind));
 }
@@ -970,17 +997,27 @@ function renderRunStatus(st) {
   const busy = !!(st && st.running);
   for (const btn of document.querySelectorAll(".act-btn")) btn.disabled = busy;
 
-  // live job panel: kind, elapsed, streaming stage log, stop button
+  // live job panel: kind, elapsed, live pass/fail tally, per-test rows, streaming log
   const live = $("job-live");
   if (busy) {
     const secs = st.started_at ? Math.max(0, (Date.now() - new Date(st.started_at).getTime()) / 1000 | 0) : 0;
     live.style.display = "block";
     $("live-kind").textContent = KIND_LABELS[st.kind] || st.kind;
     $("live-elapsed").textContent = "· " + rel(secs) + " elapsed";
+    const t = st.live_tally || { passed: 0, failed: 0 };
+    $("live-tally").innerHTML = (t.passed || t.failed)
+      ? '· <span class="pass">' + t.passed + " ✓</span> "
+        + (t.failed ? '<span class="fail">' + t.failed + " ✗</span>" : "")
+      : "";
+    const lc = st.live_cases || [];
+    $("live-cases").innerHTML = lc.slice(-40).map((c) =>
+      '<span class="livecase ' + (c.status === "passed" ? "pass" : "fail") + '"><span class="dot"></span>'
+      + esc((c.status === "passed" ? "" : "✗ ") + c.title) + "</span>").join("");
     const log = $("live-log");
-    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 30;
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
     log.textContent = (st.progress || []).join("\n") || "starting…";
     if (atBottom) log.scrollTop = log.scrollHeight;
+    window._lastLog = (st.progress || []).join("\n");
   } else {
     live.style.display = "none";
   }
@@ -1050,13 +1087,38 @@ function renderJobResult(st) {
 
   const caseTable = (cases) => {
     if (!cases || !cases.length) return "";
-    return '<table class="runs-table" style="margin-top:8px"><tbody>'
-      + cases.map((c) => '<tr><td><span class="chip ' + (c.status === "passed" ? "pass" : "fail") + '">'
-        + (c.status === "passed" ? "PASS" : esc(c.status.toUpperCase())) + "</span></td>"
-        + "<td>" + esc(c.title) + "</td>"
-        + "<td>" + (c.video ? '<a class="rlink" href="' + esc(c.video) + '" target="_blank">🎬 video</a>' : "") + "</td>"
-        + '<td style="max-width:480px;color:var(--status-error)">' + esc(c.error || "") + "</td></tr>").join("")
+    const fails = cases.filter((c) => c.status !== "passed");
+    let out = "";
+    if (fails.length) {
+      out += '<div class="err-summary"><div class="k">⚠ ' + fails.length + " failure(s)</div>"
+        + fails.map((c) => '<div style="margin-bottom:8px"><b>' + esc(c.title) + "</b> "
+          + '<button class="copy-btn" data-copy="' + encodeURIComponent(c.error || "") + '">⧉ copy</button>'
+          + '<div class="case-err">' + esc((c.error || "").slice(0, 600))
+          + (c.console_logs && c.console_logs.length ? "\nconsole: " + esc(c.console_logs.join("\n")) : "")
+          + (c.network_errors && c.network_errors.length ? "\nnetwork: " + esc(c.network_errors.join("\n")) : "")
+          + "</div></div>").join("") + "</div>";
+    }
+    out += '<div style="margin:6px 0"><label class="chk"><input type="checkbox" id="fails-only"> failures only</label></div>';
+    out += '<table class="runs-table" id="case-table"><tbody>'
+      + cases.map((c) => '<tr class="case-row ' + (c.status === "passed" ? "" : "is-fail") + '">'
+        + '<td><span class="chip ' + (c.status === "passed" ? "pass" : "fail") + '">'
+        + (c.status === "passed" ? "PASS" : esc((c.status || "fail").toUpperCase())) + "</span></td>"
+        + "<td>" + esc(c.title) + (c.browser ? ' <span class="d">' + esc(c.browser) + "</span>" : "") + "</td>"
+        + '<td class="d">' + (c.duration_ms != null ? c.duration_ms + "ms" : "") + "</td>"
+        + "<td>" + (c.video ? '<a class="rlink" href="' + esc(c.video) + '" target="_blank">🎬</a> ' : "")
+        + (c.trace ? '<a class="rlink" href="' + esc(c.trace) + '" target="_blank">🔍</a>' : "") + "</td>"
+        + '<td style="max-width:420px;color:var(--status-error);font-size:12px">' + esc((c.error || "").slice(0, 200)) + "</td></tr>").join("")
       + "</tbody></table>";
+    return out;
+  };
+
+  const downloadRow = (rep) => {
+    if (!rep || (!rep.csv && !rep.html && !rep.pdf)) return "";
+    return '<div class="dl-row">Download: '
+      + (rep.csv ? '<a class="dl-btn" href="/api/dashboard/jobs/report.csv">⬇ CSV</a>' : "")
+      + (rep.html ? '<a class="dl-btn" href="' + esc(rep.html) + '" target="_blank">⬇ HTML</a>' : "")
+      + (rep.pdf ? '<a class="dl-btn" href="/api/dashboard/jobs/report.pdf">⬇ PDF</a>' : "")
+      + '<button class="dl-btn" id="btn-rerun">⟳ Rerun</button></div>';
   };
 
   if (st.error) {
@@ -1098,8 +1160,30 @@ function renderJobResult(st) {
     }
     html += caseTable(r.cases);
   }
+  if (r.report) html += downloadRow(r.report);
+  else if (st.kind && !st.error) html += '<div class="dl-row"><button class="dl-btn" id="btn-rerun">⟳ Rerun</button></div>';
   panel.innerHTML = html;
   panel.style.display = "block";
+
+  // wire result-panel controls
+  const failsOnly = document.getElementById("fails-only");
+  if (failsOnly) failsOnly.addEventListener("change", () => {
+    for (const row of document.querySelectorAll("#case-table .case-row")) {
+      row.style.display = (failsOnly.checked && !row.classList.contains("is-fail")) ? "none" : "";
+    }
+  });
+  for (const b of panel.querySelectorAll(".copy-btn")) {
+    b.addEventListener("click", () => {
+      navigator.clipboard.writeText(decodeURIComponent(b.dataset.copy || "")).then(() => toast("copied", true, "error copied to clipboard"));
+    });
+  }
+  const rerun = document.getElementById("btn-rerun");
+  if (rerun) rerun.addEventListener("click", async () => {
+    const res = await fetch("/api/dashboard/jobs/rerun", { method: "POST" });
+    if (res.status === 409) { toast("rerun", false, "a job is already running"); return; }
+    $("job-result").style.display = "none";
+    sync();
+  });
 }
 
 /* fast 2s status poll while a job is running, so the live log streams */

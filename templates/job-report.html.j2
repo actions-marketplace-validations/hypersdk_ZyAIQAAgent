@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Zyvor QA — {{ meta.kind }} report</title>
+<style>
+  :root { --ok: #0ca30c; --bad: #d03b3b; --ink: #f1f5f9; --ink2: #98989d; --line: rgba(255,255,255,0.1); --surface: #1a1a19; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d0d0d; color: var(--ink); font-family: -apple-system, "Segoe UI", Inter, sans-serif; font-size: 14px; padding: 28px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .meta { color: var(--ink2); font-size: 13px; margin-bottom: 20px; }
+  .summary { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px; min-width: 110px; }
+  .tile .k { color: var(--ink2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .tile .v { font-size: 22px; font-weight: 700; }
+  .pass { color: var(--ok); } .fail { color: var(--bad); }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink2); margin: 24px 0 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+  th { color: var(--ink2); font-weight: 600; }
+  .chip { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; }
+  .err { color: #fca5a5; font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre-wrap; max-width: 640px; }
+  a { color: #3987e5; }
+  @media print { body { background: #fff; color: #111; } .tile, th, td { border-color: #ddd; } .err { color: #b00; } }
+</style>
+</head>
+<body>
+  <h1>Zyvor QA — {{ meta.kind }} report</h1>
+  <div class="meta">Generated {{ generated_at }}{% if meta.target %} · target: {{ meta.target }}{% endif %}</div>
+
+  <div class="summary">
+    <div class="tile"><div class="k">Passed</div><div class="v pass">{{ meta.passed }}</div></div>
+    <div class="tile"><div class="k">Failed</div><div class="v {{ 'fail' if meta.failed else '' }}">{{ meta.failed }}</div></div>
+    <div class="tile"><div class="k">Total</div><div class="v">{{ meta.total }}</div></div>
+    {% if meta.duration_s is not none %}<div class="tile"><div class="k">Duration</div><div class="v">{{ meta.duration_s }}s</div></div>{% endif %}
+  </div>
+
+  {% if failures %}
+  <h2>Failures ({{ failures|length }})</h2>
+  <table>
+    <tr><th>Test</th><th>Browser</th><th>Error</th></tr>
+    {% for c in failures %}
+    <tr>
+      <td>{{ c.title }}</td>
+      <td>{{ c.browser or '' }}</td>
+      <td class="err">{{ c.error or '' }}{% if c.console_logs %}
+
+console: {{ c.console_logs | join('\n') }}{% endif %}{% if c.network_errors %}
+
+network: {{ c.network_errors | join('\n') }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  <h2>All tests ({{ cases|length }})</h2>
+  <table>
+    <tr><th>Status</th><th>Test</th><th>Browser</th><th>Duration</th><th>Artifacts</th></tr>
+    {% for c in cases %}
+    <tr>
+      <td><span class="chip {{ 'pass' if c.status == 'passed' else 'fail' }}">{{ c.status | upper }}</span></td>
+      <td>{{ c.title }}</td>
+      <td>{{ c.browser or '' }}</td>
+      <td>{{ (c.duration_ms or 0) | round | int }}ms</td>
+      <td>
+        {% if c.video %}<a href="{{ c.video }}">video</a>{% endif %}
+        {% if c.trace %} <a href="{{ c.trace }}">trace</a>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
