@@ -272,6 +272,14 @@
     white-space: pre-wrap; padding: 10px 12px;
   }
 
+  /* command palette */
+  #palette { position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,0.5); display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+  .palette-box { width: min(560px, 92vw); border-radius: 16px; padding: 10px; }
+  #palette-input { width: 100%; font-size: 15px; padding: 10px 12px; margin-bottom: 6px; }
+  .palette-item { padding: 9px 12px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .palette-item.sel { background: rgba(0,122,255,0.18); }
+  .palette-item .pk { color: var(--text-muted); margin-left: auto; font-size: 11px; }
+
   footer { margin-top: 36px; color: var(--text-muted); font-size: 12px; display: flex; gap: 18px; }
   kbd {
     border: 1px solid var(--separator); border-radius: 6px; padding: 0 6px; font-size: 11px;
@@ -416,6 +424,19 @@
         <button class="run-btn act-btn" data-kind="flaky" style="margin-left:auto">🎲 Detect flaky</button>
       </div>
     </div>
+    <div class="glass card act">
+      <div class="act-title">📸 Screenshot — capture any URL</div>
+      <div class="act-row">
+        <input class="inp grow" id="sh-url" placeholder="https://…">
+      </div>
+      <div class="act-row" id="sh-vps" style="gap:10px">
+        <label class="chk"><input type="checkbox" value="desktop" checked> desktop</label>
+        <label class="chk"><input type="checkbox" value="tablet"> tablet</label>
+        <label class="chk"><input type="checkbox" value="mobile"> mobile</label>
+        <label class="chk"><input type="checkbox" id="sh-full"> full page</label>
+        <button class="run-btn act-btn" data-kind="screenshot" style="margin-left:auto">📸 Capture</button>
+      </div>
+    </div>
     <div class="glass card act" style="grid-column: 1 / -1">
       <div class="act-title">🌐 Test any site — crawl every page and validate it</div>
       <div class="act-row">
@@ -473,8 +494,9 @@
   </div>
 
   <footer>
+    <span><kbd>⌘K</kbd> commands</span>
     <span><kbd>r</kbd> refresh</span>
-    <span><kbd>esc</kbd> close logs</span>
+    <span><kbd>esc</kbd> close</span>
     <span>auto-refresh
       <select class="inp" id="refresh-rate" style="padding:1px 6px;font-size:11px">
         <option value="5000">5s</option>
@@ -507,6 +529,14 @@
 </aside>
 
 <div id="toasts" aria-live="polite"></div>
+
+<div id="palette" style="display:none">
+  <div class="palette-box glass">
+    <input id="palette-input" class="inp" placeholder="Run a command…  (↑↓ to move, ↵ to run, esc to close)" autocomplete="off">
+    <div id="palette-list"></div>
+  </div>
+</div>
+<canvas id="confetti" style="position:fixed;inset:0;pointer-events:none;z-index:60;display:none"></canvas>
 
 <script>
 "use strict";
@@ -957,8 +987,80 @@ function closeDrawer() {
 $("drawer-close").addEventListener("click", closeDrawer);
 $("drawer").addEventListener("mouseenter", () => { drawerHover = true; });
 $("drawer").addEventListener("mouseleave", () => { drawerHover = false; });
+/* ⌘K / Ctrl-K command palette */
+const PALETTE_CMDS = [
+  { label: "Run smoke tests", kind: "smoke" },
+  { label: "Run full pipeline", kind: "full" },
+  { label: "Site audit", kind: "audit" },
+  { label: "Flaky check", kind: "flaky" },
+  { label: "Screenshot a URL", kind: "screenshot" },
+  { label: "Generate tests", kind: "generate" },
+  { label: "Discover coverage", kind: "discover" },
+  { label: "Visual regression", kind: "regression" },
+  { label: "Crawl & test any site", kind: "crawl_test" },
+  { label: "Refresh dashboard", action: () => sync() },
+  { label: "Show cluster events", action: () => { if (!eventsOpen) $("events-toggle").click(); } },
+  { label: "Show recorded videos", action: () => { if (!videosOpen) $("videos-toggle").click(); } },
+];
+let palSel = 0, palFiltered = PALETTE_CMDS;
+function openPalette() {
+  $("palette").style.display = "flex";
+  $("palette-input").value = ""; palSel = 0; renderPalette();
+  $("palette-input").focus();
+}
+function closePalette() { $("palette").style.display = "none"; }
+function renderPalette() {
+  const q = $("palette-input").value.toLowerCase();
+  palFiltered = PALETTE_CMDS.filter((c) => c.label.toLowerCase().includes(q));
+  if (palSel >= palFiltered.length) palSel = 0;
+  $("palette-list").innerHTML = palFiltered.map((c, i) =>
+    '<div class="palette-item ' + (i === palSel ? "sel" : "") + '" data-i="' + i + '">'
+    + esc(c.label) + (c.kind ? '<span class="pk">action</span>' : '<span class="pk">view</span>') + "</div>").join("");
+  for (const el of $("palette-list").querySelectorAll(".palette-item"))
+    el.addEventListener("click", () => runPalette(parseInt(el.dataset.i, 10)));
+}
+function runPalette(i) {
+  const cmd = palFiltered[i];
+  closePalette();
+  if (!cmd) return;
+  if (cmd.kind) startJob(cmd.kind);
+  else if (cmd.action) cmd.action();
+}
+$("palette-input").addEventListener("input", renderPalette);
+$("palette-input").addEventListener("keydown", (ev) => {
+  if (ev.key === "ArrowDown") { palSel = Math.min(palSel + 1, palFiltered.length - 1); renderPalette(); ev.preventDefault(); }
+  else if (ev.key === "ArrowUp") { palSel = Math.max(palSel - 1, 0); renderPalette(); ev.preventDefault(); }
+  else if (ev.key === "Enter") runPalette(palSel);
+  else if (ev.key === "Escape") closePalette();
+});
+$("palette").addEventListener("click", (ev) => { if (ev.target.id === "palette") closePalette(); });
+
+/* confetti on an all-green finish */
+function confettiBurst() {
+  const canvas = $("confetti"), ctx = canvas.getContext("2d");
+  canvas.width = innerWidth; canvas.height = innerHeight; canvas.style.display = "block";
+  const colors = ["#22c55e", "#007aff", "#a78bfa", "#f59e0b", "#f0583a"];
+  const parts = Array.from({ length: 140 }, () => ({
+    x: innerWidth / 2 + (Math.random() - 0.5) * 200, y: innerHeight / 3,
+    vx: (Math.random() - 0.5) * 14, vy: Math.random() * -12 - 4,
+    c: colors[Math.floor(Math.random() * colors.length)], r: 3 + Math.random() * 4, life: 0,
+  }));
+  let frame = 0;
+  (function anim() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of parts) {
+      p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.life++;
+      ctx.fillStyle = p.c; ctx.globalAlpha = Math.max(0, 1 - p.life / 90);
+      ctx.fillRect(p.x, p.y, p.r, p.r);
+    }
+    if (++frame < 90) requestAnimationFrame(anim);
+    else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = "none"; }
+  })();
+}
+
 document.addEventListener("keydown", (ev) => {
-  if (ev.key === "Escape") closeDrawer();
+  if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "k") { ev.preventDefault(); openPalette(); return; }
+  if (ev.key === "Escape") { closeDrawer(); closePalette(); }
   if (ev.key === "r" && !ev.metaKey && !ev.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) sync();
 });
 $("logout").addEventListener("click", async (ev) => {
@@ -998,6 +1100,11 @@ function jobParams(kind) {
     checks: Array.from(document.querySelectorAll("#au-checks input:checked")).map((c) => c.value),
   };
   if (kind === "flaky") return { runs: parseInt($("fl-runs").value, 10) || 3, target: "manual" };
+  if (kind === "screenshot") return {
+    url: $("sh-url").value.trim(),
+    viewports: Array.from(document.querySelectorAll("#sh-vps input:checked")).map((c) => c.value).filter((v) => v !== "on"),
+    full_page: $("sh-full").checked,
+  };
   return {};
 }
 
@@ -1048,7 +1155,7 @@ for (const btn of document.querySelectorAll(".act-btn")) {
   btn.addEventListener("click", () => startJob(btn.dataset.kind));
 }
 
-const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check" };
+const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check", screenshot: "screenshot" };
 
 let lastToastKey = "";
 function renderRunStatus(st) {
@@ -1100,6 +1207,10 @@ function renderRunStatus(st) {
       toast(KIND_LABELS[st.kind] || st.kind, !st.error,
         st.error ? st.error.slice(0, 80)
         : (r.total != null ? r.passed + "/" + r.total + " passed" : "completed"));
+      // celebrate a clean, non-empty test result
+      if (!st.error && r.total > 0 && r.failed === 0 && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        confettiBurst();
+      }
     }
     lastToastKey = key;
   } else if (st && !st.finished_at && !lastToastKey) {
@@ -1199,11 +1310,21 @@ function renderJobResult(st) {
       + (r.requirements != null ? " from " + r.requirements + " requirement(s)" : "")
       + (r.total != null ? " · executed: " + r.passed + "/" + r.total + " passed" : "") + "</div>";
     html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
+  } else if (st.kind === "screenshot") {
+    html += '<div class="d">' + esc(r.url) + " — HTTP " + (r.status || "?") + " · " + esc(r.title || "") + "</div>";
+    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">'
+      + (r.shots || []).map((s) => '<div><div class="d" style="margin-bottom:4px">' + esc(s.viewport) + " · " + s.width + "×" + s.height + '</div>'
+        + '<a href="' + esc(s.href) + '" target="_blank"><img src="' + esc(s.href) + '" style="max-width:280px;border:1px solid var(--separator);border-radius:8px"></a></div>').join("")
+      + "</div>";
   } else if (st.kind === "audit") {
     const checks = r.checks || [];
-    html += '<div class="d">' + esc(r.url) + " — " + r.pages_audited + " page(s) · "
+    const gc = r.grade === "A" ? "var(--status-ok)" : r.grade === "F" || r.grade === "D" ? "var(--status-error)" : "var(--status-warn)";
+    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">'
+      + '<div style="font-size:44px;font-weight:800;line-height:1;color:' + gc + '">' + esc(r.grade || "?") + "</div>"
+      + '<div><div style="font-weight:600">Health score ' + (r.score != null ? r.score + "/100" : "") + "</div>"
+      + '<div class="d">' + esc(r.url) + " — " + r.pages_audited + " page(s) · "
       + '<span class="fail">' + r.fail_count + " failing</span> · "
-      + '<span style="color:var(--status-warn)">' + r.warn_count + " warnings</span></div>";
+      + '<span style="color:var(--status-warn)">' + r.warn_count + " warnings</span></div></div></div>";
     // summary tiles per check
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">'
       + checks.map((c) => { const b = (r.by_check || {})[c] || {}; return '<span class="chip">' + esc(c) + ': '

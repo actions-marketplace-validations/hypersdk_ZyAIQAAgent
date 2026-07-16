@@ -21,7 +21,7 @@ from typing import Any, Callable, Optional
 
 VALID_KINDS = {
     "smoke", "full", "generate", "discover", "create", "regression",
-    "crawl_test", "audit", "flaky",
+    "crawl_test", "audit", "flaky", "screenshot",
 }
 
 _lock = threading.Lock()
@@ -189,6 +189,15 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         if target != "manual":
             target = _safe_local_spec(target)
         clean["target"] = target
+    if kind == "screenshot":
+        url = (params.get("url") or "").strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500]
+        vps = params.get("viewports") or ["desktop"]
+        clean["viewports"] = [v for v in vps if v in ("desktop", "tablet", "mobile")] or ["desktop"]
+        clean["full_page"] = bool(params.get("full_page"))
+        clean["insecure"] = bool(params.get("insecure"))
     return clean
 
 
@@ -728,6 +737,20 @@ def _job_audit(params: dict[str, Any]) -> dict[str, Any]:
     total_warn = sum(v.get("warn", 0) for v in by_check.values())
     log_progress(f"audit done: {len(pages)} pages, {total_fail} failing checks, {total_warn} warnings")
 
+    # aggregate a health grade (A–F) — weighted pass ratio across all checks
+    weights = {"a11y": 3, "console": 2, "links": 2, "seo": 1, "perf": 1, "headers": 1, "responsive": 1}
+    earned = possible = 0.0
+    for check, counts in by_check.items():
+        w = weights.get(check, 1)
+        n = sum(counts.values())
+        if not n:
+            continue
+        possible += w * n
+        earned += w * (counts.get("ok", 0) + 0.5 * counts.get("warn", 0))
+    score = round(100 * earned / possible) if possible else 100
+    grade = "A" if score >= 90 else "B" if score >= 80 else "C" if score >= 70 else "D" if score >= 60 else "F"
+    log_progress(f"health grade: {grade} ({score}/100)")
+
     report = build_audit_bundle(url, checks, pages, summary)
 
     hist = PipelineReport(
@@ -744,9 +767,52 @@ def _job_audit(params: dict[str, Any]) -> dict[str, Any]:
         "by_check": by_check,
         "fail_count": total_fail,
         "warn_count": total_warn,
+        "grade": grade,
+        "score": score,
         "audit_pages": pages,
         "report": report,
     }
+
+
+def _job_screenshot(params: dict[str, Any]) -> dict[str, Any]:
+    """Capture on-demand full-page screenshots of any URL at chosen viewports."""
+    import json as _json
+    import subprocess
+
+    url = params["url"]
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    rel_dir = f"artifacts/shots/{stamp}"
+    out_dir = _repo_root() / "reports" / rel_dir
+    env = {**os.environ, "ZYVOR_BASE_URL": url}
+    if params.get("insecure"):
+        env["ZYVOR_IGNORE_HTTPS_ERRORS"] = "true"
+
+    log_progress(f"capturing {url} at {', '.join(params['viewports'])}…")
+    script = _repo_root() / "playwright" / "scripts" / "shot-url.mjs"
+    cmd = [
+        "node", str(script), url, str(out_dir),
+        ",".join(params["viewports"]),
+        "full" if params.get("full_page") else "",
+    ]
+    proc = subprocess.run(cmd, cwd=_repo_root(), env=env, capture_output=True, text=True)
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise RuntimeError(f"screenshot failed: {(proc.stderr or '')[:200]}")
+    data = _json.loads(proc.stdout)
+
+    # prune older shot dirs
+    root = _repo_root() / "reports" / "artifacts" / "shots"
+    if root.exists():
+        import shutil
+
+        for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-20]:
+            shutil.rmtree(stale, ignore_errors=True)
+
+    shots = [
+        {**s, "href": f"/reports/{rel_dir}/{s['file']}"}
+        for s in data.get("shots", [])
+    ]
+    log_progress(f"captured {len(shots)} screenshot(s)")
+    return {"url": url, "status": data.get("status"), "title": data.get("title"), "shots": shots}
 
 
 def _job_flaky(params: dict[str, Any]) -> dict[str, Any]:
@@ -816,4 +882,5 @@ _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "crawl_test": _job_crawl_test,
     "audit": _job_audit,
     "flaky": _job_flaky,
+    "screenshot": _job_screenshot,
 }
