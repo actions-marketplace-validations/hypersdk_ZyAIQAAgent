@@ -128,17 +128,20 @@ def cancel() -> dict[str, Any]:
     return status()
 
 
-_SECRET_PARAM_KEYS = ("password",)
+_SECRET_PARAM_KEYS = ("password", "token", "apiKey", "api_key")
 
 
 def _redact_params(params: Any) -> Any:
-    """Never echo login credentials back through the status/history API."""
+    """Never echo credentials (passwords, bearer tokens, API keys) back through
+    the status/history API — including one level of nesting (e.g. auth.token)."""
     if not isinstance(params, dict):
         return params
     out = dict(params)
-    for k in _SECRET_PARAM_KEYS:
-        if out.get(k):
+    for k, v in out.items():
+        if k in _SECRET_PARAM_KEYS and v:
             out[k] = "***"
+        elif isinstance(v, dict):
+            out[k] = _redact_params(v)
     return out
 
 

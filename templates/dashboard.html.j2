@@ -607,6 +607,9 @@
         <option value="tls">TLS check</option>
         <option value="flow">flow test (from 🎬 card)</option>
         <option value="route_sweep">route sweep (from 🗺 card)</option>
+        <option value="api_contract">API contract (from 🔌 card)</option>
+        <option value="realtime">live data (from 📡 card)</option>
+        <option value="vitals">web vitals (from 📊 card)</option>
       </select>
       <span class="d">every</span>
       <select class="inp" id="sc-interval">
@@ -987,17 +990,18 @@ async function loadSchedules() {
 }
 $("sc-add").addEventListener("click", async () => {
   const kind = $("sc-kind").value, arg = $("sc-arg").value.trim();
-  // flow / route_sweep pull their params from their own action cards (🎬 / 🗺)
+  // card-driven kinds pull their params from their own action cards
+  const CARD_KINDS = ["flow", "route_sweep", "api_contract", "realtime", "vitals"];
   const params = kind === "audit" ? { url: arg || "https://zyvor.dev", max_pages: 5 }
     : kind === "ping" ? { urls: arg || "https://zyvor.dev" }
     : kind === "tls" ? { host: arg || "zyvor.dev" }
-    : (kind === "flow" || kind === "route_sweep") ? jobParams(kind)
+    : CARD_KINDS.includes(kind) ? jobParams(kind)
     : {};
   if (kind === "flow" && !(params.url && params.description)) {
     toast("schedule", false, "fill the 🎬 Flow test card (URL + steps) first"); return;
   }
-  if (kind === "route_sweep" && !params.url) {
-    toast("schedule", false, "fill the 🗺 Route sweep card (URL) first"); return;
+  if (["route_sweep", "api_contract", "realtime", "vitals"].includes(kind) && !params.url) {
+    toast("schedule", false, "fill the matching action card first"); return;
   }
   const res = await fetch("/api/dashboard/schedules", {
     method: "POST", headers: { "Content-Type": "application/json" },

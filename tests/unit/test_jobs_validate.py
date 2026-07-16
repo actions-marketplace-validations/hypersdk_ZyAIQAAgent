@@ -25,6 +25,19 @@ def test_redact_does_not_mutate_original():
     assert orig["password"] == "s3cret"
 
 
+def test_redact_bearer_token_and_api_key():
+    red = _redact_params({"url": "https://x.io", "token": "eyJhbGci...", "apiKey": "sk-123"})
+    assert red["token"] == "***" and red["apiKey"] == "***"
+    assert red["url"] == "https://x.io"
+
+
+def test_redact_nested_auth_secrets():
+    red = _redact_params({"url": "https://x.io", "auth": {"token": "eyJ...", "header": "x-api-key", "apiKey": "k"}})
+    assert red["auth"]["token"] == "***"
+    assert red["auth"]["apiKey"] == "***"
+    assert red["auth"]["header"] == "x-api-key"  # non-secret preserved
+
+
 def test_flow_and_route_sweep_registered():
     assert "flow" in VALID_KINDS
     assert "route_sweep" in VALID_KINDS
