@@ -21,6 +21,7 @@ def run_flow(
     *,
     insecure: bool = False,
     record: bool = True,
+    trace: bool = True,
     username: str = "",
     password: str = "",
     stop_on_fail: bool = False,
@@ -32,7 +33,7 @@ def run_flow(
     if not script.exists():
         raise RuntimeError("flow-run.mjs not found")
 
-    flow = {"base": url, "steps": steps, "record": record, "stop_on_fail": stop_on_fail}
+    flow = {"base": url, "steps": steps, "record": record, "trace": trace, "stop_on_fail": stop_on_fail}
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
         json.dump(flow, fh)
         flow_file = fh.name

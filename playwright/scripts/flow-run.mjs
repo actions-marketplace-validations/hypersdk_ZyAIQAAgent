@@ -29,11 +29,62 @@ const FAIL_SNIPPETS = ['Something went wrong', 'ReferenceError', 'TypeError', 'i
 const emit = (m) => console.error(m);
 function slug(t) { return (t || 'step').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'step'; }
 
+// navigate with a few retries — survives server churn / cold starts (zeus-os pattern)
+async function gotoRetry(page, url, { waitUntil = 'load', timeout = 30000, tries = 3 } = {}) {
+  let lastErr;
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    try {
+      await page.goto(url, { waitUntil, timeout });
+      return;
+    } catch (err) {
+      lastErr = err;
+      emit(`flow: navigate ${url} failed (try ${attempt}/${tries}) — ${String(err.message || err).slice(0, 120)}`);
+      if (attempt < tries) await page.waitForTimeout(1500 * attempt);
+    }
+  }
+  throw lastErr;
+}
+
+// dismiss cookie banners / onboarding modals that overlay the first step (zeus-os e2e-lib)
+const OVERLAY_LABELS = [
+  'accept all', 'accept cookies', 'accept', 'i agree', 'agree', 'got it', 'ok', 'okay',
+  'dismiss', 'no thanks', 'maybe later', 'skip', 'skip tour', 'close', 'continue', 'allow all',
+];
+async function dismissOverlays(page) {
+  for (let round = 0; round < 3; round++) {
+    let clicked = false;
+    for (const label of OVERLAY_LABELS) {
+      const btn = page.getByRole('button', { name: new RegExp('^\\s*' + escapeRe(label) + '\\s*$', 'i') }).first();
+      try {
+        if ((await btn.count()) && (await btn.isVisible())) {
+          await btn.click({ timeout: 2000 });
+          emit(`flow: dismissed overlay ("${label}")`);
+          await page.waitForTimeout(250);
+          clicked = true;
+          break;
+        }
+      } catch { /* ignore */ }
+    }
+    // common close-icon patterns + Escape as a fallback
+    if (!clicked) {
+      const closeIcon = page.locator('[aria-label*="close" i], [class*="cookie" i] button, [class*="consent" i] button').first();
+      try {
+        if ((await closeIcon.count()) && (await closeIcon.isVisible())) {
+          await closeIcon.click({ timeout: 1500 });
+          clicked = true;
+        }
+      } catch { /* ignore */ }
+    }
+    if (!clicked) { await page.keyboard.press('Escape').catch(() => {}); break; }
+  }
+}
+
 async function tryLogin(page) {
   const user = process.env.ZYVOR_TEST_USER, password = process.env.ZYVOR_TEST_PASSWORD;
   if (!user || !password) return;
   try {
-    await page.goto(base + '/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await gotoRetry(page, base + '/', { waitUntil: 'domcontentloaded', timeout: 30000, tries: 3 });
+    await dismissOverlays(page);
     const pass = page.locator('input[type="password"]').first();
     if ((await pass.count()) > 0) {
       await page.locator('input[type="email"], input[name*="user" i], input[name*="email" i], input[type="text"]').first().fill(user, { timeout: 5000 });
@@ -43,6 +94,7 @@ async function tryLogin(page) {
         page.locator('button[type="submit"], input[type="submit"], button:has-text("sign in"), button:has-text("log in")').first().click({ timeout: 5000 }),
       ]);
       emit(`flow: logged in as ${user}`);
+      await dismissOverlays(page);
     }
   } catch (err) { emit(`flow: login skipped (${err})`); }
 }
@@ -53,8 +105,9 @@ async function runStep(page, step, n) {
   switch (action) {
     case 'goto': {
       const url = /^https?:/.test(target) ? target : base + (target?.startsWith('/') ? target : '/' + (target || ''));
-      await page.goto(url, { waitUntil: 'load', timeout: 30000 });
+      await gotoRetry(page, url, { waitUntil: 'load', timeout: 30000, tries: 3 });
       await page.waitForLoadState('domcontentloaded').catch(() => {});
+      await dismissOverlays(page);
       break;
     }
     case 'click': {
@@ -86,7 +139,7 @@ async function runStep(page, step, n) {
       break;
     case 'assert': {
       const text = assertion || target;
-      if (action === 'assert' && /^https?:|^\//.test(text || '')) {
+      if (/^https?:|^\//.test(text || '')) {
         await page.waitForURL(new RegExp(escapeRe(text)), { timeout: 10000 });
       } else if (text) {
         const loc = page.getByText(text, { exact: false }).first();
@@ -94,6 +147,36 @@ async function runStep(page, step, n) {
       } else {
         await page.getByRole('heading').first().waitFor({ state: 'visible', timeout: 10000 });
       }
+      break;
+    }
+    case 'assert_not': {
+      // text/element must NOT be visible — pass if hidden or absent within the window
+      const text = assertion || target;
+      const loc = page.getByText(text, { exact: false }).first();
+      const deadline = Date.now() + 8000;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const cnt = await loc.count().catch(() => 0);
+        const vis = cnt ? await loc.isVisible().catch(() => false) : false;
+        if (!vis) break;
+        if (Date.now() > deadline) throw new Error(`expected "${text}" to be absent, but it is visible`);
+        await page.waitForTimeout(250);
+      }
+      break;
+    }
+    case 'assert_count': {
+      // target = selector, value = expected integer count
+      const want = Number(value);
+      const got = await page.locator(target).count();
+      if (got !== want) throw new Error(`expected ${want} of "${target}", found ${got}`);
+      break;
+    }
+    case 'assert_value': {
+      // target = field, value = expected input value
+      const byLabel = page.getByLabel(new RegExp(escapeRe(target), 'i')).first();
+      const field = (await byLabel.count()) ? byLabel : page.locator(`input[name*="${target}" i], textarea[name*="${target}" i], ${target}`).first();
+      const got = await field.inputValue({ timeout: 8000 });
+      if (String(got) !== String(value ?? '')) throw new Error(`expected ${target} = "${value}", got "${got}"`);
       break;
     }
     default:
@@ -113,6 +196,9 @@ function describe(step) {
   if (action === 'press') return `press ${value}`;
   if (action === 'wait') return `wait ${target || (value || '') + 'ms'}`;
   if (action === 'assert') return `assert "${assertion || target}"`;
+  if (action === 'assert_not') return `assert NOT "${assertion || target}"`;
+  if (action === 'assert_count') return `assert count "${target}" = ${value}`;
+  if (action === 'assert_value') return `assert ${target} value = "${value}"`;
   return action;
 }
 function escapeRe(s) { return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -126,6 +212,11 @@ async function main() {
   fs.mkdirSync(outDir, { recursive: true });
   if (record) ctxOpts.recordVideo = { dir: outDir, size: { width: 1440, height: 900 } };
   const context = await browser.newContext(ctxOpts);
+  // Playwright trace — time-travel debugger (DOM/network/console per step)
+  const wantTrace = flow.trace !== false;
+  if (wantTrace) {
+    await context.tracing.start({ screenshots: true, snapshots: true, sources: true }).catch(() => {});
+  }
   const page = await context.newPage();
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(String(e.message || e)));
@@ -161,6 +252,15 @@ async function main() {
     if (status === 'failed' && flow.stop_on_fail) break;
   }
 
+  // stop trace before closing the context
+  let traceFile = '';
+  if (wantTrace) {
+    try {
+      traceFile = 'trace.zip';
+      await context.tracing.stop({ path: path.join(outDir, traceFile) });
+    } catch { traceFile = ''; }
+  }
+
   // finalize video: close context THEN saveAs (Playwright writes on close)
   let videoFile = '';
   const video = record ? page.video() : null;
@@ -177,7 +277,7 @@ async function main() {
   }
   await browser.close();
 
-  process.stdout.write(JSON.stringify({ base, passed, failed, total: steps.length, steps: results, video: videoFile }));
+  process.stdout.write(JSON.stringify({ base, passed, failed, total: steps.length, steps: results, video: videoFile, trace: traceFile }));
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

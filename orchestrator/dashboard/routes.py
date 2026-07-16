@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, Response
 from jinja2 import Environment, FileSystemLoader
 
@@ -52,8 +52,23 @@ async def login_page() -> str:
     return env.get_template("login.html.j2").render(auth_enabled=auth.enabled())
 
 
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP, honouring a single proxy hop."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _is_https(request: Request) -> bool:
+    proto = request.headers.get("x-forwarded-proto", "")
+    if proto:
+        return proto.split(",")[0].strip() == "https"
+    return request.url.scheme == "https"
+
+
 @router.post("/api/login")
-def api_login(payload: dict[str, Any] = Body(...)) -> Response:
+def api_login(request: Request, payload: dict[str, Any] = Body(...)) -> Response:
     """Sync route on purpose — the failure path sleeps for brute-force damping."""
     import json
 
@@ -62,12 +77,23 @@ def api_login(payload: dict[str, Any] = Body(...)) -> Response:
             content=json.dumps({"ok": True, "note": "auth disabled"}),
             media_type="application/json",
         )
+    ip = _client_ip(request)
+    locked = auth.rate_limited(ip)
+    if locked:
+        return Response(
+            content=json.dumps({"ok": False, "detail": f"too many attempts — try again in {locked}s"}),
+            status_code=429,
+            headers={"Retry-After": str(locked)},
+            media_type="application/json",
+        )
     if not auth.verify_credentials(str(payload.get("username", "")), str(payload.get("password", ""))):
+        auth.record_failure(ip)
         return Response(
             content=json.dumps({"ok": False, "detail": "invalid username or password"}),
             status_code=401,
             media_type="application/json",
         )
+    auth.record_success(ip)
     token, max_age = auth.issue_token(remember=bool(payload.get("remember")))
     response = Response(content=json.dumps({"ok": True}), media_type="application/json")
     response.set_cookie(
@@ -76,6 +102,7 @@ def api_login(payload: dict[str, Any] = Body(...)) -> Response:
         max_age=max_age,
         httponly=True,
         samesite="lax",
+        secure=_is_https(request),
     )
     return response
 

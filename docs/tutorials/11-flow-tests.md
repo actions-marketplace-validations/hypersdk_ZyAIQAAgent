@@ -68,10 +68,26 @@ zyvor-qa flow https://app.example.com --steps checkout.flow \
 | `press <key>` | `page.keyboard.press(value)` — e.g. `press Enter` |
 | `wait [for] <selector\|ms>` | `waitForSelector` or `waitForTimeout` |
 | `assert "<text>"` / `assert /path` (`verify`/`expect`/`check`) | text visible, heading, or URL match |
+| `assert not "<text>"` / `assert no "<text>"` | text/element must **not** be visible (spinner gone, error absent) |
+| `assert count <selector> = <n>` | exactly `n` elements match the CSS selector |
+| `assert value <field> = <value>` | an input holds the expected value |
 
 A bare line with no verb is treated as `assert "<that text>"`. A step **fails** not only on a Playwright error but also if a runtime error fires during it — the runner scans the page body for `Something went wrong`, `ReferenceError`, `is not defined`, and hooks `page.on('pageerror')`. That catches "the button clicked but the app threw" bugs a naive click test would miss.
 
+The prose parser also detects negatives — "the spinner is **no longer** visible", "the error **should not** appear" become `assert_not` steps.
+
+### Robustness
+
+The runner is built to survive real apps and flaky servers:
+
+- **Overlay dismissal** — before the first step (and after each navigation) it clicks past cookie banners and onboarding modals (Accept / Got it / Dismiss / Skip / Close / Escape) so they don't block the journey.
+- **Navigation retry** — each `goto` (and the login navigation) retries up to 3× with backoff, surviving cold starts and server churn.
+
 Every step also captures a screenshot, and the whole run is saved as one video (`context.recordVideo`, finalized with `page.video().saveAs()` after the context closes — ordering matters, Playwright only writes the file on context close).
+
+### Trace — the time-travel debugger
+
+By default the runner captures a **Playwright trace** (`trace.zip`) alongside the video. Download it from the result panel (🔍) or the CLI output and open it at [trace.playwright.dev](https://trace.playwright.dev) — you get a per-step timeline with the DOM snapshot, network log, and console at each moment. This is the fastest way to see *why* a step failed. Turn it off with `--no-trace` (CLI) for a lighter run.
 
 ---
 
@@ -108,7 +124,12 @@ zyvor-qa route-sweep https://zyvor.dev --routes "/,/products,/pricing" --mobile
 
 # accept the new look as the baseline
 zyvor-qa route-sweep https://zyvor.dev --routes "/,/products,/pricing" --update-baselines
+
+# don't type routes at all — crawl the site and sweep whatever it finds
+zyvor-qa route-sweep https://zyvor.dev --auto --max-pages 20 --mobile
 ```
+
+Tick **auto-discover (crawl)** in the 🗺 card to do the same from the dashboard. Every sweep also writes a downloadable **CSV / HTML / PDF** report (route × viewport matrix with thumbnails), same as flow tests.
 
 - Desktop is **1440×900**, mobile is **375×812**.
 - Dynamic content that flakes pixel diffs — `canvas`, charts (`.recharts-*`), clocks, timestamps, skeletons — is **masked**, and CSS animations are disabled.
@@ -130,6 +151,28 @@ Use flow tests for the paths you can't afford to break, and route sweeps + crawl
 
 ---
 
+## 6. Run them on a loop
+
+Both flow tests and route sweeps are **schedulable**. Fill in the 🎬 or 🗺 card, then in the **Schedules** panel pick *flow test* or *route sweep* and an interval — the schedule reuses whatever you entered in the card. A critical signup journey every 15 minutes, a full-site route sweep nightly: the console becomes a monitor, and each run lands in QA history with its video/trace/report.
+
+---
+
+## 7. Serving securely (HTTPS)
+
+The dashboard is served over plain HTTP by default. For anything reachable beyond localhost, serve it over TLS:
+
+```bash
+# self-signed cert, auto-generated under ~/.zyvor-qa/tls
+zyvor-qa serve --port 8090 --tls
+
+# or bring your own
+zyvor-qa serve --port 8090 --tls-cert /path/cert.pem --tls-key /path/key.pem
+```
+
+Over HTTPS the session cookie is marked **Secure**. The deploy script takes `--tls` to do this on a host (`deploy-remote.sh <host> <user> --service --tls`). Login is also **rate-limited** — 8 failed attempts from an IP within 5 minutes triggers a 5-minute lockout — so a default password isn't a free brute-force target. Still, change `DASHBOARD_PASSWORD` from the default for any real deployment.
+
+---
+
 ## Configuration
 
 Relevant environment variables (see [configuration](../configuration.md)):
@@ -143,3 +186,7 @@ Relevant environment variables (see [configuration](../configuration.md)):
 | `VISUAL_MAX_DIFF_RATIO` | route-sweep pixel-diff pass threshold |
 | `VISUAL_SETTLE_MS` | extra settle time per route before screenshot |
 | `ANTHROPIC_API_KEY` | enables LLM journey parsing (heuristic otherwise) |
+| `DASHBOARD_PASSWORD` | enables dashboard login (rate-limited); change from the default |
+| `DASHBOARD_SECRET` | explicit session-signing secret (else derived from credentials) |
+
+The flow trace is on by default; pass `--no-trace` to the CLI to skip it. Serve over HTTPS with `zyvor-qa serve --tls` (self-signed) — see section 7.

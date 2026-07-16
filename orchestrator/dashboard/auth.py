@@ -11,12 +11,54 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import threading
 import time
+from collections import defaultdict, deque
 from typing import Any
 
 COOKIE_NAME = "zyvor_qa_session"
 SESSION_HOURS = 12
 REMEMBER_DAYS = 30
+
+# ── login rate limiting (per client IP, sliding window) ──
+RL_WINDOW_S = 300          # 5-minute window
+RL_MAX_FAILURES = 8        # failures allowed in the window before lockout
+RL_LOCKOUT_S = 300         # lockout duration once tripped
+_rl_lock = threading.Lock()
+_rl_failures: dict[str, deque[float]] = defaultdict(deque)
+_rl_locked_until: dict[str, float] = {}
+
+
+def rate_limited(ip: str) -> int:
+    """Return remaining lockout seconds for this IP (0 = allowed to attempt)."""
+    now = time.time()
+    with _rl_lock:
+        until = _rl_locked_until.get(ip, 0)
+        if until > now:
+            return int(until - now) + 1
+        if until:
+            _rl_locked_until.pop(ip, None)
+        return 0
+
+
+def record_failure(ip: str) -> None:
+    """Record a failed login; trip a lockout once too many failures accrue."""
+    now = time.time()
+    with _rl_lock:
+        dq = _rl_failures[ip]
+        dq.append(now)
+        while dq and dq[0] < now - RL_WINDOW_S:
+            dq.popleft()
+        if len(dq) >= RL_MAX_FAILURES:
+            _rl_locked_until[ip] = now + RL_LOCKOUT_S
+            dq.clear()
+
+
+def record_success(ip: str) -> None:
+    """Clear failure state for an IP after a successful login."""
+    with _rl_lock:
+        _rl_failures.pop(ip, None)
+        _rl_locked_until.pop(ip, None)
 
 OPEN_PATHS = {"/health", "/login", "/api/login", "/favicon.ico"}
 PROTECTED_PREFIXES = ("/dashboard", "/api/dashboard", "/reports", "/screenshots")

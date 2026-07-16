@@ -26,7 +26,6 @@ def _collect_test_files() -> list[Path]:
 
 def _extract_test_signals(content: str) -> set[str]:
     signals: set[str] = set()
-    content_lower = content.lower()
 
     for match in re.finditer(r"goto\(\s*['\"`]([^'\"`]+)['\"`]", content):
         signals.add(match.group(1).lower())
@@ -43,25 +42,7 @@ def _extract_test_signals(content: str) -> set[str]:
     return signals
 
 
-def _candidate_match_tokens(candidate: CoverageCandidate) -> set[str]:
-    tokens = {
-        candidate.path.lower(),
-        candidate.title.lower(),
-        _slug(candidate.title),
-        _slug(candidate.path.strip("/")),
-        candidate.id.lower(),
-    }
-    for signal in candidate.signals:
-        if signal.startswith("status:") or signal.startswith("live-crawl"):
-            continue
-        tokens.add(signal.lower())
-    if candidate.path != "/":
-        tokens.add(candidate.path.rstrip("/").lower())
-    return {t for t in tokens if t}
-
-
 def is_candidate_covered(candidate: CoverageCandidate, test_signals: set[str]) -> bool:
-    tokens = _candidate_match_tokens(candidate)
     path = candidate.path.lower().rstrip("/") or "/"
     if path in test_signals:
         return True

@@ -151,7 +151,7 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`. St
 | `DASHBOARD_NAMESPACE` | in-cluster namespace, else `default` | Kubernetes namespace the dashboard inspects |
 | `DASHBOARD_POD_SELECTOR` | *(empty — all pods in namespace)* | Label selector filter, e.g. `app=zyvor-qa-agent` |
 | `DASHBOARD_USER` | `admin` | Login username (Zyvor premium login screen) |
-| `DASHBOARD_PASSWORD` | *(empty — auth disabled)* | Setting this **enables login** for `/dashboard`, the API, and artifacts; `/health` and `/webhook/github` stay open. `deploy-remote.sh` generates one per host automatically (skip with `--no-auth`). |
+| `DASHBOARD_PASSWORD` | *(empty — auth disabled)* | Setting this **enables login** for `/dashboard`, the API, and artifacts; `/health` and `/webhook/github` stay open. `deploy-remote.sh` generates one per host automatically (skip with `--no-auth`). Login is rate-limited (8 failures / 5 min per IP → 5-min lockout). |
 | `DASHBOARD_SECRET` | derived from credentials | Optional explicit session-signing secret |
 | `ZYVOR_IGNORE_HTTPS_ERRORS` | `false` | Accept self-signed/invalid TLS on the target under test (the Test-any-site / audit / probe actions set this per job) |
 | `ZYVOR_VIDEO` | *(off)* | `on` records a video for every test (dashboard job runs set this) |
@@ -160,7 +160,7 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`. St
 | `VISUAL_MAX_DIFF_RATIO` | `2.0` | Route-sweep pixel-diff pass threshold (percent); routes above it are flagged |
 | `VISUAL_SETTLE_MS` | `1500` | Extra settle time per route before the sweep screenshots it |
 
-The **🎬 Flow test** action (`flow` job / `zyvor-qa flow`) drives a multi-step journey recorded as one video; the **🗺 Route sweep** action (`route_sweep` / `zyvor-qa route-sweep`) screenshots routes at desktop/mobile and diffs them against baselines under `reports/artifacts/route-baselines/`. Both honour `ZYVOR_IGNORE_HTTPS_ERRORS`, `ZYVOR_NO_SANDBOX`, and (flow) `ZYVOR_VIDEO`. See [Tutorial 11](tutorials/11-flow-tests.md).
+The **🎬 Flow test** action (`flow` job / `zyvor-qa flow`) drives a multi-step journey recorded as one video, with a Playwright `trace.zip` (open at trace.playwright.dev) and richer assertions (`assert_not` / `assert_count` / `assert_value`); the **🗺 Route sweep** action (`route_sweep` / `zyvor-qa route-sweep`) screenshots routes at desktop/mobile and diffs them against baselines under `reports/artifacts/route-baselines/`, and can `--auto`-discover routes by crawling. Both honour `ZYVOR_IGNORE_HTTPS_ERRORS`, `ZYVOR_NO_SANDBOX`, and (flow) `ZYVOR_VIDEO`, and both are schedulable. Serve the dashboard over HTTPS with `zyvor-qa serve --tls` (self-signed cert under `~/.zyvor-qa/tls`) or the deploy script's `--tls`. See [Tutorial 11](tutorials/11-flow-tests.md).
 
 The dashboard's audit, probe, screenshot, compare, ping, load-test, TLS, flaky, and schedule actions are entirely UI/API-driven — no extra environment variables. They persist artifacts (videos, screenshots, diff images, and CSV/HTML/PDF report bundles) under `reports/` (PVC-backed on Kubernetes).
 

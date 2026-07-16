@@ -31,6 +31,7 @@ VERIFY_ONLY=false
 PREFLIGHT_ONLY=false
 WITH_ENV=false
 INSTALL_SERVICE=false
+TLS_MODE=""
 RUN_SMOKE=false
 VERBOSE=false
 SERVE_PORT="${ZYVOR_QA_PORT:-}"
@@ -70,6 +71,8 @@ Options:
   --skip-verify       Skip remote verification
   --with-env          Also sync local .env (contains secrets — default: excluded)
   --service           Install + start systemd unit: zyvor-qa serve (webhook + dashboard)
+  --tls               Serve the dashboard over HTTPS (self-signed cert, auto-generated
+                      on the host) — sets the session cookie Secure
   --port N            Serve port (default: 30080 — fixed, NodePort-range,
                       persisted on the remote and reused on redeploys)
   --runtime NAME      Container runtime: docker | podman (default: auto-detect —
@@ -112,6 +115,7 @@ while [ $# -gt 0 ]; do
         --quick)          QUICK_MODE=true; DEPLOY_PROFILE="quick"; shift ;;
         --container)      DEPLOY_PROFILE="container"; shift ;;
         --k3s)            DEPLOY_PROFILE="k3s"; shift ;;
+        --tls)            TLS_MODE=true; shift ;;
         --uninstall)      UNINSTALL=true; shift ;;
         --key)            KEY_AUTH=true; shift ;;
         --dry-run)        DRY_RUN=true; shift ;;
@@ -518,7 +522,7 @@ REMOTE
 }
 
 install_service() {
-    _ssh env REMOTE_STAGING="${REMOTE_DIR}" REMOTE_USER="${TARGET_USER}" SERVE_PORT="${SERVE_PORT}" bash <<'REMOTE'
+    _ssh env REMOTE_STAGING="${REMOTE_DIR}" REMOTE_USER="${TARGET_USER}" SERVE_PORT="${SERVE_PORT}" TLS_MODE="${TLS_MODE:-}" bash <<'REMOTE'
 set -e
 SUDO=""
 [ "$(id -u)" -ne 0 ] && SUDO="sudo"
@@ -533,7 +537,7 @@ Wants=network-online.target
 Type=simple
 User=${REMOTE_USER}
 WorkingDirectory=${REMOTE_STAGING}
-ExecStart=${REMOTE_STAGING}/.venv/bin/zyvor-qa serve --port ${SERVE_PORT} --host 0.0.0.0
+ExecStart=${REMOTE_STAGING}/.venv/bin/zyvor-qa serve --port ${SERVE_PORT} --host 0.0.0.0${TLS_MODE:+ --tls}
 Restart=on-failure
 RestartSec=5
 

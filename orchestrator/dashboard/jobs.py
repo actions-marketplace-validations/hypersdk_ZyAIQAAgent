@@ -273,6 +273,10 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["viewports"] = [v for v in vps if v in ("desktop", "mobile")] or ["desktop"]
         clean["update_baselines"] = bool(params.get("update_baselines"))
         clean["insecure"] = bool(params.get("insecure"))
+        clean["auto"] = bool(params.get("auto"))
+        clean["max_pages"] = max(1, min(int(params.get("max_pages") or 20), 40))
+        clean["username"] = (params.get("username") or "").strip()[:200]
+        clean["password"] = (params.get("password") or "")[:200]
     if kind in PROBE_KINDS:
         target = (params.get("url") or params.get("host") or "").strip()
         if kind == "dns_records":
@@ -1232,8 +1236,13 @@ def _job_flow(params: dict[str, Any]) -> dict[str, Any]:
             "shot": f"{base}/{s['shot']}" if s.get("shot") else None,
         })
     video = f"{base}/{data['video']}" if data.get("video") else None
+    trace = f"{base}/{data['trace']}" if data.get("trace") else None
     passed, failed, total = data.get("passed", 0), data.get("failed", 0), data.get("total", 0)
-    log_progress(f"journey done: {passed}/{total} steps passed" + (" · video saved" if video else ""))
+    log_progress(
+        f"journey done: {passed}/{total} steps passed"
+        + (" · video saved" if video else "")
+        + (" · trace saved" if trace else "")
+    )
 
     # prune old flow dirs
     root = _repo_root() / "reports" / "artifacts" / "flows"
@@ -1250,7 +1259,7 @@ def _job_flow(params: dict[str, Any]) -> dict[str, Any]:
     history.append_run(hist, source="dashboard-flow", duration_s=_time.time() - t0)
     return {
         "url": url, "mode": mode, "passed": passed, "failed": failed, "total": total,
-        "flow_steps": result_steps, "video": video, "report": report,
+        "flow_steps": result_steps, "video": video, "trace": trace, "report": report,
     }
 
 
@@ -1272,6 +1281,29 @@ def _job_route_sweep(params: dict[str, Any]) -> dict[str, Any]:
     url = params["url"].rstrip("/")
     routes, viewports = params["routes"], params["viewports"]
     update = params["update_baselines"]
+
+    # auto-discover routes by crawling the site (plan: "routes[] or auto from crawl")
+    if params.get("auto"):
+        from agents.discover.crawl import crawl_live_site
+
+        overrides: dict[str, Optional[str]] = {
+            "ZYVOR_BASE_URL": url,
+            "ENABLE_LIVE_CRAWL": "true",
+            "CRAWL_MAX_PAGES": str(params.get("max_pages", 20)),
+            "ZYVOR_IGNORE_HTTPS_ERRORS": "true" if params.get("insecure") else None,
+            "ZYVOR_TEST_USER": params.get("username") or None,
+            "ZYVOR_TEST_PASSWORD": params.get("password") or None,
+        }
+        log_progress(f"auto-discovering routes by crawling {url}…")
+        with _env_overrides(overrides):
+            candidates = crawl_live_site(url)
+        discovered = []
+        for c in candidates:
+            p = getattr(c, "path", "") or ""
+            if p.startswith("/") and p not in discovered:
+                discovered.append(p)
+        routes = discovered[: params.get("max_pages", 20)] or routes
+        log_progress(f"discovered {len(routes)} route(s): " + ", ".join(routes[:8]) + ("…" if len(routes) > 8 else ""))
 
     baseline_root = _repo_root() / "reports" / "artifacts" / "route-baselines"
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -1336,11 +1368,23 @@ def _job_route_sweep(params: dict[str, Any]) -> dict[str, Any]:
         for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-10]:
             shutil.rmtree(stale, ignore_errors=True)
 
+    summary = {"fail_count": fails, "new_baselines": new_baselines, "routes": len(routes)}
+    report = _route_sweep_report_bundle(url, rows, summary)
     return {
         "url": url, "routes": len(routes), "viewports": viewports,
         "baselines_updated": update or new_baselines > 0, "new_baselines": new_baselines,
-        "fail_count": fails, "sweep_rows": rows,
+        "fail_count": fails, "sweep_rows": rows, "report": report,
     }
+
+
+def _route_sweep_report_bundle(url: str, rows: list, summary: dict) -> dict[str, str]:
+    try:
+        from agents.reporter.exports import build_route_sweep_bundle
+
+        return build_route_sweep_bundle(url, rows, summary)
+    except Exception as exc:
+        log_progress(f"report bundle failed: {str(exc)[:80]}")
+        return {}
 
 
 _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {

@@ -335,7 +335,10 @@ def flow(
     describe: Optional[str] = typer.Option(None, help="Journey in plain English"),
     steps: Optional[str] = typer.Option(None, help="Path to a file with one step per line"),
     video: bool = typer.Option(True, help="Record the journey as a video"),
+    trace: bool = typer.Option(True, help="Capture a Playwright trace.zip (time-travel debugger)"),
     insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
+    username: Optional[str] = typer.Option(None, help="Login username (best-effort sign-in)"),
+    password: Optional[str] = typer.Option(None, help="Login password"),
 ) -> None:
     """Drive a multi-step user journey and record it end-to-end as one video."""
     _load_env()
@@ -354,10 +357,16 @@ def flow(
     typer.echo(f"{len(parsed)} step(s) parsed ({mode})")
     repo_root = Path(__file__).resolve().parents[1]
     out_dir = repo_root / "reports" / "artifacts" / "flows" / "cli"
-    result = run_flow(url, parsed, out_dir, record=video, insecure=insecure, on_line=lambda line: typer.echo(line))
+    result = run_flow(
+        url, parsed, out_dir, record=video, trace=trace, insecure=insecure,
+        username=username or "", password=password or "",
+        on_line=lambda line: typer.echo(line),
+    )
     typer.echo(f"Result: {result['passed']}/{result['total']} steps passed")
     if result.get("video"):
         typer.echo(f"Journey video: {out_dir / result['video']}")
+    if result.get("trace"):
+        typer.echo(f"Trace (open at trace.playwright.dev): {out_dir / result['trace']}")
     if result["failed"] > 0:
         raise typer.Exit(code=1)
 
@@ -368,6 +377,9 @@ def route_sweep(
     routes: str = typer.Option("/", help="Comma-separated routes to screenshot"),
     mobile: bool = typer.Option(False, help="Also capture mobile viewport"),
     update_baselines: bool = typer.Option(False, help="Capture/replace baselines"),
+    auto: bool = typer.Option(False, help="Auto-discover routes by crawling the site"),
+    max_pages: int = typer.Option(20, help="Max routes to discover when --auto"),
+    insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
 ) -> None:
     """Screenshot a list of routes and diff against baselines."""
     _load_env()
@@ -379,7 +391,9 @@ def route_sweep(
         "routes": [r.strip() for r in routes.split(",") if r.strip()],
         "viewports": vps,
         "update_baselines": update_baselines,
-        "insecure": False,
+        "insecure": insecure,
+        "auto": auto,
+        "max_pages": max_pages,
     })
     typer.echo(f"Swept {result['routes']} route(s): {result['fail_count']} changed, {result['new_baselines']} new baseline(s)")
     for row in result["sweep_rows"]:
@@ -390,15 +404,49 @@ def route_sweep(
 def serve(
     port: int = typer.Option(8080, help="Webhook server port"),
     host: str = typer.Option("0.0.0.0", help="Bind host"),
+    tls: bool = typer.Option(False, help="Serve over HTTPS (generates a self-signed cert if none given)"),
+    tls_cert: Optional[str] = typer.Option(None, help="Path to a TLS certificate (PEM)"),
+    tls_key: Optional[str] = typer.Option(None, help="Path to the TLS private key (PEM)"),
 ) -> None:
-    """Start FastAPI webhook server for GitHub events."""
+    """Start FastAPI webhook server for GitHub events + Mission Control dashboard."""
     _load_env()
     import uvicorn
 
     from orchestrator.webhook import create_app
 
-    typer.echo(f"Starting webhook server on {host}:{port}")
-    uvicorn.run(create_app(), host=host, port=port)
+    ssl_kwargs: dict[str, str] = {}
+    if tls or tls_cert or tls_key:
+        cert, key = _ensure_tls_cert(tls_cert, tls_key, host)
+        ssl_kwargs = {"ssl_certfile": cert, "ssl_keyfile": key}
+        typer.echo(f"Starting HTTPS server on {host}:{port} (cert: {cert})")
+    else:
+        typer.echo(f"Starting webhook server on {host}:{port}")
+    uvicorn.run(create_app(), host=host, port=port, **ssl_kwargs)
+
+
+def _ensure_tls_cert(cert: Optional[str], key: Optional[str], host: str) -> tuple[str, str]:
+    """Return (cert_path, key_path); generate a self-signed pair if not provided."""
+    import subprocess
+
+    if cert and key:
+        return cert, key
+    cert_dir = Path.home() / ".zyvor-qa" / "tls"
+    cert_dir.mkdir(parents=True, exist_ok=True)
+    cert_path, key_path = cert_dir / "server.crt", cert_dir / "server.key"
+    if cert_path.exists() and key_path.exists():
+        return str(cert_path), str(key_path)
+    cn = host if host not in ("0.0.0.0", "") else "localhost"
+    typer.echo(f"Generating self-signed TLS certificate (CN={cn}) → {cert_dir}")
+    subprocess.run(
+        [
+            "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+            "-keyout", str(key_path), "-out", str(cert_path),
+            "-days", "825", "-subj", f"/CN={cn}",
+            "-addext", f"subjectAltName=DNS:{cn},DNS:localhost,IP:127.0.0.1",
+        ],
+        check=True, capture_output=True,
+    )
+    return str(cert_path), str(key_path)
 
 
 if __name__ == "__main__":

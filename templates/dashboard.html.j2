@@ -484,11 +484,12 @@
       <div class="act-title">🗺 Route sweep — screenshot many routes, diff vs baselines</div>
       <div class="act-row">
         <input class="inp grow" id="rs-url" placeholder="https://…">
-        <input class="inp grow" id="rs-routes" placeholder="routes: / , /products , /vm  (comma or newline)">
+        <input class="inp grow" id="rs-routes" placeholder="routes: / , /products , /vm  (comma or newline — or tick auto-discover)">
       </div>
       <div class="act-row" style="gap:12px" id="rs-vps">
         <label class="chk"><input type="checkbox" value="desktop" checked> desktop</label>
         <label class="chk"><input type="checkbox" value="mobile"> mobile</label>
+        <label class="chk"><input type="checkbox" id="rs-auto"> auto-discover (crawl)</label>
         <label class="chk"><input type="checkbox" id="rs-update"> update baselines</label>
         <label class="chk"><input type="checkbox" id="rs-insecure"> self-signed TLS</label>
         <button class="run-btn act-btn" data-kind="route_sweep" style="margin-left:auto">🗺 Sweep</button>
@@ -536,6 +537,8 @@
         <option value="audit">site audit (zyvor.dev)</option>
         <option value="ping">uptime ping</option>
         <option value="tls">TLS check</option>
+        <option value="flow">flow test (from 🎬 card)</option>
+        <option value="route_sweep">route sweep (from 🗺 card)</option>
       </select>
       <span class="d">every</span>
       <select class="inp" id="sc-interval">
@@ -916,10 +919,18 @@ async function loadSchedules() {
 }
 $("sc-add").addEventListener("click", async () => {
   const kind = $("sc-kind").value, arg = $("sc-arg").value.trim();
+  // flow / route_sweep pull their params from their own action cards (🎬 / 🗺)
   const params = kind === "audit" ? { url: arg || "https://zyvor.dev", max_pages: 5 }
     : kind === "ping" ? { urls: arg || "https://zyvor.dev" }
     : kind === "tls" ? { host: arg || "zyvor.dev" }
+    : (kind === "flow" || kind === "route_sweep") ? jobParams(kind)
     : {};
+  if (kind === "flow" && !(params.url && params.description)) {
+    toast("schedule", false, "fill the 🎬 Flow test card (URL + steps) first"); return;
+  }
+  if (kind === "route_sweep" && !params.url) {
+    toast("schedule", false, "fill the 🗺 Route sweep card (URL) first"); return;
+  }
   const res = await fetch("/api/dashboard/schedules", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ kind, interval_s: parseInt($("sc-interval").value, 10), params }),
@@ -1285,6 +1296,7 @@ function jobParams(kind) {
     viewports: Array.from(document.querySelectorAll("#rs-vps input[value]:checked")).map((c) => c.value),
     update_baselines: $("rs-update").checked,
     insecure: $("rs-insecure").checked,
+    auto: $("rs-auto").checked,
   };
   const PROBES = ["redirects","headers","cookies","robots","security_paths","api_check","sitemap_test","dns_records","cors","transport"];
   if (PROBES.includes(kind)) {
@@ -1521,6 +1533,7 @@ function renderJobResult(st) {
     html += '<div class="d"><b class="' + (r.failed ? "fail" : "pass") + '">' + r.passed + "/" + r.total + " steps passed</b> · "
       + esc(r.url) + " · parsed by " + esc(r.mode) + "</div>";
     if (r.video) html += '<video controls src="' + esc(r.video) + '" style="max-width:520px;width:100%;border:1px solid var(--separator);border-radius:10px;margin:10px 0"></video>';
+    if (r.trace) html += '<div class="dl-row" style="margin:2px 0 8px">🔍 <a class="rlink" href="' + esc(r.trace) + '" target="_blank">download trace.zip</a> <span class="d">— open at trace.playwright.dev for step-by-step DOM/network/console</span></div>';
     html += '<table class="runs-table" style="margin-top:6px"><tbody>'
       + (r.flow_steps || []).map((s) => "<tr><td>" + s.n + "</td>"
         + '<td><span class="chip ' + (s.status === "passed" ? "pass" : "fail") + '">' + (s.status === "passed" ? "PASS" : "FAIL") + "</span></td>"

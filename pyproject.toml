@@ -42,6 +42,15 @@ zyvor-qa = "orchestrator.cli:main"
 where = ["."]
 include = ["orchestrator*", "agents*", "github*"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+python_files = ["test_*.py"]
+addopts = "-q"
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint.per-file-ignores]
+# cli.py filters warnings before importing heavy modules — imports intentionally follow.
+"orchestrator/cli.py" = ["E402"]

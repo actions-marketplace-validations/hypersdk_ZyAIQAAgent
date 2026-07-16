@@ -26,6 +26,9 @@ Return ONLY valid JSON:
 - `press` — `value` is a key (e.g. `Enter`).
 - `wait` — `target` is a CSS selector to wait for, or `value` is milliseconds.
 - `assert` — `assertion` is visible text that must appear, or a URL path to reach.
+- `assert_not` — `assertion` is text/element that must **not** be visible (e.g. a spinner is gone, an error is absent).
+- `assert_count` — `target` is a CSS selector, `value` is the exact integer count expected.
+- `assert_value` — `target` is an input field name/label, `value` is the exact value it must hold.
 
 ## Rules
 

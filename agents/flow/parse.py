@@ -39,6 +39,22 @@ def parse_step_lines(text: str) -> list[dict[str, Any]]:
             arg = m.group(1).strip()
             steps.append(_step("wait", value=arg) if arg.replace("ms", "").isdigit() else _step("wait", arg))
             continue
+        # assert value: `assert value email = qa@x.com` / `assert <field> value = X`
+        m = re.match(r"^(?:assert|verify|expect|check)\s+(?:value\s+)?(.+?)\s+value\s*[=:]\s*[\"']?(.+?)[\"']?$", line, re.I) \
+            or re.match(r"^(?:assert|verify|expect|check)\s+value\s+(.+?)\s*[=:]\s*[\"']?(.+?)[\"']?$", line, re.I)
+        if m:
+            steps.append(_step("assert_value", m.group(1).strip(), m.group(2).strip()))
+            continue
+        # assert count: `assert count .card = 3`
+        m = re.match(r"^(?:assert|verify|expect|check)\s+count\s+(.+?)\s*[=:]\s*(\d+)$", line, re.I)
+        if m:
+            steps.append(_step("assert_count", m.group(1).strip(), m.group(2).strip()))
+            continue
+        # negative assert: `assert not "spinner"` / `assert no "error"`
+        m = re.match(r"^(?:assert|verify|expect|check)\s+(?:not|no)\s+[\"']?(.+?)[\"']?$", line, re.I)
+        if m:
+            steps.append(_step("assert_not", assertion=m.group(1).strip()))
+            continue
         m = re.match(r"^(?:assert|verify|expect|check)\s+[\"']?(.+?)[\"']?$", line, re.I)
         if m:
             steps.append(_step("assert", assertion=m.group(1).strip()))
@@ -72,7 +88,9 @@ def parse_prose_heuristic(text: str) -> list[dict[str, Any]]:
             steps.append(_step("fill", fm.group(1) if fm else "field", q.group(1) if q else ""))
         elif re.search(r"\b(verify|assert|expect|check|see|should)\b", low):
             q = re.search(r"[\"'“]([^\"'”]+)[\"'”]", c)
-            steps.append(_step("assert", assertion=(q.group(1) if q else c).strip()))
+            body = (q.group(1) if q else c).strip()
+            negative = re.search(r"\b(no longer|not\s+(?:see|visible|present|shown)|should\s+not|isn'?t|shouldn'?t|disappear|gone|hidden)\b", low)
+            steps.append(_step("assert_not" if negative else "assert", assertion=body))
         elif pm:
             steps.append(_step("goto", pm.group(1)))
         else:
