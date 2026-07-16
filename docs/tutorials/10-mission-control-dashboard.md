@@ -1,8 +1,8 @@
 # Tutorial 10 — Mission Control Dashboard
 
-A live, self-refreshing dashboard served by the webhook server: Kubernetes pod health, deployment/cronjob status, pod log tails, and QA run history with a pass-rate trend. Styled to match the HyperSDK dashboard (macOS Tahoe liquid-glass).
+A live, self-refreshing operations console served by the webhook server. It shows Kubernetes pod health and logs, QA run history with trends, and a full **Actions** panel that runs 20+ QA capabilities — every CLI command plus a whole suite of web-quality, security, and performance checks — with live-streamed output and downloadable CSV/HTML/PDF reports. Styled as a blue-biased "mission control" console (see the [showcase page](https://claude.ai/code/artifact/0a1c36a4-7a7c-4241-a43f-ac98a3f72d70)).
 
-**Prerequisites:** [Tutorial 1](01-getting-started.md). A Kubernetes cluster is optional — without one the QA runs panel still works and the pod panel shows an offline state.
+**Prerequisites:** [Tutorial 1](01-getting-started.md). A Kubernetes cluster is optional — without one the pod panel shows an offline state and everything else still works.
 
 ---
 
@@ -84,37 +84,90 @@ Set `DASHBOARD_PASSWORD` (and optionally `DASHBOARD_USER`, default `admin`) to p
 
 Sessions are signed cookies (12 h, or 30 days with "remember me"); sign out from the chip in the header.
 
-## 5½. Test any site — any UX, all pages
+## 6. Actions — run anything, watch it live
 
-The **🌐 Test any site** card points the agent at *any* web app: it crawls every same-origin page (BFS, configurable page cap), generates a validation test per page, and runs them all. Optional target login credentials (best-effort form fill before crawling) and **self-signed TLS support** (`allow self-signed TLS` → Playwright's `ignoreHTTPSErrors`). Results list every failing page with its error; the run lands in history as `dashboard-crawl`.
+The **Actions** panel is the heart of the console. Click any card to start a job; one runs at a time. A **live panel** appears immediately with:
 
-## 6. Actions — the CLI, online
+- streaming Playwright/probe output, **per-test ✓/✗ chips** and a running pass/fail tally
+- an elapsed timer, a **⏹ Stop** button that kills the run mid-flight, and copy-log / download-`.txt`
+- when it finishes: a full result table with error text, a **💡 likely-cause hint** per failure, 🎬 video and 🔍 trace links, and a **Download CSV · HTML · PDF** row
 
-The **Actions** section mirrors every CLI capability. One job runs at a time; a status chip shows progress and results render in a panel under the cards.
+A green run pops confetti and a rising sound cue (both mutable / reduced-motion aware). Press **⌘K** (Ctrl-K) for a command palette that launches any action.
 
-| Action card | CLI equivalent | Notes |
-|-------------|----------------|-------|
-| ▶ Smoke | `zyvor-qa test` | result recorded in run history |
-| ▶ Full pipeline | `zyvor-qa run [--source --spec --pr-number --expand-coverage]` | report link appears when done |
-| ⚙ Generate | `zyvor-qa generate [--source --spec --expand-coverage]` | lists generated `.spec.ts` files |
-| 🔎 Discover | `zyvor-qa discover` | inventory + gaps table |
-| ✨ Create from English | `zyvor-qa create "…" [--execute]` | requires an LLM key in the environment/secret |
-| 👁 Visual regression | `zyvor-qa regression [--update-baselines]` | diffs table with diff-image links |
+### CLI-equivalent actions
 
-Local `spec` paths are restricted to files inside the repository — the trigger endpoint refuses anything else.
+| Card | CLI equivalent |
+|------|----------------|
+| ▶ Smoke | `zyvor-qa test` |
+| ▶ Full pipeline | `zyvor-qa run [--source --spec --pr-number --expand-coverage]` |
+| ⚙ Generate | `zyvor-qa generate [--source --spec --expand-coverage]` |
+| 🔎 Discover | `zyvor-qa discover` |
+| ✨ Create from English | `zyvor-qa create "…" [--execute]` — LLM when a key is set, heuristic parser otherwise |
+| 👁 Visual regression | `zyvor-qa regression [--update-baselines]` |
 
-## 6. API endpoints
+### Web-quality & site actions
+
+| Card | What it does |
+|------|--------------|
+| 🌐 Test any site | Crawl every page of any URL, generate a check per page, run them all (login + self-signed TLS supported) |
+| 🔬 Site audit | Per-page **a11y (axe-core), links, SEO, console errors, performance, security headers** as a pass/warn/fail matrix, ending in an **A–F health grade** |
+| 🔀 Compare | Visual pixel-diff two URLs (staging vs prod) — side-by-side + diff image + % |
+| 🎲 Flaky check | Run a suite N times; rank tests by flake rate |
+| 📸 Screenshot | Capture any URL at desktop / tablet / mobile, full-page optional |
+
+### Network & security probes (🧰 Probes card)
+
+Ten one-shot checks, each rendered as a table with flagged issues:
+
+| Probe | Checks |
+|-------|--------|
+| 🔗 Redirects | full redirect chain + hop count |
+| 📋 Headers | complete HTTP response headers |
+| 🍪 Cookies | Secure / HttpOnly / SameSite flags |
+| 🤖 Robots/sitemap | presence + line/URL counts |
+| 🔓 Exposed paths | probes `/.env`, `/.git/config`, etc. (SPA-fallback aware) |
+| 🔌 API check | status + JSON-path assertion + latency |
+| 🗺 Sitemap URLs | fetch sitemap.xml and test every URL |
+| 🌍 DNS | A / AAAA / PTR records |
+| ↔ CORS | allow-origin/credentials, flags insecure combos |
+| 📦 Compression | encoding, cache-control, HTTP version |
+
+Plus **⏱ Load test** (fire N requests at C concurrency → p50/p95/p99 latency + req/s) and **🔒 TLS check** (DNS + certificate issuer, expiry, protocol, SANs).
+
+### Schedules — run on a loop
+
+The **Schedules** panel turns any job into a recurring monitor (5 min – 6 h). A background thread re-triggers due schedules (respecting single-flight). Add a smoke run every 15 min, an audit every hour, a TLS check daily — add/remove from the panel or the ⌘K palette.
+
+Local `spec` and any URL parameters are validated; local paths are restricted to files inside the repository.
+
+## 7. Reports, videos & test health
+
+- Every executed job writes a **CSV / HTML / PDF bundle** to `reports/jobs/<ts>-<kind>/` (PVC-backed on K8s) and exposes it in the result panel.
+- **🎬 videos** panel lists every recorded test video; **⬇ all videos (zip)** downloads them in one shot.
+- **Test health** panel ranks the worst-offender tests (fail count, fail %, flaky badge) from a per-test index every run appends to.
+- **QA Runs** shows the pass-rate sparkline, expandable run rows, and **⬇ export** (runs as JSON).
+
+## 8. Cluster ops
+
+- **Pods** cards show CPU/memory (metrics-server), restarts, warnings, and a **⟳ restart** button.
+- **⚡ events** panel shows recent namespace events.
+- Log drawer: per-container tabs, line-count selector, follow mode, download.
+
+## 9. API endpoints
 
 The page is a thin client over JSON endpoints you can script against:
 
 | Endpoint | Returns |
 |----------|---------|
-| `GET /api/dashboard/overview` | banner status, namespace, workloads, latest run |
-| `GET /api/dashboard/pods` | pod list with health details |
-| `GET /api/dashboard/pods/{name}/logs?lines=100&container=` | log tail (all containers when unspecified) |
-| `GET /api/dashboard/runs?limit=30` | QA run history |
-| `POST /api/dashboard/jobs` `{kind, params}` | trigger a job (202; 409 if one is running) |
-| `GET /api/dashboard/jobs/status` | current/last job state incl. result payload |
-| `GET /reports/…`, `GET /screenshots/…` | static artifacts: HTML report, videos, diff images |
+| `GET /api/dashboard/overview` | banner status, namespace, workloads, latest run, server version |
+| `GET /api/dashboard/pods` · `…/pods/{name}/logs?lines=&container=` | pod health (with usage) · log tail |
+| `DELETE /api/dashboard/pods/{name}` | restart (delete) a pod |
+| `GET /api/dashboard/events` · `/api/dashboard/tests` | cluster events · per-test health |
+| `GET /api/dashboard/runs?limit=` · `/api/dashboard/videos` · `/api/dashboard/videos.zip` | history · videos · zip |
+| `POST /api/dashboard/jobs` `{kind, params}` · `GET /jobs/status` · `POST /jobs/cancel` · `POST /jobs/rerun` | run / watch / stop / rerun a job |
+| `GET /api/dashboard/jobs/report.{csv,html,pdf}` | download the last job's report |
+| `GET/POST/DELETE /api/dashboard/schedules[/{id}]` | list / add / remove recurring schedules |
+| `POST /api/login` · `POST /api/logout` | session auth |
+| `GET /reports/…`, `GET /screenshots/…` | static artifacts (report bundles, videos, diffs) |
 
 Read endpoints degrade gracefully (`"available": false`) instead of erroring when no cluster is reachable.

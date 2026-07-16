@@ -153,7 +153,12 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`. St
 | `DASHBOARD_USER` | `admin` | Login username (Zyvor premium login screen) |
 | `DASHBOARD_PASSWORD` | *(empty — auth disabled)* | Setting this **enables login** for `/dashboard`, the API, and artifacts; `/health` and `/webhook/github` stay open. `deploy-remote.sh` generates one per host automatically (skip with `--no-auth`). |
 | `DASHBOARD_SECRET` | derived from credentials | Optional explicit session-signing secret |
-| `ZYVOR_IGNORE_HTTPS_ERRORS` | `false` | Accept self-signed/invalid TLS on the target under test (the Test-any-site action sets this per job) |
+| `ZYVOR_IGNORE_HTTPS_ERRORS` | `false` | Accept self-signed/invalid TLS on the target under test (the Test-any-site / audit / probe actions set this per job) |
+| `ZYVOR_VIDEO` | *(off)* | `on` records a video for every test (dashboard job runs set this) |
+| `ZYVOR_NO_SANDBOX` | *(off)* | `true` runs Chromium with `--no-sandbox` (required in containers/as root; set in the image) |
+| `ZYVOR_PW_WORKERS` | *(CPU count)* | Cap Playwright parallelism (set to `2` in the image so in-pod runs don't OOM) |
+
+The dashboard's audit, probe, screenshot, compare, ping, load-test, TLS, flaky, and schedule actions are entirely UI/API-driven — no extra environment variables. They persist artifacts (videos, screenshots, diff images, and CSV/HTML/PDF report bundles) under `reports/` (PVC-backed on Kubernetes).
 
 The dashboard is served by `zyvor-qa serve` at `/dashboard`. Cluster access resolves in-cluster config first, then local kubeconfig; with neither, the pod panels show an offline state and QA run history still works. See [Tutorial 10](tutorials/10-mission-control-dashboard.md).
 

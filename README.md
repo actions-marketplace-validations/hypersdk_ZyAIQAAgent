@@ -2,6 +2,8 @@
 
 Autonomous AI testing agent for [Zyvor](https://zyvor.dev) — an AI-first infrastructure platform. Continuously validates the Zyvor platform by reading requirements from GitHub, generating Playwright tests, executing them after deployments, detecting regressions, and producing actionable reports.
 
+Ships with **Mission Control** — a live web console (`zyvor-qa serve` → `/dashboard`) that runs 20+ QA capabilities on demand with streamed output and CSV/HTML/PDF reports: the full test pipeline, site audits (a11y/SEO/perf/security with an A–F grade), ten network & security probes, load and TLS checks, visual/environment diffs, flaky detection, screenshots, and recurring monitors. See [`docs/tutorials/10-mission-control-dashboard.md`](docs/tutorials/10-mission-control-dashboard.md).
+
 ## Architecture
 
 ```
@@ -69,6 +71,8 @@ See [**Writing Tests & GitHub Integration**](docs/test-authoring.md) for the ful
 | [**Architecture**](docs/architecture.md) | Pipeline internals: LangGraph nodes, state, agents, fallback design |
 | [**Configuration**](docs/configuration.md) | Complete environment variable reference with defaults |
 | [**Writing Tests & GitHub Integration**](docs/test-authoring.md) | Command reference; manual, spec-driven, and NL test creation |
+| [**Mission Control dashboard**](docs/tutorials/10-mission-control-dashboard.md) | The live console: 20+ QA actions, audits, probes, schedules, reports |
+| [**Remote deployment**](docs/remote-deploy.md) | `deploy-remote.sh` — bare host, container, or k3s in one command |
 | [**Troubleshooting**](docs/troubleshooting.md) | Common errors and fixes |
 | [**Contributing**](CONTRIBUTING.md) | Dev setup, conventions, how to add a pipeline stage |
 | [`kubernetes/README.md`](kubernetes/README.md) | Kubernetes deployment |
