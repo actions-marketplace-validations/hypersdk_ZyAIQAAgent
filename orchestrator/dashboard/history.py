@@ -48,6 +48,60 @@ def _prune(history_dir: Path) -> None:
             continue
 
 
+def record_test_results(cases: list[dict[str, Any]]) -> None:
+    """Append per-test pass/fail rows to a bounded index for trend analysis."""
+    if not cases:
+        return
+    index = _repo_root() / "reports" / "test-index.jsonl"
+    index.parent.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now(timezone.utc).isoformat()
+    lines = []
+    for c in cases:
+        title = c.get("title")
+        if not title:
+            continue
+        lines.append(json.dumps({"t": ts, "title": title, "status": c.get("status", "unknown")}))
+    if not lines:
+        return
+    with index.open("a", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+    # bound the file to the most recent ~5000 rows
+    try:
+        content = index.read_text(encoding="utf-8").splitlines()
+        if len(content) > 5000:
+            index.write_text("\n".join(content[-5000:]) + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def test_health(limit: int = 40) -> list[dict[str, Any]]:
+    """Aggregate the per-test index: runs, fails, flake rate, last failure."""
+    index = _repo_root() / "reports" / "test-index.jsonl"
+    if not index.exists():
+        return []
+    agg: dict[str, dict[str, Any]] = {}
+    for line in index.read_text(encoding="utf-8").splitlines():
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        title = row.get("title")
+        if not title:
+            continue
+        rec = agg.setdefault(title, {"title": title, "runs": 0, "fails": 0, "last_fail": None})
+        rec["runs"] += 1
+        if row.get("status") != "passed":
+            rec["fails"] += 1
+            rec["last_fail"] = row.get("t")
+    out = []
+    for rec in agg.values():
+        rec["fail_pct"] = round(100 * rec["fails"] / rec["runs"]) if rec["runs"] else 0
+        rec["flaky"] = 0 < rec["fails"] < rec["runs"]
+        out.append(rec)
+    out.sort(key=lambda r: (-r["fails"], -r["fail_pct"]))
+    return out[:limit]
+
+
 def load_runs(limit: int = 50) -> list[dict[str, Any]]:
     """Return recent runs, newest first."""
     history_dir = _history_dir()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -79,18 +80,69 @@ def build_report_bundle(
         "csv": f"/reports/jobs/{job_dir.name}/report.csv",
     }
 
-    import os
-
     if os.environ.get("ENABLE_PDF_REPORT", "true").lower() == "true":
         pdf_path = html_to_pdf(html_path, job_dir / "report.pdf")
         if pdf_path:
             hrefs["pdf"] = f"/reports/jobs/{job_dir.name}/report.pdf"
 
-    # prune: keep the newest 30 job report dirs
-    dirs = sorted([d for d in reports.iterdir() if d.is_dir()])
-    for stale in dirs[:-30]:
-        import shutil
+    _prune(reports, 30)
+    return hrefs
 
+
+def _prune(root: Path, keep: int) -> None:
+    import shutil
+
+    for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-keep]:
         shutil.rmtree(stale, ignore_errors=True)
 
+
+def audit_to_csv(checks: list[str], pages: list[dict[str, Any]]) -> str:
+    """Flatten the pages × checks matrix into CSV."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["page", "title", "status"] + [f"{c}_status" for c in checks] + ["issues"])
+    for p in pages:
+        issues = []
+        for c in checks:
+            for issue in (p.get("checks", {}).get(c, {}) or {}).get("issues", []):
+                issues.append(f"[{c}] {issue}")
+        writer.writerow(
+            [p.get("path", ""), p.get("title", ""), p.get("status", "")]
+            + [(p.get("checks", {}).get(c, {}) or {}).get("status", "-") for c in checks]
+            + [" | ".join(issues)]
+        )
+    return buffer.getvalue()
+
+
+def build_audit_bundle(
+    url: str, checks: list[str], pages: list[dict[str, Any]], summary: dict[str, Any]
+) -> dict[str, str]:
+    """Write audit report.html / report.csv / report.pdf into a PVC-backed dir."""
+    reports = _repo_root() / "reports" / "jobs"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    job_dir = reports / f"{stamp}-audit"
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    (job_dir / "report.csv").write_text(audit_to_csv(checks, pages), encoding="utf-8")
+    env = Environment(loader=FileSystemLoader(_repo_root() / "templates"))
+    html = env.get_template("audit-report.html.j2").render(
+        url=url,
+        checks=checks,
+        pages=pages,
+        summary=summary,
+        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+    )
+    html_path = job_dir / "report.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    hrefs = {
+        "html": f"/reports/jobs/{job_dir.name}/report.html",
+        "csv": f"/reports/jobs/{job_dir.name}/report.csv",
+    }
+    if os.environ.get("ENABLE_PDF_REPORT", "true").lower() == "true":
+        pdf_path = html_to_pdf(html_path, job_dir / "report.pdf")
+        if pdf_path:
+            hrefs["pdf"] = f"/reports/jobs/{job_dir.name}/report.pdf"
+
+    _prune(reports, 30)
     return hrefs

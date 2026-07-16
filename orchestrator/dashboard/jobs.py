@@ -19,7 +19,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-VALID_KINDS = {"smoke", "full", "generate", "discover", "create", "regression", "crawl_test"}
+VALID_KINDS = {
+    "smoke", "full", "generate", "discover", "create", "regression",
+    "crawl_test", "audit", "flaky",
+}
 
 _lock = threading.Lock()
 _cancel = threading.Event()
@@ -73,6 +76,21 @@ def _stream_line(line: str) -> None:
     status = "passed" if mark == "✓" else "failed"
     with _lock:
         _live_cases.append({"title": title.strip()[:120], "status": status, "browser": browser})
+
+
+def _stream_line_audit(line: str) -> None:
+    """Audit progress line → live log + one live-case per audited page."""
+    import re
+
+    log_progress(line)
+    m = re.match(r"^audit:\s+(\S+)\s+\((?:HTTP\s+)?(\d+)\)", line)
+    if not m:
+        return
+    path_, status = m.group(1), int(m.group(2))
+    with _lock:
+        _live_cases.append(
+            {"title": path_, "status": "passed" if 200 <= status < 400 else "failed", "browser": None}
+        )
 
 
 def cancel() -> dict[str, Any]:
@@ -152,6 +170,25 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["insecure"] = bool(params.get("insecure"))
         max_pages = int(params.get("max_pages") or 30)
         clean["max_pages"] = max(1, min(max_pages, 200))
+    if kind == "audit":
+        url = (params.get("url") or "").strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500]
+        clean["max_pages"] = max(1, min(int(params.get("max_pages") or 10), 100))
+        selected = params.get("checks") or ["a11y", "links", "seo", "console", "perf", "headers"]
+        from agents.audit.engine import VALID_CHECKS
+
+        clean["checks"] = [c for c in selected if c in VALID_CHECKS] or ["a11y", "seo", "console"]
+        clean["username"] = (params.get("username") or "").strip()[:200]
+        clean["password"] = (params.get("password") or "")[:200]
+        clean["insecure"] = bool(params.get("insecure"))
+    if kind == "flaky":
+        clean["runs"] = max(2, min(int(params.get("runs") or 3), 10))
+        target = (params.get("target") or "manual").strip()
+        if target != "manual":
+            target = _safe_local_spec(target)
+        clean["target"] = target
     return clean
 
 
@@ -307,6 +344,12 @@ def _cases_payload(
 def _finalize(kind: str, results: Any, videos, traces, duration_s: float | None = None) -> dict[str, Any]:
     """Build the case list + a downloadable CSV/HTML/PDF report bundle."""
     cases = _cases_payload(results, videos=videos, traces=traces)
+    try:
+        from orchestrator.dashboard import history
+
+        history.record_test_results(cases)
+    except Exception:
+        pass
     report: dict[str, str] = {}
     try:
         from agents.reporter.exports import build_report_bundle
@@ -655,6 +698,114 @@ def _job_crawl_test(params: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _job_audit(params: dict[str, Any]) -> dict[str, Any]:
+    """Crawl a site and run per-page QA checks (a11y / links / SEO / perf / …)."""
+    import time as _time
+
+    from agents.audit.engine import run_audit
+    from agents.common.models import PipelineReport
+    from agents.reporter.exports import build_audit_bundle
+    from orchestrator.dashboard import history
+
+    t0 = _time.time()
+    url = params["url"]
+    checks = params["checks"]
+    log_progress(f"auditing {url} — checks: {', '.join(checks)} (max {params['max_pages']} pages)")
+    data = run_audit(
+        url,
+        checks,
+        max_pages=params["max_pages"],
+        insecure=params.get("insecure", False),
+        username=params.get("username", ""),
+        password=params.get("password", ""),
+        on_line=_stream_line_audit,
+    )
+    _check_cancel()
+    pages = data.get("pages", [])
+    summary = data.get("summary", {})
+    by_check = summary.get("byCheck", {})
+    total_fail = sum(v.get("fail", 0) for v in by_check.values())
+    total_warn = sum(v.get("warn", 0) for v in by_check.values())
+    log_progress(f"audit done: {len(pages)} pages, {total_fail} failing checks, {total_warn} warnings")
+
+    report = build_audit_bundle(url, checks, pages, summary)
+
+    hist = PipelineReport(
+        summary=f"Audit of {url}: {len(pages)} pages, {total_fail} failing / {total_warn} warning checks",
+        passed=sum(v.get("ok", 0) for v in by_check.values()),
+        failed=total_fail,
+        total=sum(sum(v.values()) for v in by_check.values()),
+    )
+    history.append_run(hist, source="dashboard-audit", duration_s=_time.time() - t0)
+    return {
+        "url": url,
+        "checks": checks,
+        "pages_audited": len(pages),
+        "by_check": by_check,
+        "fail_count": total_fail,
+        "warn_count": total_warn,
+        "audit_pages": pages,
+        "report": report,
+    }
+
+
+def _job_flaky(params: dict[str, Any]) -> dict[str, Any]:
+    """Run a suite N times and report which tests flake (mixed pass/fail)."""
+    import time as _time
+
+    from agents.common.models import PipelineReport
+    from agents.execution.runner import run_playwright
+    from orchestrator.dashboard import history
+
+    t0 = _time.time()
+    runs = params["runs"]
+    target = params["target"]
+    test_dirs = [str(_repo_root() / "tests" / "manual")] if target == "manual" else [target]
+    base_url = os.environ.get("ZYVOR_BASE_URL", "https://zyvor.dev")
+
+    tally: dict[str, dict[str, int]] = {}
+    for i in range(runs):
+        _check_cancel()
+        log_progress(f"flaky run {i + 1}/{runs}…")
+        results = run_playwright(test_dirs=test_dirs, base_url=base_url, on_line=_stream_line)
+        for c in results.cases:
+            rec = tally.setdefault(c.title[:120], {"pass": 0, "fail": 0})
+            rec["pass" if c.status == "passed" else "fail"] += 1
+        try:
+            history.record_test_results(
+                [{"title": c.title[:120], "status": c.status} for c in results.cases]
+            )
+        except Exception:
+            pass
+
+    cases = []
+    flaky_count = 0
+    for title, rec in sorted(tally.items(), key=lambda kv: -(kv[1]["fail"])):
+        total = rec["pass"] + rec["fail"]
+        is_flaky = rec["pass"] > 0 and rec["fail"] > 0
+        if is_flaky:
+            flaky_count += 1
+        cases.append(
+            {
+                "title": title,
+                "status": "flaky" if is_flaky else ("passed" if rec["fail"] == 0 else "failed"),
+                "passes": rec["pass"],
+                "runs": total,
+                "flake_pct": round(100 * rec["fail"] / total) if total else 0,
+            }
+        )
+
+    log_progress(f"flaky check done: {flaky_count} flaky test(s) over {runs} runs")
+    hist = PipelineReport(
+        summary=f"Flaky check ({runs} runs): {flaky_count} flaky of {len(cases)} tests",
+        passed=sum(1 for c in cases if c["status"] == "passed"),
+        failed=flaky_count,
+        total=len(cases),
+    )
+    history.append_run(hist, source="dashboard-flaky", duration_s=_time.time() - t0)
+    return {"runs": runs, "flaky_count": flaky_count, "flaky_cases": cases}
+
+
 _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "smoke": _job_smoke,
     "full": _job_full,
@@ -663,4 +814,6 @@ _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "create": _job_create,
     "regression": _job_regression,
     "crawl_test": _job_crawl_test,
+    "audit": _job_audit,
+    "flaky": _job_flaky,
 }

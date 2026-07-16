@@ -391,6 +391,32 @@
       </div>
     </div>
     <div class="glass card act" style="grid-column: 1 / -1">
+      <div class="act-title">🔬 Site audit — accessibility, links, SEO, performance, security per page</div>
+      <div class="act-row">
+        <input class="inp grow" id="au-url" placeholder="https://your-app.example.com">
+        <input class="inp" id="au-pages" type="number" value="10" min="1" max="100" style="width:80px" title="max pages">
+        <label class="chk"><input type="checkbox" id="au-insecure"> self-signed TLS</label>
+      </div>
+      <div class="act-row" id="au-checks" style="gap:12px">
+        <label class="chk"><input type="checkbox" value="a11y" checked> a11y</label>
+        <label class="chk"><input type="checkbox" value="links" checked> links</label>
+        <label class="chk"><input type="checkbox" value="seo" checked> SEO</label>
+        <label class="chk"><input type="checkbox" value="console" checked> console</label>
+        <label class="chk"><input type="checkbox" value="perf" checked> perf</label>
+        <label class="chk"><input type="checkbox" value="headers" checked> headers</label>
+        <label class="chk"><input type="checkbox" value="responsive"> responsive</label>
+        <button class="run-btn act-btn" data-kind="audit" style="margin-left:auto">🔬 Run audit</button>
+      </div>
+    </div>
+    <div class="glass card act">
+      <div class="act-title">🎲 Flaky check — run repeatedly, find unstable tests</div>
+      <div class="act-row">
+        <span class="d">runs</span>
+        <input class="inp" id="fl-runs" type="number" value="3" min="2" max="10" style="width:70px">
+        <button class="run-btn act-btn" data-kind="flaky" style="margin-left:auto">🎲 Detect flaky</button>
+      </div>
+    </div>
+    <div class="glass card act" style="grid-column: 1 / -1">
       <div class="act-title">🌐 Test any site — crawl every page and validate it</div>
       <div class="act-row">
         <input class="inp grow" id="ct-url" placeholder="https://your-app.example.com (any UX — self-signed TLS OK)">
@@ -439,6 +465,11 @@
       <div class="k" style="margin-bottom:8px">Activity</div>
       <div class="feed" id="feed"><span class="d">No activity yet this session.</span></div>
     </div>
+  </div>
+
+  <h2 style="display:flex;align-items:center;gap:10px">Test health <button class="dl-btn" id="th-refresh">↻</button></h2>
+  <div class="glass card">
+    <div class="feed" id="test-health" style="max-height:280px"><span class="d">No test history yet — run tests to build trends.</span></div>
   </div>
 
   <footer>
@@ -716,6 +747,27 @@ function renderPods(data) {
 }
 $("pod-search").addEventListener("input", () => { if (podsCache) renderPods(podsCache); });
 
+/* test-health panel */
+async function loadTestHealth() {
+  try {
+    const data = await fetch("/api/dashboard/tests").then((r) => r.json());
+    const el = $("test-health");
+    if (!data.tests.length) {
+      el.innerHTML = '<span class="d">No test history yet — run tests to build trends.</span>';
+      return;
+    }
+    el.innerHTML = data.tests.map((t) =>
+      '<div class="feed-item"><span class="f-kind">' + (t.flaky ? "🎲" : t.fails ? "⚠️" : "✅") + "</span>"
+      + '<span class="f-brief">' + esc(t.title) + "</span>"
+      + '<span class="f-when">' + t.fails + "/" + t.runs + " fails"
+      + (t.fail_pct ? " · " + t.fail_pct + "%" : "") + "</span></div>"
+    ).join("");
+  } catch (err) {
+    $("test-health").innerHTML = '<span class="d">failed: ' + esc(String(err)) + "</span>";
+  }
+}
+$("th-refresh").addEventListener("click", loadTestHealth);
+
 /* recorded videos panel */
 let videosOpen = false;
 $("videos-toggle").addEventListener("click", async () => {
@@ -939,6 +991,13 @@ function jobParams(kind) {
     insecure: $("ct-insecure").checked,
     max_pages: parseInt($("ct-pages").value, 10) || 30,
   };
+  if (kind === "audit") return {
+    url: $("au-url").value.trim(),
+    max_pages: parseInt($("au-pages").value, 10) || 10,
+    insecure: $("au-insecure").checked,
+    checks: Array.from(document.querySelectorAll("#au-checks input:checked")).map((c) => c.value),
+  };
+  if (kind === "flaky") return { runs: parseInt($("fl-runs").value, 10) || 3, target: "manual" };
   return {};
 }
 
@@ -989,7 +1048,7 @@ for (const btn of document.querySelectorAll(".act-btn")) {
   btn.addEventListener("click", () => startJob(btn.dataset.kind));
 }
 
-const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test" };
+const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check" };
 
 let lastToastKey = "";
 function renderRunStatus(st) {
@@ -1140,10 +1199,37 @@ function renderJobResult(st) {
       + (r.requirements != null ? " from " + r.requirements + " requirement(s)" : "")
       + (r.total != null ? " · executed: " + r.passed + "/" + r.total + " passed" : "") + "</div>";
     html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
-  } else if (st.kind === "crawl_test") {
-    html += '<div class="d">' + esc(r.url) + " — " + r.pages_found + " page(s) found · "
-      + r.passed + "/" + r.total + " passed</div>";
-    html += caseTable(r.cases);
+  } else if (st.kind === "audit") {
+    const checks = r.checks || [];
+    html += '<div class="d">' + esc(r.url) + " — " + r.pages_audited + " page(s) · "
+      + '<span class="fail">' + r.fail_count + " failing</span> · "
+      + '<span style="color:var(--status-warn)">' + r.warn_count + " warnings</span></div>";
+    // summary tiles per check
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">'
+      + checks.map((c) => { const b = (r.by_check || {})[c] || {}; return '<span class="chip">' + esc(c) + ': '
+        + '<span class="pass">' + (b.ok || 0) + "✓</span>"
+        + (b.warn ? ' <span style="color:var(--status-warn)">' + b.warn + "!</span>" : "")
+        + (b.fail ? ' <span class="fail">' + b.fail + "✗</span>" : "") + "</span>"; }).join("") + "</div>";
+    // pages × checks matrix
+    html += '<div style="overflow-x:auto"><table class="runs-table"><tbody>'
+      + "<tr><td><b>Page</b></td>" + checks.map((c) => "<td><b>" + esc(c) + "</b></td>").join("") + "</tr>"
+      + (r.audit_pages || []).map((p) => "<tr><td>" + esc(p.path) + '</td>'
+        + checks.map((c) => { const chk = (p.checks || {})[c]; if (!chk) return '<td class="d">–</td>';
+          const col = chk.status === "ok" ? "var(--status-ok)" : chk.status === "warn" ? "var(--status-warn)" : "var(--status-error)";
+          const iss = (chk.issues || []).join("\n");
+          return '<td title="' + esc(iss) + '" style="color:' + col + ';cursor:' + (iss ? "help" : "default") + '">' + esc(chk.status) + "</td>"; }).join("")
+        + "</tr>").join("")
+      + "</tbody></table></div>";
+  } else if (st.kind === "flaky") {
+    html += '<div class="d">' + r.runs + " runs · <b class=\"" + (r.flaky_count ? "fail" : "pass") + "\">"
+      + r.flaky_count + " flaky test(s)</b></div>";
+    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + (r.flaky_cases || []).slice(0, 30).map((c) => "<tr><td>"
+        + '<span class="chip ' + (c.status === "passed" ? "pass" : "fail") + '">'
+        + (c.status === "flaky" ? "FLAKY" : c.status.toUpperCase()) + "</span></td>"
+        + "<td>" + esc(c.title) + "</td><td>" + c.passes + "/" + c.runs + " passed</td>"
+        + '<td>' + (c.flake_pct ? '<span class="fail">' + c.flake_pct + "% flake</span>" : "") + "</td></tr>").join("")
+      + "</tbody></table>";
   } else if (st.kind === "regression") {
     html += '<div class="d">' + (r.baselines_updated ? "baselines updated · " : "") + (r.diffs || []).length + " screenshot(s) compared</div>";
     if (r.diffs && r.diffs.length) {
@@ -1246,6 +1332,7 @@ $("refresh-rate").addEventListener("change", () => {
   setRefreshRate(parseInt($("refresh-rate").value, 10));
 });
 sync();
+loadTestHealth();
 setRefreshRate(parseInt($("refresh-rate").value, 10) || REFRESH);
 </script>
 </body>

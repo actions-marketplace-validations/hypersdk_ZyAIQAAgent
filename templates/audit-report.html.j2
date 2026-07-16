@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Zyvor QA — Site audit</title>
+<style>
+  :root { --ok: #0ca30c; --warn: #d4a017; --bad: #d03b3b; --ink: #f1f5f9; --ink2: #98989d; --line: rgba(255,255,255,0.1); --surface: #1a1a19; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d0d0d; color: var(--ink); font-family: -apple-system, "Segoe UI", Inter, sans-serif; font-size: 14px; padding: 28px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .meta { color: var(--ink2); font-size: 13px; margin-bottom: 20px; }
+  .summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; }
+  .tile .k { color: var(--ink2); font-size: 11px; text-transform: uppercase; }
+  .tile .v { font-size: 16px; font-weight: 700; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .fail { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+  th { color: var(--ink2); font-weight: 600; }
+  .cell { display: inline-block; min-width: 44px; text-align: center; border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 700; }
+  .cell.ok { background: rgba(12,163,12,0.15); }
+  .cell.warn { background: rgba(212,160,23,0.15); }
+  .cell.fail { background: rgba(208,59,59,0.18); }
+  .cell.na { color: var(--ink2); }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink2); margin: 22px 0 10px; }
+  .issue { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #fca5a5; }
+  @media print { body { background: #fff; color: #111; } .tile, th, td { border-color: #ddd; } }
+</style>
+</head>
+<body>
+  <h1>Zyvor QA — Site audit</h1>
+  <div class="meta">{{ url }} · {{ pages|length }} pages · {{ generated_at }}</div>
+
+  <div class="summary">
+    {% for c in checks %}
+    <div class="tile"><div class="k">{{ c }}</div>
+      <div class="v">
+        <span class="ok">{{ summary.byCheck[c].ok }}✓</span>
+        {% if summary.byCheck[c].warn %}<span class="warn">{{ summary.byCheck[c].warn }}!</span>{% endif %}
+        {% if summary.byCheck[c].fail %}<span class="fail">{{ summary.byCheck[c].fail }}✗</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2>Pages × checks</h2>
+  <table>
+    <tr><th>Page</th>{% for c in checks %}<th>{{ c }}</th>{% endfor %}</tr>
+    {% for p in pages %}
+    <tr>
+      <td>{{ p.path }} <span style="color:var(--ink2)">{{ p.status }}</span></td>
+      {% for c in checks %}
+      {% set chk = p.checks.get(c) %}
+      <td>{% if chk %}<span class="cell {{ chk.status }}">{{ chk.status }}</span>{% else %}<span class="cell na">–</span>{% endif %}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Issues</h2>
+  {% for p in pages %}
+    {% set page_issues = [] %}
+    {% for c in checks %}{% set chk = p.checks.get(c) %}{% if chk and chk.issues %}{% for i in chk.issues %}{% set _ = page_issues.append('[' ~ c ~ '] ' ~ i) %}{% endfor %}{% endif %}{% endfor %}
+    {% if page_issues %}
+    <div style="margin-bottom:14px">
+      <div style="font-weight:600">{{ p.path }}</div>
+      {% for i in page_issues %}<div class="issue">{{ i }}</div>{% endfor %}
+    </div>
+    {% endif %}
+  {% endfor %}
+</body>
+</html>

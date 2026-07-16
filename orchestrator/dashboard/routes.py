@@ -205,6 +205,11 @@ async def runs(limit: int = Query(30, ge=1, le=200)) -> dict[str, Any]:
     return {"runs": history.load_runs(limit=limit)}
 
 
+@router.get("/api/dashboard/tests")
+async def tests() -> dict[str, Any]:
+    return {"tests": history.test_health()}
+
+
 def _job_response(started: bool, state: dict[str, Any]) -> Response:
     import json
 

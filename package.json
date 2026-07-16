@@ -11,6 +11,9 @@
     "report": "playwright show-report reports",
     "report:pdf": "node playwright/scripts/html-to-pdf.mjs reports/qa-summary.html reports/qa-summary.pdf"
   },
+  "dependencies": {
+    "axe-core": "^4.12.1"
+  },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
     "typescript": "^5.7.0"
