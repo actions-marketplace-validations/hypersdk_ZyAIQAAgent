@@ -127,9 +127,24 @@ def cancel() -> dict[str, Any]:
     return status()
 
 
+_SECRET_PARAM_KEYS = ("password",)
+
+
+def _redact_params(params: Any) -> Any:
+    """Never echo login credentials back through the status/history API."""
+    if not isinstance(params, dict):
+        return params
+    out = dict(params)
+    for k in _SECRET_PARAM_KEYS:
+        if out.get(k):
+            out[k] = "***"
+    return out
+
+
 def status() -> dict[str, Any]:
     with _lock:
         state = dict(_state)
+        state["params"] = _redact_params(state.get("params"))
         state["progress"] = _progress[-80:]
         state["live_cases"] = list(_live_cases)
         state["live_tally"] = {

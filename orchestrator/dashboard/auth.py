@@ -27,6 +27,24 @@ RL_LOCKOUT_S = 300         # lockout duration once tripped
 _rl_lock = threading.Lock()
 _rl_failures: dict[str, deque[float]] = defaultdict(deque)
 _rl_locked_until: dict[str, float] = {}
+_rl_last_prune = 0.0
+
+
+def _rl_prune(now: float) -> None:
+    """Drop stale IP entries so the maps don't grow unbounded (call under _rl_lock)."""
+    global _rl_last_prune
+    if now - _rl_last_prune < RL_WINDOW_S:
+        return
+    _rl_last_prune = now
+    for ip in list(_rl_failures):
+        dq = _rl_failures[ip]
+        while dq and dq[0] < now - RL_WINDOW_S:
+            dq.popleft()
+        if not dq:
+            del _rl_failures[ip]
+    for ip in list(_rl_locked_until):
+        if _rl_locked_until[ip] <= now:
+            del _rl_locked_until[ip]
 
 
 def rate_limited(ip: str) -> int:
@@ -45,6 +63,7 @@ def record_failure(ip: str) -> None:
     """Record a failed login; trip a lockout once too many failures accrue."""
     now = time.time()
     with _rl_lock:
+        _rl_prune(now)
         dq = _rl_failures[ip]
         dq.append(now)
         while dq and dq[0] < now - RL_WINDOW_S:

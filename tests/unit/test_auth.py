@@ -59,6 +59,18 @@ def test_rate_limit_trips_and_clears(auth):
     assert ip not in auth._rl_locked_until
 
 
+def test_rate_limit_map_pruned(auth):
+    # stale single-failure IPs should be swept, not accumulate forever
+    auth._rl_last_prune = 0.0
+    auth.record_failure("198.51.100.1")
+    assert "198.51.100.1" in auth._rl_failures
+    # fast-forward past the window by back-dating the entry, then trigger a prune
+    auth._rl_failures["198.51.100.1"][0] = 1.0
+    auth._rl_last_prune = 0.0
+    auth.record_failure("198.51.100.99")  # any failure triggers the sweep
+    assert "198.51.100.1" not in auth._rl_failures
+
+
 def test_requires_auth_paths(auth):
     assert auth.requires_auth("/dashboard") is True
     assert auth.requires_auth("/api/dashboard/jobs") is True

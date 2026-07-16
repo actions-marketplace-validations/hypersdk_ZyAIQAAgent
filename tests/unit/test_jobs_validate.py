@@ -4,7 +4,25 @@ from __future__ import annotations
 
 import pytest
 
-from orchestrator.dashboard.jobs import VALID_KINDS, _validate
+from orchestrator.dashboard.jobs import VALID_KINDS, _redact_params, _validate
+
+
+def test_password_redacted_but_url_kept():
+    red = _redact_params({"url": "https://x.io", "username": "admin", "password": "s3cret"})
+    assert red["password"] == "***"
+    assert red["username"] == "admin"
+    assert red["url"] == "https://x.io"
+
+
+def test_redact_leaves_empty_password_untouched():
+    red = _redact_params({"password": ""})
+    assert red["password"] == ""  # nothing to hide
+
+
+def test_redact_does_not_mutate_original():
+    orig = {"password": "s3cret"}
+    _redact_params(orig)
+    assert orig["password"] == "s3cret"
 
 
 def test_flow_and_route_sweep_registered():
