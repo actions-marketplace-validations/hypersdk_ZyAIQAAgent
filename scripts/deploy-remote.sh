@@ -541,8 +541,18 @@ RestartSec=5
 WantedBy=multi-user.target
 UNIT
 $SUDO systemctl daemon-reload
-$SUDO systemctl enable --now zyvor-qa.service
+$SUDO systemctl enable zyvor-qa.service >/dev/null 2>&1 || true
+# stop first so the old process releases the port, then start fresh (enable --now
+# would NOT restart an already-running service, leaving stale code + a port race)
+$SUDO systemctl stop zyvor-qa.service 2>/dev/null || true
+$SUDO pkill -f "zyvor-qa serve" 2>/dev/null || true
 sleep 2
+$SUDO systemctl reset-failed zyvor-qa.service 2>/dev/null || true
+$SUDO systemctl start zyvor-qa.service
+for i in $(seq 1 10); do
+    sleep 2
+    curl -sf "http://127.0.0.1:${SERVE_PORT}/health" >/dev/null && break
+done
 $SUDO systemctl --no-pager --lines=0 status zyvor-qa.service | head -3
 curl -sf "http://127.0.0.1:${SERVE_PORT}/health" >/dev/null && echo "  ✅ /health responding on :${SERVE_PORT}" || echo "  ⚠️  /health not responding yet"
 REMOTE
