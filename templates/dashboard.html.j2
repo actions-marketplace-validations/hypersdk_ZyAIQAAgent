@@ -513,14 +513,17 @@
       </div>
     </div>
     <div class="glass card act" style="grid-column: 1 / -1">
-      <div class="act-title">🔌 API contract — validate REST endpoints against their OpenAPI schema</div>
+      <div class="act-title">🔌 API contract — validate REST endpoints against their OpenAPI schema
+        <button class="dl-btn" id="api-preset-forge" title="fill Forge defaults" style="margin-left:8px">🔥 Forge preset</button>
+      </div>
       <div class="act-row">
-        <input class="inp grow" id="api-url" placeholder="API base, e.g. https://api.example.com">
-        <input class="inp grow" id="api-spec" placeholder="OpenAPI spec URL (…/openapi.json) or paste JSON below">
+        <input class="inp grow" id="api-url" placeholder="API host, e.g. http://127.0.0.1 or https://api.example.com">
+        <input class="inp" id="api-port" placeholder="port" title="port (default: Forge 24631)" value="24631" style="max-width:110px">
+        <input class="inp grow" id="api-spec" placeholder="OpenAPI spec URL or /path (…/openapi.json)">
       </div>
       <div class="act-row"><textarea class="inp grow" id="api-spec-json" rows="2" placeholder="…or paste an inline OpenAPI JSON (optional; overrides the URL)"></textarea></div>
       <div class="act-row" style="gap:12px">
-        <input class="inp" id="api-token" placeholder="Bearer token (optional)" style="max-width:280px">
+        <input class="inp" id="api-token" placeholder="API key / bearer token" style="max-width:280px">
         <label class="chk"><input type="checkbox" id="api-writes"> include writes (POST/PUT/DELETE)</label>
         <label class="chk"><input type="checkbox" id="api-insecure"> self-signed TLS</label>
         <button class="run-btn act-btn" data-kind="api_contract" style="margin-left:auto">🔌 Test API</button>
@@ -1039,6 +1042,18 @@ $("find-clear").addEventListener("click", async () => {
   loadFindings();
 });
 
+/* Forge preset — fill the API-contract card with Forge's defaults (port 24631, key Admin@321) */
+{
+  const fp = document.getElementById("api-preset-forge");
+  if (fp) fp.addEventListener("click", () => {
+    $("api-url").value = "http://127.0.0.1";
+    $("api-port").value = "24631";
+    $("api-spec").value = "/openapi.json";
+    $("api-token").value = "Admin@321";
+    toast("forge", true, "filled Forge defaults — set the host if not local, then Test API");
+  });
+}
+
 $("sc-add").addEventListener("click", async () => {
   const kind = $("sc-kind").value, arg = $("sc-arg").value.trim();
   // card-driven kinds pull their params from their own action cards
@@ -1438,12 +1453,18 @@ function jobParams(kind) {
     auto: $("rs-auto").checked,
   };
   if (kind === "api_contract") {
+    // combine host + port (port defaults to Forge's 24631); default scheme http for a bare host
+    let host = $("api-url").value.trim();
+    const port = $("api-port").value.trim();
+    if (host && !/^https?:\/\//.test(host)) host = "http://" + host;
+    if (host && port) { try { const u = new URL(host); if (!u.port) { u.port = port; host = u.origin; } } catch (e) { /* leave as typed */ } }
     let spec = $("api-spec").value.trim();
     const inline = $("api-spec-json").value.trim();
     if (inline) { try { spec = JSON.parse(inline); } catch (e) { toast("api", false, "inline spec is not valid JSON"); throw e; } }
+    else if (spec && spec.startsWith("/") && host) spec = host + spec;  // relative spec → absolute
     const tok = $("api-token").value.trim();
     return {
-      url: $("api-url").value.trim(),
+      url: host,
       mode: "spec",
       spec,
       auth: tok ? { token: tok } : null,
