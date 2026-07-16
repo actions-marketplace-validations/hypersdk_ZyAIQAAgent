@@ -155,6 +155,18 @@ The agent dismisses onboarding overlays, waits for async modals to settle, refer
 | Performance, mobile, Safari/Firefox, offline | `vitals` + flow `--browser/--device/--throttle` |
 | A page renders / looks right | crawl, audit, route-sweep, flow (Tutorials 10–11) |
 
+## Wiring a product as a test target (example: Forge)
+
+Products can be wired to the agent with a small target script. `scripts/wire-forge.sh` stands up **Forge** locally (its FastAPI API gateway + Vite web UI) and runs the agent's suite against it:
+
+```bash
+scripts/wire-forge.sh                 # start Forge + run api-contract, vitals, ai-test
+scripts/wire-forge.sh --suite-only    # Forge already running → just run the agent
+scripts/wire-forge.sh --no-ui         # gateway only (API contract)
+```
+
+It authenticates with a bearer dev key (`FORGE_API_KEY`), starts the gateway with a throwaway kubeconfig so it runs without a full cluster, and points `zyvor-qa api-test` at Forge's 366-endpoint OpenAPI. Note: with no reachable K8s cluster, Forge's cluster-backed endpoints return an **undocumented HTTP 500** — the api-contract flags this ("status 500 not declared"), a real contract-robustness finding (endpoints should declare a 503 for backend-unavailable). Any product with an OpenAPI spec + bearer/token auth can be wired the same way.
+
 ## Configuration
 
 | Variable | Effect |
