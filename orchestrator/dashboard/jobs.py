@@ -21,7 +21,7 @@ from typing import Any, Callable, Optional
 
 VALID_KINDS = {
     "smoke", "full", "generate", "discover", "create", "regression",
-    "crawl_test", "audit", "flaky", "screenshot",
+    "crawl_test", "audit", "flaky", "screenshot", "compare", "ping",
 }
 
 _lock = threading.Lock()
@@ -198,6 +198,21 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["viewports"] = [v for v in vps if v in ("desktop", "tablet", "mobile")] or ["desktop"]
         clean["full_page"] = bool(params.get("full_page"))
         clean["insecure"] = bool(params.get("insecure"))
+    if kind == "compare":
+        for key in ("url_a", "url_b"):
+            u = (params.get(key) or "").strip()
+            if not u.startswith(("http://", "https://")):
+                raise ValueError(f"{key} must start with http:// or https://")
+            clean[key] = u[:500]
+        clean["insecure"] = bool(params.get("insecure"))
+    if kind == "ping":
+        raw = params.get("urls") or ""
+        if isinstance(raw, str):
+            raw = raw.replace(",", "\n").split("\n")
+        urls = [u.strip() for u in raw if u.strip().startswith(("http://", "https://"))]
+        if not urls:
+            raise ValueError("provide at least one http(s) URL")
+        clean["urls"] = urls[:30]
     return clean
 
 
@@ -327,6 +342,28 @@ def _persist_videos(results: Any, kind: str) -> dict[str, str]:
     return _persist_artifacts(results, kind)[0]
 
 
+def _explain_failure(error: str) -> str:
+    """Heuristic likely-cause hint for a Playwright failure (no LLM needed)."""
+    e = (error or "").lower()
+    if not e:
+        return ""
+    if "timeout" in e and ("locator" in e or "waiting for" in e or "getby" in e):
+        return "Element never appeared — selector may have changed, or the page loaded too slowly."
+    if "timeout" in e and ("goto" in e or "navigation" in e):
+        return "Navigation timed out — the target may be down, slow, or blocking the request."
+    if "strict mode violation" in e or "resolved to" in e:
+        return "Selector matched multiple elements — make it more specific (add a role or exact text)."
+    if "tobevisible" in e or "not visible" in e:
+        return "Element exists but isn't visible — it may be hidden, off-screen, or behind an overlay."
+    if "expected" in e and "received" in e:
+        return "Assertion mismatch — the actual text/value differs from what the test expects."
+    if "net::" in e or "err_" in e or "econnrefused" in e:
+        return "Network error reaching the target — check the URL, TLS, or that the service is up."
+    if "no valid playwright spec" in e:
+        return "The generated spec had a syntax error and was skipped — regenerate it."
+    return "Review the trace or video to see the exact step that failed."
+
+
 def _cases_payload(
     results: Any,
     limit: int = 60,
@@ -334,20 +371,24 @@ def _cases_payload(
     traces: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Full per-test detail for the result tables and downloadable reports."""
-    return [
-        {
-            "title": c.title[:120],
-            "status": c.status,
-            "browser": c.browser,
-            "duration_ms": round(c.duration_ms or 0),
-            "error": (c.error_message or "")[:1200] if c.status != "passed" else "",
-            "console_logs": [line for line in (c.console_logs or []) if line.startswith("[error]")][:8],
-            "network_errors": (c.network_errors or [])[:8],
-            "video": (videos or {}).get(c.title),
-            "trace": (traces or {}).get(c.title),
-        }
-        for c in results.cases[:limit]
-    ]
+    payload = []
+    for c in results.cases[:limit]:
+        error = (c.error_message or "")[:1200] if c.status != "passed" else ""
+        payload.append(
+            {
+                "title": c.title[:120],
+                "status": c.status,
+                "browser": c.browser,
+                "duration_ms": round(c.duration_ms or 0),
+                "error": error,
+                "hint": _explain_failure(error) if error else "",
+                "console_logs": [line for line in (c.console_logs or []) if line.startswith("[error]")][:8],
+                "network_errors": (c.network_errors or [])[:8],
+                "video": (videos or {}).get(c.title),
+                "trace": (traces or {}).get(c.title),
+            }
+        )
+    return payload
 
 
 def _finalize(kind: str, results: Any, videos, traces, duration_s: float | None = None) -> dict[str, Any]:
@@ -872,6 +913,101 @@ def _job_flaky(params: dict[str, Any]) -> dict[str, Any]:
     return {"runs": runs, "flaky_count": flaky_count, "flaky_cases": cases}
 
 
+def _capture_one(url: str, out_dir: Path, tag: str, insecure: bool) -> Optional[Path]:
+    import json as _json
+    import subprocess
+
+    env = {**os.environ, "ZYVOR_BASE_URL": url}
+    if insecure:
+        env["ZYVOR_IGNORE_HTTPS_ERRORS"] = "true"
+    script = _repo_root() / "playwright" / "scripts" / "shot-url.mjs"
+    proc = subprocess.run(
+        ["node", str(script), url, str(out_dir), "desktop", "full"],
+        cwd=_repo_root(), env=env, capture_output=True, text=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return None
+    data = _json.loads(proc.stdout)
+    shots = data.get("shots", [])
+    return (out_dir / shots[0]["file"]) if shots else None
+
+
+def _job_compare(params: dict[str, Any]) -> dict[str, Any]:
+    """Visual-diff two URLs (e.g. staging vs prod) at desktop, full page."""
+    import shutil
+
+    from agents.regression.compare_screenshots import _diff_percent
+
+    try:
+        from PIL import Image
+    except ImportError:
+        raise RuntimeError("Pillow required for compare")
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    rel_dir = f"artifacts/compare/{stamp}"
+    out_dir = _repo_root() / "reports" / rel_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    log_progress(f"capturing A: {params['url_a']}")
+    a = _capture_one(params["url_a"], out_dir, "a", params.get("insecure", False))
+    _check_cancel()
+    log_progress(f"capturing B: {params['url_b']}")
+    b = _capture_one(params["url_b"], out_dir, "b", params.get("insecure", False))
+    if not a or not b:
+        raise RuntimeError("failed to capture one or both URLs")
+
+    img_a = Image.open(a).convert("RGB")
+    img_b = Image.open(b).convert("RGB")
+    if img_a.size != img_b.size:
+        img_b = img_b.resize(img_a.size)
+    from PIL import ImageChops
+
+    diff_img = ImageChops.difference(img_a, img_b)
+    diff_path = out_dir / "diff.png"
+    diff_img.save(diff_path)
+    pct = round(_diff_percent(img_a, img_b), 3)
+    log_progress(f"visual difference: {pct}%")
+
+    # prune
+    root = _repo_root() / "reports" / "artifacts" / "compare"
+    if root.exists():
+        for stale in sorted([d for d in root.iterdir() if d.is_dir()])[:-20]:
+            shutil.rmtree(stale, ignore_errors=True)
+
+    base = f"/reports/{rel_dir}"
+    return {
+        "url_a": params["url_a"], "url_b": params["url_b"],
+        "diff_percent": pct,
+        "identical": pct < 0.1,
+        "a_href": f"{base}/{a.name}", "b_href": f"{base}/{b.name}", "diff_href": f"{base}/diff.png",
+    }
+
+
+def _job_ping(params: dict[str, Any]) -> dict[str, Any]:
+    """HTTP status + latency check across a list of URLs."""
+    import time as _time
+
+    import httpx
+
+    results = []
+    up = 0
+    with httpx.Client(timeout=15, follow_redirects=True, verify=False) as client:
+        for url in params["urls"]:
+            _check_cancel()
+            t0 = _time.time()
+            try:
+                resp = client.get(url)
+                ms = round((_time.time() - t0) * 1000)
+                ok = resp.status_code < 400
+                up += 1 if ok else 0
+                results.append({"url": url, "status": resp.status_code, "ms": ms, "ok": ok})
+                log_progress(f"{resp.status_code} {url} ({ms}ms)")
+            except Exception as exc:
+                results.append({"url": url, "status": 0, "ms": None, "ok": False, "error": str(exc)[:120]})
+                log_progress(f"ERR {url}: {str(exc)[:80]}")
+    return {"total": len(results), "up": up, "down": len(results) - up, "results": results}
+
+
 _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "smoke": _job_smoke,
     "full": _job_full,
@@ -883,4 +1019,6 @@ _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "audit": _job_audit,
     "flaky": _job_flaky,
     "screenshot": _job_screenshot,
+    "compare": _job_compare,
+    "ping": _job_ping,
 }

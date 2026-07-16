@@ -5,52 +5,54 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zyvor Mission Control</title>
 <style>
-  /* macOS Tahoe Liquid Glass — tokens mirrored from hypersdk web/dashboard-react */
+  /* Zyvor QA — Mission Control console theme (blue-biased dark) */
   :root {
     color-scheme: dark;
-    --radius-liquid: 22px;
-    --blur-liquid: 28px;
-    --accent: #007aff;
-    --surface-base: rgba(28, 28, 30, 0.68);
-    --surface-elevated: rgba(36, 36, 38, 0.82);
-    --surface-strong: rgba(44, 44, 46, 0.92);
-    --surface-muted: rgba(255, 255, 255, 0.04);
-    --separator: rgba(255, 255, 255, 0.08);
-    --fill-secondary: rgba(255, 255, 255, 0.06);
-    --glass-border-strong: rgba(255, 255, 255, 0.12);
-    --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
-    --glass-highlight: rgba(255, 255, 255, 0.1);
-    --text-primary: #f5f5f7;
-    --text-secondary: #98989d;
-    --text-muted: #636366;
-    --status-ok: rgb(48, 209, 88);
-    --status-warn: rgb(255, 214, 10);
-    --status-error: rgb(255, 69, 58);
-    --status-info: rgb(0, 122, 255);
-    --status-neutral: rgb(152, 152, 157);
-    --font-base: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-    --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, 'JetBrains Mono', Menlo, monospace;
+    --radius-liquid: 14px;
+    --blur-liquid: 0px;
+    --bg: #0a0d12;
+    --accent: #3b82f6;
+    --accent-2: #a78bfa;
+    --surface-base: #131a24;
+    --surface-elevated: #1a232f;
+    --surface-strong: #1f2937;
+    --surface-muted: rgba(148, 168, 200, 0.05);
+    --separator: rgba(148, 168, 200, 0.12);
+    --fill-secondary: rgba(148, 168, 200, 0.08);
+    --glass-border-strong: rgba(148, 168, 200, 0.22);
+    --glass-shadow: 0 20px 45px -25px rgba(0, 0, 0, 0.7);
+    --glass-highlight: rgba(148, 168, 200, 0.06);
+    --text-primary: #e9eef6;
+    --text-secondary: #aeb9cb;
+    --text-muted: #74829a;
+    --status-ok: #22c55e;
+    --status-warn: #f5a623;
+    --status-error: #ef4444;
+    --status-info: #3b82f6;
+    --status-neutral: #74829a;
+    --font-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, 'JetBrains Mono', 'Cascadia Code', Menlo, monospace;
   }
   * { box-sizing: border-box; }
   html, body { min-height: 100%; }
   body {
     margin: 0;
-    background:
-      radial-gradient(ellipse 120% 80% at 50% -20%, rgba(30, 58, 95, 0.35), transparent 55%),
-      linear-gradient(180deg, rgb(8, 12, 22) 0%, rgb(6, 10, 18) 100%);
-    background-attachment: fixed;
+    background: var(--bg);
     color: var(--text-primary);
     font-family: var(--font-base);
     font-size: 14px; line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
-  main { max-width: 1200px; margin: 0 auto; padding: 24px 28px 60px; }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 15% -5%, rgba(59,130,246,0.13), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 90% 8%, rgba(167,139,250,0.09), transparent 55%);
+  }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 28px 60px; position: relative; z-index: 1; }
 
   .glass {
     background-color: var(--surface-base);
-    background-image: linear-gradient(to bottom, var(--glass-highlight), transparent 45%);
-    backdrop-filter: blur(var(--blur-liquid)) saturate(1.15);
-    -webkit-backdrop-filter: blur(var(--blur-liquid)) saturate(1.15);
     border: 1px solid var(--separator);
     box-shadow: var(--glass-shadow);
     border-radius: var(--radius-liquid);
@@ -61,26 +63,20 @@
     position: relative; overflow: hidden;
     border: 1px solid var(--separator); border-radius: var(--radius-liquid);
     background:
-      linear-gradient(135deg, var(--glass-highlight) 0%, transparent 42%),
-      linear-gradient(160deg, var(--surface-elevated) 0%, var(--surface-base) 100%);
-    backdrop-filter: blur(28px) saturate(1.5);
-    -webkit-backdrop-filter: blur(28px) saturate(1.5);
-    box-shadow: 0 1px 0 var(--glass-highlight) inset, var(--glass-shadow);
+      linear-gradient(180deg, rgba(34,197,94,0.05), transparent 40%),
+      var(--surface-base);
+    box-shadow: var(--glass-shadow);
     padding: 22px 24px; margin-bottom: 24px;
   }
-  .hero-shine {
-    position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.04) 50%, transparent 60%);
-  }
+  .hero-shine { display: none; }
   .hero-head { position: relative; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .icon-badge {
     display: flex; align-items: center; justify-content: center;
-    width: 3.25rem; height: 3.25rem; border-radius: 1rem; flex: none;
-    background: linear-gradient(145deg, rgba(56, 189, 248, 0.22), rgba(99, 102, 241, 0.12));
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 8px 24px -8px rgba(14, 165, 233, 0.35);
+    width: 3rem; height: 3rem; border-radius: 12px; flex: none;
+    background: linear-gradient(150deg, rgba(59,130,246,0.3), rgba(167,139,250,0.15));
+    border: 1px solid var(--separator);
   }
-  .hero h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+  .hero h1 { font-family: var(--font-mono); font-size: 22px; font-weight: 700; letter-spacing: 0.02em; margin: 0; }
   .hero .subtitle { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
   .hero .sync { margin-left: auto; color: var(--text-muted); font-size: 12px; }
   .status-line { display: inline-flex; align-items: center; gap: 8px; }
@@ -98,16 +94,14 @@
   .stat-grid { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 18px; }
   .stat-tile {
     display: flex; flex-direction: column; gap: 0.35rem;
-    padding: 1rem 1.125rem; border-radius: 1.125rem;
+    padding: 0.9rem 1.05rem; border-radius: 12px;
     border: 1px solid var(--separator); background: var(--surface-muted);
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    box-shadow: 0 1px 0 var(--glass-highlight) inset;
   }
-  .stat-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); }
-  .stat-value { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .stat-label { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+  .stat-value { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary); font-variant-numeric: tabular-nums; }
   .stat-sub { font-size: 0.72rem; color: var(--text-muted); }
 
-  h2 { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 26px 0 12px; letter-spacing: -0.01em; }
+  h2 { font-family: var(--font-mono); font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin: 28px 0 12px; letter-spacing: 0.14em; }
 
   .strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
   .card { padding: 16px 18px; }
@@ -208,7 +202,14 @@
   .dl-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
   .dl-row a, .dl-row button { text-decoration: none; }
   .acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
-  .act-title { font-weight: 600; font-size: 13px; margin-bottom: 10px; }
+  .brand-eyebrow {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; font-weight: 600;
+    background: linear-gradient(110deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .act-title { font-weight: 700; font-size: 13px; margin-bottom: 10px; letter-spacing: -0.01em; }
+  .act:hover { border-color: rgba(59,130,246,0.4); }
+  .act { transition: border-color .18s; }
   .act-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
   .act-row:last-child { margin-bottom: 0; }
   .inp {
@@ -298,7 +299,7 @@
         </svg>
       </div>
       <div>
-        <div style="font-size:11px;letter-spacing:0.22em;color:var(--text-secondary);font-weight:600">ZYVOR QA · MISSION CONTROL</div>
+        <div class="brand-eyebrow">ZYVOR QA · MISSION CONTROL</div>
         <h1><span id="banner-title">STANDBY</span></h1>
         <div class="subtitle status-line"><span class="lamp"></span><span id="banner-sub">waiting for first sync</span></div>
       </div>
@@ -425,6 +426,20 @@
       </div>
     </div>
     <div class="glass card act">
+      <div class="act-title">🔀 Compare — visual diff two URLs (staging vs prod)</div>
+      <div class="act-row"><input class="inp grow" id="cmp-a" placeholder="URL A (e.g. staging)"></div>
+      <div class="act-row"><input class="inp grow" id="cmp-b" placeholder="URL B (e.g. prod)"></div>
+      <div class="act-row">
+        <label class="chk"><input type="checkbox" id="cmp-insecure"> self-signed TLS</label>
+        <button class="run-btn act-btn" data-kind="compare" style="margin-left:auto">🔀 Compare</button>
+      </div>
+    </div>
+    <div class="glass card act">
+      <div class="act-title">📡 Uptime ping — status &amp; latency across URLs</div>
+      <div class="act-row"><textarea class="inp grow" id="pg-urls" rows="2" placeholder="one URL per line"></textarea></div>
+      <div class="act-row"><button class="run-btn act-btn" data-kind="ping" style="margin-left:auto">📡 Ping all</button></div>
+    </div>
+    <div class="glass card act">
       <div class="act-title">📸 Screenshot — capture any URL</div>
       <div class="act-row">
         <input class="inp grow" id="sh-url" placeholder="https://…">
@@ -497,6 +512,7 @@
     <span><kbd>⌘K</kbd> commands</span>
     <span><kbd>r</kbd> refresh</span>
     <span><kbd>esc</kbd> close</span>
+    <span><button class="dl-btn" id="sound-toggle" style="padding:1px 8px"></button></span>
     <span>auto-refresh
       <select class="inp" id="refresh-rate" style="padding:1px 6px;font-size:11px">
         <option value="5000">5s</option>
@@ -542,6 +558,7 @@
 "use strict";
 const REFRESH = {{ refresh_interval_ms }};
 const $ = (id) => document.getElementById(id);
+let soundOn = localStorage.getItem("zyvor-sound") !== "off";
 let lastSync = null;
 let drawerPod = null;
 let drawerHover = false;
@@ -798,6 +815,14 @@ async function loadTestHealth() {
 }
 $("th-refresh").addEventListener("click", loadTestHealth);
 
+/* sound toggle */
+function syncSoundBtn() { $("sound-toggle").textContent = soundOn ? "🔔 sound" : "🔕 muted"; }
+$("sound-toggle").addEventListener("click", () => {
+  soundOn = !soundOn; localStorage.setItem("zyvor-sound", soundOn ? "on" : "off"); syncSoundBtn();
+  if (soundOn) beep(true);
+});
+syncSoundBtn();
+
 /* recorded videos panel */
 let videosOpen = false;
 $("videos-toggle").addEventListener("click", async () => {
@@ -994,6 +1019,8 @@ const PALETTE_CMDS = [
   { label: "Site audit", kind: "audit" },
   { label: "Flaky check", kind: "flaky" },
   { label: "Screenshot a URL", kind: "screenshot" },
+  { label: "Compare two URLs", kind: "compare" },
+  { label: "Uptime ping", kind: "ping" },
   { label: "Generate tests", kind: "generate" },
   { label: "Discover coverage", kind: "discover" },
   { label: "Visual regression", kind: "regression" },
@@ -1034,6 +1061,23 @@ $("palette-input").addEventListener("keydown", (ev) => {
   else if (ev.key === "Escape") closePalette();
 });
 $("palette").addEventListener("click", (ev) => { if (ev.target.id === "palette") closePalette(); });
+
+/* sound cue on finish — rising tone on green, falling on red (mutable) */
+function beep(ok) {
+  if (!soundOn) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine";
+    const t = ctx.currentTime;
+    o.frequency.setValueAtTime(ok ? 520 : 400, t);
+    o.frequency.exponentialRampToValueAtTime(ok ? 780 : 240, t + 0.18);
+    g.gain.setValueAtTime(0.14, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    o.start(t); o.stop(t + 0.36);
+  } catch (e) { /* audio unavailable */ }
+}
 
 /* confetti on an all-green finish */
 function confettiBurst() {
@@ -1105,6 +1149,8 @@ function jobParams(kind) {
     viewports: Array.from(document.querySelectorAll("#sh-vps input:checked")).map((c) => c.value).filter((v) => v !== "on"),
     full_page: $("sh-full").checked,
   };
+  if (kind === "compare") return { url_a: $("cmp-a").value.trim(), url_b: $("cmp-b").value.trim(), insecure: $("cmp-insecure").checked };
+  if (kind === "ping") return { urls: $("pg-urls").value };
   return {};
 }
 
@@ -1155,7 +1201,7 @@ for (const btn of document.querySelectorAll(".act-btn")) {
   btn.addEventListener("click", () => startJob(btn.dataset.kind));
 }
 
-const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check", screenshot: "screenshot" };
+const KIND_LABELS = { smoke: "smoke tests", full: "full pipeline", generate: "generate", discover: "discover", create: "NL create", regression: "regression", crawl_test: "crawl & test", audit: "site audit", flaky: "flaky check", screenshot: "screenshot", compare: "compare", ping: "uptime ping" };
 
 let lastToastKey = "";
 function renderRunStatus(st) {
@@ -1208,9 +1254,9 @@ function renderRunStatus(st) {
         st.error ? st.error.slice(0, 80)
         : (r.total != null ? r.passed + "/" + r.total + " passed" : "completed"));
       // celebrate a clean, non-empty test result
-      if (!st.error && r.total > 0 && r.failed === 0 && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        confettiBurst();
-      }
+      const clean = !st.error && r.total > 0 && r.failed === 0;
+      if (clean && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) confettiBurst();
+      beep(clean && !st.error);
     }
     lastToastKey = key;
   } else if (st && !st.finished_at && !lastToastKey) {
@@ -1263,6 +1309,7 @@ function renderJobResult(st) {
       out += '<div class="err-summary"><div class="k">⚠ ' + fails.length + " failure(s)</div>"
         + fails.map((c) => '<div style="margin-bottom:8px"><b>' + esc(c.title) + "</b> "
           + '<button class="copy-btn" data-copy="' + encodeURIComponent(c.error || "") + '">⧉ copy</button>'
+          + (c.hint ? '<div style="color:var(--accent-2);font-size:12px;margin:2px 0">💡 ' + esc(c.hint) + "</div>" : "")
           + '<div class="case-err">' + esc((c.error || "").slice(0, 600))
           + (c.console_logs && c.console_logs.length ? "\nconsole: " + esc(c.console_logs.join("\n")) : "")
           + (c.network_errors && c.network_errors.length ? "\nnetwork: " + esc(c.network_errors.join("\n")) : "")
@@ -1310,6 +1357,22 @@ function renderJobResult(st) {
       + (r.requirements != null ? " from " + r.requirements + " requirement(s)" : "")
       + (r.total != null ? " · executed: " + r.passed + "/" + r.total + " passed" : "") + "</div>";
     html += '<div class="result-files" style="margin-top:6px">' + files.map(esc).join("<br>") + "</div>";
+  } else if (st.kind === "compare") {
+    const same = r.identical;
+    html += '<div class="d">' + (same ? '<span class="pass">identical</span>' : '<span class="fail">' + r.diff_percent + "% different</span>")
+      + " — " + esc(r.url_a) + " vs " + esc(r.url_b) + "</div>";
+    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">'
+      + [["A", r.a_href], ["B", r.b_href], ["diff", r.diff_href]].map(([lbl, href]) =>
+        '<div><div class="d" style="margin-bottom:4px">' + lbl + "</div>"
+        + '<a href="' + esc(href) + '" target="_blank"><img src="' + esc(href) + '" style="max-width:230px;border:1px solid var(--separator);border-radius:8px"></a></div>').join("")
+      + "</div>";
+  } else if (st.kind === "ping") {
+    html += '<div class="d"><span class="pass">' + r.up + " up</span>"
+      + (r.down ? ' · <span class="fail">' + r.down + " down</span>" : "") + " of " + r.total + "</div>";
+    html += '<table class="runs-table" style="margin-top:8px"><tbody>'
+      + (r.results || []).map((x) => "<tr><td><span class=\"chip " + (x.ok ? "pass" : "fail") + '">' + (x.status || "ERR") + "</span></td>"
+        + "<td>" + esc(x.url) + "</td><td class=\"d\">" + (x.ms != null ? x.ms + "ms" : esc(x.error || "")) + "</td></tr>").join("")
+      + "</tbody></table>";
   } else if (st.kind === "screenshot") {
     html += '<div class="d">' + esc(r.url) + " — HTTP " + (r.status || "?") + " · " + esc(r.title || "") + "</div>";
     html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">'
