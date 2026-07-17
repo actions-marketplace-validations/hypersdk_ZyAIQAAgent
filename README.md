@@ -1,5 +1,10 @@
 # Zyvor QA Agent
 
+
+## 📖 Feature Guide
+
+**[Zyvor QA Agent — Customer Feature Guide](docs/zyvor-qa-agent-customer-feature-guide.md)** — a complete, customer-facing reference covering all **42 features** across **8 areas**, grounded in the product's actual capabilities. Also available as a print-ready **[PDF](docs/zyvor-qa-agent-customer-feature-guide.pdf)**.
+
 Autonomous AI testing agent for [Zyvor](https://zyvor.dev) — an AI-first infrastructure platform. Continuously validates the Zyvor platform by reading requirements from GitHub, generating Playwright tests, executing them after deployments, detecting regressions, and producing actionable reports.
 
 Ships with **Mission Control** — a live web console (`zyvor-qa serve` → `/dashboard`) that runs 20+ QA capabilities on demand with streamed output and CSV/HTML/PDF reports: the full test pipeline, **E2E flow tests** (multi-step journey → one video + Playwright trace, cross-browser/device/throttle), **API contract tests** (OpenAPI schema validation + multi-step workflows), **auth & session** tests (reusable login), **live-data** tests (WebSocket/SSE assertions), **Core Web Vitals**, **route sweeps** (visual diff at desktop/mobile), site audits (a11y/SEO/perf/security with an A–F grade), ten network & security probes, load and TLS checks, flaky detection, screenshots, and recurring monitors. See [`docs/tutorials/10-mission-control-dashboard.md`](docs/tutorials/10-mission-control-dashboard.md), [`11-flow-tests.md`](docs/tutorials/11-flow-tests.md), and [`12-api-auth-realtime.md`](docs/tutorials/12-api-auth-realtime.md).
