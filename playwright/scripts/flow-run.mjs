@@ -239,8 +239,13 @@ async function runStep(page, step, n, seenResponses = []) {
       const looksLikeSel = text && (/^[.#\[]/.test(text) || text.includes('='));
       const loc = looksLikeSel
         ? root.locator(text).first()
-        : root.getByText(text, { exact: false }).first();
-      await loc.waitFor({ state: 'visible', timeout });
+        : root.getByText(text, { exact: false }).filter({ visible: true }).first();
+      // Prefer a visible match — marketing sites often hide dropdown clones of the same text
+      try {
+        await loc.waitFor({ state: 'visible', timeout });
+      } catch {
+        await root.getByText(text, { exact: false }).first().waitFor({ state: 'visible', timeout: Math.min(timeout, 5000) });
+      }
       break;
     }
     case 'assert': {

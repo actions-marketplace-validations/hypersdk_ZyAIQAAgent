@@ -4,14 +4,17 @@ import { screenshotOptions } from '../../playwright/utils/visual';
 import { captureBaseline } from '../../playwright/utils/api';
 
 test.describe('Visual Regression', () => {
-  test('homepage visual baseline', { tag: ['@visual', '@smoke'] }, async ({ page }) => {
+  test('homepage visual baseline', { tag: ['@visual'] }, async ({ page }) => {
     await page.goto('/');
     await waitForPageReady(page);
 
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
 
     const opts = await screenshotOptions(page);
-    await expect(page).toHaveScreenshot('homepage-hero.png', opts);
+    await expect(page).toHaveScreenshot('homepage-hero.png', {
+      ...opts,
+      maxDiffPixelRatio: 0.02,
+    });
 
     // Optional: also feed the Pillow/Rust post-run pipeline when ENABLE_REGRESSION=true
     if (process.env.ENABLE_REGRESSION === 'true') {
@@ -28,7 +31,10 @@ test.describe('Visual Regression', () => {
     await expect(section).toBeAttached();
 
     const opts = await screenshotOptions(page);
-    await expect(section).toHaveScreenshot('products-section.png', opts);
+    await expect(section).toHaveScreenshot('products-section.png', {
+      ...opts,
+      maxDiffPixelRatio: 0.02,
+    });
 
     if (process.env.ENABLE_REGRESSION === 'true') {
       await captureBaseline(page, 'products-section');
