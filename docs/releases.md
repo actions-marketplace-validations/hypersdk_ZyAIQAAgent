@@ -43,4 +43,4 @@ git push hypersdk v0.1.1
 gh release create v0.1.1 --repo hypersdk/ZyAIQAAgent --generate-notes
 ```
 
-Either the tag push or the `gh release create` triggers the workflow (it also accepts `workflow_dispatch` with an existing tag, for re-publishing an image without cutting a new release). Version numbers follow `pyproject.toml` / `package.json` (`0.1.0` today); bump those alongside the tag.
+Either the tag push or the `gh release create` triggers the workflow (it also accepts `workflow_dispatch` with an existing tag, for re-publishing an image without cutting a new release). Version numbers follow `pyproject.toml` / `package.json` (currently `0.2.0`); bump those alongside the tag.
