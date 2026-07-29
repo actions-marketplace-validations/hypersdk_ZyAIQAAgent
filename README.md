@@ -1,5 +1,12 @@
 # Zyvor QA Agent
 
+https://github.com/hypersdk/ZyAIQAAgent/raw/main/docs/assets/zyvor-dev-mission-control-demo.gif
+
+**Demo:** Playwright journey against [zyvor.dev](https://zyvor.dev) (home → HyperSDK → Products) — [play MP4](https://github.com/hypersdk/ZyAIQAAgent/blob/main/docs/assets/zyvor-dev-mission-control-demo.mp4) · [download WebM](docs/assets/zyvor-dev-mission-control-demo.webm) · [steps](docs/assets/zyvor-dev-demo.steps) · [how-to](docs/tutorials/13-test-zyvor-dev-recording.md)
+
+```bash
+zyvor-qa flow https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video
+```
 
 ## 📖 Feature Guide
 
@@ -12,21 +19,6 @@ Ships with **Mission Control** — a live web console (`zyvor-qa serve` → `/da
 ### Mission Control UX
 
 The console is a full-bleed ops surface (glass sticky topbar/footer, larger type, primary **Smoke** CTA, card motion) with a short **boot splash**, a live **signal-field / constellation** canvas, **⌘K** command palette, **NOC wall mode** (double-click the brand), and light **warp** cues (`` ` `` or type `zyvor`). Reduced-motion preferences are respected.
-
-### Watch a zyvor.dev test recording
-
-Real Playwright journey video against [zyvor.dev](https://zyvor.dev) (home → HyperSDK → Products):
-
-https://github.com/hypersdk/ZyAIQAAgent/raw/main/docs/assets/zyvor-dev-mission-control-demo.webm
-
-<video src="docs/assets/zyvor-dev-mission-control-demo.webm" controls width="720" title="Zyvor QA Agent — zyvor.dev journey recording">
-</video>
-
-[Download .webm](docs/assets/zyvor-dev-mission-control-demo.webm) · steps used: [`docs/assets/zyvor-dev-demo.steps`](docs/assets/zyvor-dev-demo.steps) · how-to: [Tutorial 13](docs/tutorials/13-test-zyvor-dev-recording.md)
-
-```bash
-zyvor-qa flow https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video
-```
 
 ## Architecture
 
