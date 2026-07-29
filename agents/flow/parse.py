@@ -22,6 +22,10 @@ def parse_step_lines(text: str) -> list[dict[str, Any]]:
         if m:
             steps.append(_step("goto", m.group(1).strip("\"'")))
             continue
+        m = re.match(r"^hover\s+[\"']?(.+?)[\"']?$", line, re.I)
+        if m:
+            steps.append(_step("hover", m.group(1).strip()))
+            continue
         m = re.match(r"^click\s+[\"']?(.+?)[\"']?$", line, re.I)
         if m:
             steps.append(_step("click", m.group(1).strip()))
@@ -30,14 +34,67 @@ def parse_step_lines(text: str) -> list[dict[str, Any]]:
         if m:
             steps.append(_step("fill", m.group(1).strip(), m.group(2).strip()))
             continue
+        m = re.match(r"^select\s+(.+?)\s*[=:]\s*[\"']?(.+?)[\"']?$", line, re.I)
+        if m:
+            steps.append(_step("select", m.group(1).strip(), m.group(2).strip()))
+            continue
+        m = re.match(r"^upload\s+(.+?)\s*[=:]\s*[\"']?(.+?)[\"']?$", line, re.I)
+        if m:
+            steps.append(_step("upload", m.group(1).strip(), m.group(2).strip()))
+            continue
+        m = re.match(r"^download\s+[\"']?(.+?)[\"']?(?:\s+to\s+[\"']?(.+?)[\"']?)?$", line, re.I)
+        if m:
+            steps.append(_step("download", m.group(1).strip(), (m.group(2) or "").strip()))
+            continue
+        m = re.match(r"^dialog\s+(accept|dismiss)(?:\s+[\"']?(.+?)[\"']?)?$", line, re.I)
+        if m:
+            steps.append(_step("dialog", value=m.group(1).lower(), assertion=(m.group(2) or "").strip()))
+            continue
+        m = re.match(r"^iframe\s+[\"']?(.+?)[\"']?$", line, re.I)
+        if m:
+            tgt = m.group(1).strip()
+            if tgt.lower() in ("off", "none", "exit", "main", "-"):
+                tgt = ""
+            steps.append(_step("iframe", tgt))
+            continue
+        m = re.match(r"^drag\s+(.+?)\s+(?:to|->)\s+[\"']?(.+?)[\"']?$", line, re.I)
+        if m:
+            steps.append(_step("drag", m.group(1).strip(), m.group(2).strip()))
+            continue
         m = re.match(r"^press\s+(.+)$", line, re.I)
         if m:
             steps.append(_step("press", value=m.group(1).strip()))
+            continue
+        m = re.match(r"^clock\s+(.+)$", line, re.I)
+        if m:
+            steps.append(_step("clock", value=m.group(1).strip()))
+            continue
+        m = re.match(r"^wait\s+until\s+[\"']?(.+?)[\"']?(?:\s+(\d+)\s*ms)?$", line, re.I)
+        if m:
+            steps.append(_step("wait_until", m.group(1).strip(), (m.group(2) or "").strip()))
             continue
         m = re.match(r"^wait\s+(?:for\s+)?(.+)$", line, re.I)
         if m:
             arg = m.group(1).strip()
             steps.append(_step("wait", value=arg) if arg.replace("ms", "").isdigit() else _step("wait", arg))
+            continue
+        # assert url: `assert url /vms` / `assert_url /dashboard`
+        m = re.match(r"^(?:assert|verify|expect|check)\s+url\s+[\"']?(.+?)[\"']?$", line, re.I) \
+            or re.match(r"^assert_url\s+[\"']?(.+?)[\"']?$", line, re.I)
+        if m:
+            steps.append(_step("assert_url", assertion=m.group(1).strip()))
+            continue
+        # assert api: `assert api /api/vms = 200` / `assert_api /api/vms`
+        m = re.match(r"^(?:assert|verify|expect|check)\s+api\s+(\S+)(?:\s*[=:]\s*(\d+))?$", line, re.I) \
+            or re.match(r"^assert_api\s+(\S+)(?:\s*[=:]\s*(\d+))?$", line, re.I)
+        if m:
+            steps.append(_step("assert_api", m.group(1).strip(), (m.group(2) or "").strip()))
+            continue
+        # assert aria: `assert aria body = - heading "Home"` / multiline via YAML in assertion
+        m = re.match(r"^(?:assert|verify|expect|check)\s+aria\s+(\S+)\s*[=:]\s*(.+)$", line, re.I) \
+            or re.match(r"^assert_aria\s+(\S+)\s*[=:]\s*(.+)$", line, re.I)
+        if m:
+            steps.append(_step("assert_aria", m.group(1).strip(), assertion=m.group(2).strip()))
             continue
         # assert value: `assert value email = qa@x.com` / `assert <field> value = X`
         m = re.match(r"^(?:assert|verify|expect|check)\s+(?:value\s+)?(.+?)\s+value\s*[=:]\s*[\"']?(.+?)[\"']?$", line, re.I) \
@@ -79,6 +136,16 @@ def parse_prose_heuristic(text: str) -> list[dict[str, Any]]:
             steps.append(_step("goto", pm.group(1)))
         elif re.search(r"\blog ?in|sign ?in\b", low):
             steps.append(_step("goto", "/"))
+        elif re.search(r"\bhover\b", low):
+            q = re.search(r"[\"'“]([^\"'”]+)[\"'”]", c)
+            steps.append(_step("hover", (q.group(1) if q else c).strip()))
+        elif re.search(r"\bupload\b", low):
+            q = re.search(r"[\"'“]([^\"'”]+)[\"'”]", c)
+            steps.append(_step("upload", "file", q.group(1) if q else ""))
+        elif re.search(r"\bselect\b", low):
+            q = re.search(r"[\"'“]([^\"'”]+)[\"'”]", c)
+            fm = re.search(r"select\s+(\w+)", c, re.I)
+            steps.append(_step("select", fm.group(1) if fm else "field", q.group(1) if q else ""))
         elif re.search(r"\bclick|press the|tap\b", low):
             q = re.search(r"[\"'“]([^\"'”]+)[\"'”]", c) or re.search(r"(?:click|tap)(?:\s+the|\s+on)?\s+([A-Z][\w ]+?)(?:\s+button|\s+link)?$", c, re.I)
             steps.append(_step("click", (q.group(1) if q else c).strip()))
@@ -128,7 +195,11 @@ def parse_flow(text: str, *, steps_mode: bool = False) -> tuple[list[dict[str, A
     if not text:
         raise ValueError("describe the journey or provide steps")
     # explicit step lines: every non-empty line starts with a known verb
-    verbs = re.compile(r"^\s*(goto|go\s+to|open|navigate|click|fill|type|enter|press|wait|assert|verify|expect|check)\b", re.I)
+    verbs = re.compile(
+        r"^\s*(goto|go\s+to|open|navigate|click|hover|fill|type|enter|select|upload|download|"
+        r"dialog|iframe|drag|press|clock|wait|assert|verify|expect|check|assert_url|assert_api|assert_aria)\b",
+        re.I,
+    )
     lines = [ln for ln in text.splitlines() if ln.strip()]
     looks_like_steps = steps_mode or (len(lines) > 1 and all(verbs.match(ln) for ln in lines))
     if looks_like_steps:

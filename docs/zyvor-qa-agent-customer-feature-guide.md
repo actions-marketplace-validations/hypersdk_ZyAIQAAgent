@@ -92,6 +92,10 @@ _Drive real user journeys across browsers and devices, and catch visual regressi
 
 - **E2E Flow Tests** — Drives a multi-step journey — log in, navigate, fill a wizard, assert the outcome — as one continuous session recorded to a single video and Playwright trace. — _Watch the whole user journey succeed or fail, then time-travel debug it._
   - **How:** CLI: `zyvor-qa flow  --steps  | --describe "" [--video --username --password --insecure --session  --no-trace]`, or Mission Control's 🎬 Flow test card. Steps stream live; a `journey.webm` video and `trace.zip` land in `reports/jobs/-flow/`.
+- **HAR Record / Replay** — Captures network traffic as a HAR file, then drives the UI against that recording (offline-friendly contract for the page). — _Prove the UI still works when the backend is mocked from a real capture._
+  - **How:** CLI: `zyvor-qa har-replay <url> --mode record|replay --har path [--routes /, /pricing]`, or the 📼 HAR card in Mission Control.
+- **Import Playwright Codegen** — Paste codegen JS/TS (or record locally with `node playwright/scripts/record-flow.mjs`) and convert it into runnable flow steps. — _Turn an interactive recording into a permanent journey without rewriting selectors by hand._
+  - **How:** CLI: `zyvor-qa import-codegen <file|-> [--run --url …]`, or the 📥 Import codegen card.
 - **Smoke Tests** — Runs the hand-written smoke suite against any target with a single command and no LLM required. — _A fast, dependency-free health check for every deploy._
   - **How:** CLI: `zyvor-qa test` (runs everything in `tests/manual/` with Chromium), or the ▶ Smoke card in Mission Control. Targets `ZYVOR_BASE_URL`; no LLM key needed.
 - **Route Sweep** — Screenshots every route at desktop and mobile, then pixel-diffs each shot against a saved baseline, masking dynamic content. — _Catches unintended visual changes across the whole site at once._
@@ -105,7 +109,7 @@ _Drive real user journeys across browsers and devices, and catch visual regressi
 - **Flaky Detection** — Runs a suite N times and ranks each test by its flake rate. — _Finds the unreliable tests before they erode trust in the whole suite._
   - **How:** Mission Control's 🎲 Flaky check card — pick the run count N; UI/API-driven with no extra environment variables. Results feed the Test health panel's flaky badges.
 - **Cross-Browser & Device** — Runs on Chromium, Firefox, and WebKit with device profiles and 3G/offline network throttling. — _Confirms the experience holds up beyond your own laptop's browser._
-  - **How:** Per-journey CLI flags: `zyvor-qa flow  --browser firefox|webkit --device "Pixel 7" --throttle 3g|offline` (set `ZYVOR_BROWSER`/`ZYVOR_DEVICE`/`ZYVOR_THROTTLE`), or the 🎬 Flow card's dropdowns. For the full pipeline, set `ENABLE_MULTI_BROWSER=true` in `.env` (install browsers with `npx playwright install --with-deps`).
+  - **How:** Per-journey CLI flags: `zyvor-qa flow  --browser firefox|webkit --device "Pixel 7" --throttle 3g|offline` (set `ZYVOR_BROWSER`/`ZYVOR_DEVICE`/`ZYVOR_THROTTLE`), or the 🎬 Flow card's dropdowns. For the full pipeline, set `ENABLE_MULTI_BROWSER=true` in `.env` (install browsers with `npx playwright install --with-deps`). Filter suites with tags (`@smoke`, `@visual`, `@a11y`) via `zyvor-qa test --grep @smoke` or `ZYVOR_GREP`; shard CI with `--shard 1/2`. Optional: `ENABLE_AUTH_SETUP=true` + dashboard credentials for a Playwright setup project that writes `storageState`; `ENABLE_EMULATION_PROJECTS=true` for dark / reduced-motion / locale projects.
 
 ## 3. API, Auth & Real-Time
 

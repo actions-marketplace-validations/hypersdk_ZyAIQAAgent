@@ -8,6 +8,7 @@ warnings.filterwarnings("ignore", message=".*OpenSSL.*")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="langgraph.*")
 
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -140,7 +141,10 @@ def run(
 
 
 @app.command()
-def test() -> None:
+def test(
+    grep: Optional[str] = typer.Option(None, help="Playwright --grep filter (e.g. @smoke)"),
+    shard: Optional[str] = typer.Option(None, help="Playwright --shard i/n (e.g. 1/2)"),
+) -> None:
     """Run Playwright tests only (skip parse/generate)."""
     _load_env()
     from agents.execution.runner import run_playwright
@@ -148,9 +152,21 @@ def test() -> None:
     base_url = os.environ.get("ZYVOR_BASE_URL", "https://zyvor.dev")
     repo_root = Path(__file__).resolve().parents[1]
     test_dirs = [str(repo_root / "tests" / "manual")]
+    grep = grep or os.environ.get("ZYVOR_GREP")
+    shard = shard or os.environ.get("ZYVOR_SHARD")
 
-    typer.echo(f"Running Playwright tests against {base_url}...")
-    results = run_playwright(test_dirs=test_dirs, base_url=base_url)
+    extra = []
+    if grep:
+        extra.append(f"grep={grep}")
+    if shard:
+        extra.append(f"shard={shard}")
+    typer.echo(f"Running Playwright tests against {base_url}" + (f" ({', '.join(extra)})" if extra else "") + "...")
+    results = run_playwright(
+        test_dirs=test_dirs,
+        base_url=base_url,
+        grep=grep,
+        shard=shard,
+    )
     typer.echo(f"Results: {results.passed} passed, {results.failed} failed")
 
     if results.failed > 0:
@@ -522,6 +538,67 @@ def auth_test(
     if result.get("session_name"):
         typer.echo(f"Session saved as: {result['session_name']} (reuse with flow/realtime --session)")
     if result["failed"] > 0:
+        raise typer.Exit(code=1)
+
+
+@app.command(name="har-replay")
+def har_replay(
+    url: str = typer.Argument(..., help="Base URL"),
+    mode: str = typer.Option("replay", help="record | replay"),
+    har: Optional[str] = typer.Option(None, help="HAR file path (required for replay; default out dir for record)"),
+    routes: Optional[str] = typer.Option("/", help="Comma/newline list of paths to visit when recording"),
+    expect_text: Optional[str] = typer.Option(None, help="Text that must appear during replay"),
+    not_found_ok: bool = typer.Option(False, help="On replay, fall back to network if a route is missing from HAR"),
+    insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
+) -> None:
+    """Record network traffic as HAR, or replay a page against a HAR file."""
+    _load_env()
+    from orchestrator.dashboard.jobs import _job_har_replay
+
+    result = _job_har_replay({
+        "url": url,
+        "mode": mode,
+        "har": har or os.environ.get("ZYVOR_HAR_PATH") or "",
+        "routes": routes or "/",
+        "expect_text": expect_text or "",
+        "not_found_ok": not_found_ok,
+        "insecure": insecure,
+    })
+    typer.echo(f"HAR {result.get('mode')}: {result['passed']}/{result['total']} checks")
+    if result.get("har"):
+        typer.echo(f"HAR file: {result['har']}")
+    for c in result.get("checks") or []:
+        typer.echo(f"  {'✓' if c['ok'] else '✗'} {c['name']} — {c.get('detail', '')}")
+    if result["failed"] > 0:
+        raise typer.Exit(code=1)
+
+
+@app.command(name="import-codegen")
+def import_codegen_cmd(
+    source: str = typer.Argument(..., help="Path to a Playwright codegen .js/.ts file, or '-' for stdin"),
+    url: Optional[str] = typer.Option(None, help="Base URL (required with --run)"),
+    run: bool = typer.Option(False, help="Run the imported steps as a flow test"),
+    insecure: bool = typer.Option(False, help="Accept self-signed TLS"),
+) -> None:
+    """Parse Playwright codegen output into flow steps (optionally run them)."""
+    _load_env()
+    if source == "-":
+        script = sys.stdin.read()
+    else:
+        script = Path(source).read_text(encoding="utf-8")
+    from orchestrator.dashboard.jobs import _job_import_codegen
+
+    result = _job_import_codegen({
+        "script": script,
+        "url": url or "",
+        "run": run,
+        "insecure": insecure,
+    })
+    steps = result.get("imported_steps") or result.get("steps") or []
+    typer.echo(f"Imported {len(steps)} step(s)")
+    for i, s in enumerate(steps, 1):
+        typer.echo(f"  {i}. {s.get('action')} {s.get('target') or s.get('assertion') or s.get('value') or ''}")
+    if run and result.get("failed", 0) > 0:
         raise typer.Exit(code=1)
 
 

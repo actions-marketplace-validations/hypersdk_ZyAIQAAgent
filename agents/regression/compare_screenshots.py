@@ -122,8 +122,21 @@ def compare_screenshots(
 
 
 def collect_screenshots_from_test_results(test_results_dir: str | Path) -> list[Path]:
-    """Collect PNG screenshots from Playwright test-results output."""
+    """Collect PNG screenshots from Playwright test-results output.
+
+    Skips Playwright native snapshot dirs (``*-snapshots``) so ``toHaveScreenshot``
+    baselines are not double-diffed by the Pillow/Rust regression pipeline.
+    """
     root = Path(test_results_dir)
     if not root.exists():
         return []
-    return list(root.rglob("*.png"))
+    out: list[Path] = []
+    for png in root.rglob("*.png"):
+        parts = {p.lower() for p in png.parts}
+        joined = str(png).lower()
+        if any(p.endswith("-snapshots") or p == "snapshots" for p in parts):
+            continue
+        if "-snapshots" in joined or "/snapshots/" in joined:
+            continue
+        out.append(png)
+    return out

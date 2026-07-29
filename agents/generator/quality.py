@@ -34,6 +34,15 @@ def sanitize_steps(steps: list[RequirementStep]) -> list[RequirementStep]:
                     RequirementStep(action="assert", target="heading", assertion="heading")
                 )
                 continue
+            if step.target == "aria":
+                sanitized.append(
+                    RequirementStep(
+                        action="assert",
+                        target="aria",
+                        assertion=step.assertion or '- heading /.*/',
+                    )
+                )
+                continue
             safe = sanitize_assertion_text(step.assertion or step.target or "")
             if safe:
                 sanitized.append(
@@ -135,6 +144,15 @@ def check_test_quality(
 
     if ".toBeAttached()" in code and "coverage" not in requirement.tags:
         issues.append("uses brittle toBeAttached assertion")
+
+    # Allowed modern Playwright APIs (soft / aria / poll / screenshots) — never reject for these
+    _ = (
+        "toMatchAriaSnapshot" in code
+        or "expect.soft" in code
+        or ".toPass(" in code
+        or "toHaveScreenshot" in code
+        or "eventuallyVisible" in code
+    )
 
     body_hash = hashlib.sha256(code.strip().encode()).hexdigest()
     if existing_hashes and body_hash in existing_hashes.values():

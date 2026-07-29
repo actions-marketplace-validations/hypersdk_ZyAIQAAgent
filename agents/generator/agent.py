@@ -135,14 +135,36 @@ def render_template_fallback(
 
     safe_steps = sanitize_steps(requirement.steps)
 
+    login_required = (
+        not marketing_only
+        and ("auth" in requirement.tags or "login" in requirement.tags or "dashboard" in requirement.tags)
+    )
+    auth_setup = (
+        login_required
+        and os.environ.get("ENABLE_AUTH_SETUP", "false").lower() == "true"
+        and os.environ.get("ENABLE_DASHBOARD_TESTS", "false").lower() == "true"
+    )
+    visual = "visual" in requirement.tags
+    tag_list = ["@generated", "@smoke"]
+    if login_required:
+        tag_list.append("@auth")
+    if visual:
+        tag_list.append("@visual")
+    if "a11y" in requirement.tags or "aria" in requirement.tags:
+        tag_list.append("@a11y")
+    if "coverage" in requirement.tags:
+        tag_list.append("@coverage")
+
     code = template.render(
         title=requirement.title,
         requirement_id=requirement.id,
         steps=safe_steps,
-        login_required=(
-            not marketing_only
-            and ("auth" in requirement.tags or "login" in requirement.tags or "dashboard" in requirement.tags)
-        ),
+        login_required=login_required,
+        auth_setup=auth_setup,
+        visual=visual,
+        use_eventually=False,
+        tags_json=json.dumps(tag_list),
+        slug=_slugify(requirement.id),
         start_path=start_path,
     )
     output_dir = Path(output_dir)

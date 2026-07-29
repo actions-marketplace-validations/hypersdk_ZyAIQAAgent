@@ -54,6 +54,8 @@ Login in these products lives in `sessionStorage` (JWT), cookies, or one-time ti
 - a **tampered token** is rejected,
 - **logout** clears the session.
 
+For the Playwright *test suite* itself (smoke / generated specs), set `ENABLE_AUTH_SETUP=true` with `ENABLE_DASHBOARD_TESTS=true` and credentials. A setup project (`playwright/auth.setup.ts`) logs in once and writes `playwright/.auth/user.json`; dependent browser projects reuse that state (fixtures also reinject sessionStorage / token extras).
+
 ```bash
 # API login (token → sessionStorage), then run the checks and save the session
 zyvor-qa auth-test https://app.example.com --api-login /api/v1/auth/login \

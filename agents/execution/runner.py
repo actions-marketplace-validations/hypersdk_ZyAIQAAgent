@@ -84,12 +84,19 @@ def run_playwright(
     test_dirs: list[str] | None = None,
     base_url: str | None = None,
     project: str | None = None,
+    grep: str | None = None,
+    grep_invert: str | None = None,
+    shard: str | None = None,
     on_line=None,
 ) -> TestResult:
     """Execute Playwright tests and parse JSON results.
 
     ``on_line`` (optional callable) receives each stdout line as it is emitted,
     enabling live streaming of Playwright's `list` reporter output.
+
+    ``grep`` / ``grep_invert`` map to Playwright ``--grep`` / ``--grep-invert``
+    (e.g. ``@smoke``). ``shard`` is ``i/n`` (e.g. ``1/2``).
+    Env fallbacks: ``ZYVOR_GREP``, ``ZYVOR_SHARD``.
     """
     _load_env()
     repo_root = _repo_root()
@@ -124,6 +131,14 @@ def run_playwright(
     cmd = ["npx", "playwright", "test", f"--config={config}", *targets]
     if project:
         cmd.extend(["--project", project])
+    grep = grep or env.get("ZYVOR_GREP") or None
+    if grep:
+        cmd.extend(["--grep", grep])
+    if grep_invert:
+        cmd.extend(["--grep-invert", grep_invert])
+    shard = shard or env.get("ZYVOR_SHARD") or None
+    if shard:
+        cmd.extend([f"--shard={shard}"])
 
     proc = subprocess.Popen(
         cmd,

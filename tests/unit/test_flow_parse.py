@@ -75,3 +75,51 @@ def test_steps_mode_forces_line_parser():
     steps, mode = parse_flow("HyperSDK", steps_mode=True)
     assert mode == "steps"
     assert steps[0]["action"] == "assert"
+
+
+def test_new_flow_actions():
+    steps = parse_step_lines(
+        "\n".join(
+            [
+                "hover Menu",
+                'select region = us-east',
+                "upload file = /tmp/a.iso",
+                'download "Export" to /tmp/out.csv',
+                "dialog accept Confirm delete",
+                "iframe #embed",
+                'drag "Card A" to "Column B"',
+                "clock install",
+                "clock set:2025-06-01T12:00:00Z",
+                "clock fastForward:5000",
+                'wait until "Running" 20000ms',
+                "assert url /vms",
+                "assert api /api/vms = 200",
+                'assert aria body = - heading "VMs"',
+                "iframe off",
+            ]
+        )
+    )
+    assert _actions(steps) == [
+        "hover",
+        "select",
+        "upload",
+        "download",
+        "dialog",
+        "iframe",
+        "drag",
+        "clock",
+        "clock",
+        "clock",
+        "wait_until",
+        "assert_url",
+        "assert_api",
+        "assert_aria",
+        "iframe",
+    ]
+    assert steps[1]["target"] == "region" and steps[1]["value"] == "us-east"
+    assert steps[2]["value"] == "/tmp/a.iso"
+    assert steps[4]["value"] == "accept"
+    assert steps[5]["target"] == "#embed"
+    assert steps[-1]["target"] == ""
+    assert steps[11]["assertion"] == "/vms"
+    assert steps[12]["target"] == "/api/vms" and steps[12]["value"] == "200"

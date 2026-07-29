@@ -3,7 +3,7 @@ import { waitForPageReady } from '../../playwright/utils/helpers';
 import { validateApiCalls } from '../../playwright/utils/api';
 
 test.describe('Zyvor Product Suite', () => {
-  test('product suite section is visible on homepage', async ({ page, apiCalls }) => {
+  test('product suite section is visible on homepage', { tag: ['@smoke'] }, async ({ page, apiCalls }) => {
     await page.goto('/');
     await waitForPageReady(page);
 
@@ -17,18 +17,18 @@ test.describe('Zyvor Product Suite', () => {
     expect(apiFailures).toHaveLength(0);
   });
 
-  test('key product names are present in page content', async ({ page }) => {
+  test('key product names are present in page content', { tag: ['@smoke'] }, async ({ page }) => {
     await page.goto('/');
     await waitForPageReady(page);
 
     const products = ['HyperSDK', 'hyper2kvm', 'Zeus OS', 'PacketWolf', 'Aether'];
 
     for (const product of products) {
-      await expect(page.getByText(product, { exact: false }).first()).toBeAttached();
+      await expect.soft(page.getByText(product, { exact: false }).first()).toBeAttached();
     }
   });
 
-  test('migration providers are mentioned in page content', async ({ page }) => {
+  test('migration providers are mentioned in page content', { tag: ['@smoke'] }, async ({ page }) => {
     await page.goto('/');
     await waitForPageReady(page);
 

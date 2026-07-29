@@ -1,17 +1,22 @@
 import { test, expect } from '../../playwright/fixtures/base';
-import { waitForPageReady } from '../../playwright/utils/helpers';
-{% if login_required %}
+import { waitForPageReady{% if use_eventually %}, eventuallyVisible{% endif %} } from '../../playwright/utils/helpers';
+{% if login_required and not auth_setup %}
 import { login, hasAuthCredentials } from '../../playwright/utils/auth';
+{% endif %}
+{% if visual %}
+import { screenshotOptions } from '../../playwright/utils/visual';
 {% endif %}
 
 test.describe('{{ title }}', () => {
-  test('{{ title }}', async ({ page, consoleLogs }) => {
-{% if login_required %}
+  test('{{ title }}', { tag: {{ tags_json }} }, async ({ page, consoleLogs }) => {
+{% if login_required and not auth_setup %}
     test.skip(
       !hasAuthCredentials(),
       'Skipped: dashboard auth not configured (set ENABLE_DASHBOARD_TESTS=true and credentials)'
     );
     await login(page);
+{% elif login_required and auth_setup %}
+    // Auth provided by Playwright setup project (ENABLE_AUTH_SETUP) via storageState
 {% endif %}
 {% for step in steps %}
 {% if step.action == 'navigate' %}
@@ -22,15 +27,17 @@ test.describe('{{ title }}', () => {
 {% elif step.action == 'fill' %}
     await page.getByLabel(/{{ step.target }}|name/i).fill('{{ step.value }}');
 {% elif step.action == 'assert' %}
-{% if step.target == 'heading' %}
-    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page).toHaveTitle(/.+/);
+{% if step.target == 'aria' %}
+    await expect(page.locator('main, [role="main"], body').first()).toMatchAriaSnapshot(`{{ step.assertion }}`);
+{% elif step.target == 'heading' %}
+    await expect.soft(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 15000 });
+    await expect.soft(page).toHaveTitle(/.+/);
 {% elif step.assertion and step.assertion != 'visible' and step.assertion != 'heading' %}
-    await expect(page.getByText({{ step.assertion | tojson }}).first()).toBeVisible({ timeout: 15000 });
+    await expect.soft(page.getByText({{ step.assertion | tojson }}).first()).toBeVisible({ timeout: 15000 });
 {% elif step.target and step.target not in ['page', 'content'] %}
-    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 15000 });
+    await expect.soft(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 15000 });
 {% else %}
-    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 15000 });
+    await expect.soft(page.getByRole('heading', { level: 1 }).first()).toBeVisible({ timeout: 15000 });
 {% endif %}
 {% elif step.action == 'wait' %}
     await waitForPageReady(page);
@@ -40,12 +47,18 @@ test.describe('{{ title }}', () => {
     await page.goto('{{ start_path }}');
     await waitForPageReady(page);
 {% if start_path == '/' %}
-    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
-    await expect(page).toHaveTitle(/Zyvor|HyperSDK/i);
+    await expect.soft(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    await expect.soft(page).toHaveTitle(/Zyvor|HyperSDK/i);
 {% else %}
-    await expect(page).toHaveURL(new RegExp('{{ start_path }}'));
-    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    await expect.soft(page).toHaveURL(new RegExp('{{ start_path }}'));
+    await expect.soft(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
 {% endif %}
+{% endif %}
+{% if visual %}
+    {
+      const opts = await screenshotOptions(page);
+      await expect(page).toHaveScreenshot('{{ slug }}-page.png', opts);
+    }
 {% endif %}
     const appErrors = consoleLogs.filter(
       (l) => l.startsWith('[error]') && !l.includes('Content Security Policy')

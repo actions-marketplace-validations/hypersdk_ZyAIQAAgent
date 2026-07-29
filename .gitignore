@@ -14,15 +14,9 @@ venv/
 # Node
 node_modules/
 
-# Playwright
-playwright-report/
-test-results/
-blob-report/
-reports/
-screenshots/
-videos/
-traces/
-*.har
+playwright/.auth/user.json
+playwright/.auth/*.json
+!playwright/.auth/.gitkeep
 
 # Generated tests (optional — uncomment to ignore)
 # tests/generated/

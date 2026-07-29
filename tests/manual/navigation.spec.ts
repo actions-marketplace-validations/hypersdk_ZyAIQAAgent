@@ -2,7 +2,7 @@ import { test, expect } from '../../playwright/fixtures/base';
 import { waitForPageReady } from '../../playwright/utils/helpers';
 
 test.describe('Zyvor Navigation & CTAs', () => {
-  test('Schedule Demo CTA is present', async ({ page, networkErrors }) => {
+  test('Schedule Demo CTA is present', { tag: ['@smoke'] }, async ({ page, networkErrors }) => {
     await page.goto('/');
     await waitForPageReady(page);
 
@@ -14,7 +14,7 @@ test.describe('Zyvor Navigation & CTAs', () => {
     expect(criticalErrors).toHaveLength(0);
   });
 
-  test('documentation links resolve', async ({ page }) => {
+  test('documentation links resolve', { tag: ['@smoke'] }, async ({ page }) => {
     await page.goto('/');
     await waitForPageReady(page);
 
@@ -26,7 +26,7 @@ test.describe('Zyvor Navigation & CTAs', () => {
     }
   });
 
-  test('footer or contact section is reachable', async ({ page }) => {
+  test('footer or contact section is reachable', { tag: ['@smoke'] }, async ({ page }) => {
     await page.goto('/');
     await waitForPageReady(page);
 

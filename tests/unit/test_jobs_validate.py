@@ -91,8 +91,35 @@ def test_unknown_kind_rejected():
 
 
 def test_new_kinds_registered():
-    for k in ("api_contract", "auth_test", "realtime", "vitals"):
+    for k in ("api_contract", "auth_test", "realtime", "vitals", "har_replay", "import_codegen"):
         assert k in VALID_KINDS
+
+
+def test_har_replay_requires_url_and_mode():
+    with pytest.raises(ValueError):
+        _validate("har_replay", {"url": "not-a-url", "mode": "record"})
+    with pytest.raises(ValueError):
+        _validate("har_replay", {"url": "https://x.io", "mode": "replay"})  # no har
+    clean = _validate("har_replay", {"url": "https://x.io", "mode": "record", "routes": "/,/a"})
+    assert clean["mode"] == "record"
+    assert clean["routes"] == ["/", "/a"]
+
+
+def test_import_codegen_requires_script():
+    with pytest.raises(ValueError):
+        _validate("import_codegen", {"script": "  "})
+    clean = _validate("import_codegen", {"script": "await page.goto('/');"})
+    assert clean["run"] is False
+    with pytest.raises(ValueError):
+        _validate("import_codegen", {"script": "await page.goto('/');", "run": True})
+
+
+def test_smoke_shard_and_grep():
+    clean = _validate("smoke", {"grep": "@smoke", "shard": "1/2"})
+    assert clean["grep"] == "@smoke"
+    assert clean["shard"] == "1/2"
+    with pytest.raises(ValueError):
+        _validate("smoke", {"shard": "bad"})
 
 
 def test_api_contract_requires_spec_in_spec_mode():

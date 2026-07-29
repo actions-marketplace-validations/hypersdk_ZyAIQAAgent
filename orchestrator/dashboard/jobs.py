@@ -14,6 +14,7 @@ One job at a time; runs on a daemon thread; kind-specific `result` payloads.
 from __future__ import annotations
 
 import os
+import re
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,6 +29,7 @@ VALID_KINDS = {
     "crawl_test", "audit", "flaky", "screenshot", "compare", "ping",
     "loadtest", "tls", "flow", "route_sweep",
     "api_contract", "auth_test", "realtime", "vitals", "ai_flow",
+    "har_replay", "import_codegen",
 } | PROBE_KINDS
 
 _lock = threading.Lock()
@@ -374,6 +376,43 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["insecure"] = bool(params.get("insecure"))
         if not (clean["ws"] or clean["sse"] or clean["live_selector"]):
             raise ValueError("provide a ws path, sse path, or a live-view selector")
+    if kind == "har_replay":
+        url = (params.get("url") or "").strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500]
+        mode = (params.get("mode") or "replay").strip().lower()
+        if mode not in {"record", "replay"}:
+            raise ValueError("mode must be record or replay")
+        clean["mode"] = mode
+        raw = params.get("routes") or "/"
+        if isinstance(raw, str):
+            raw = raw.replace(",", "\n").split("\n")
+        clean["routes"] = [r.strip() for r in raw if r.strip().startswith("/")][:40] or ["/"]
+        clean["har"] = (params.get("har") or "").strip()[:500]
+        clean["expect_text"] = (params.get("expect_text") or "").strip()[:200]
+        clean["not_found_ok"] = bool(params.get("not_found_ok"))
+        clean["insecure"] = bool(params.get("insecure"))
+        if mode == "replay" and not clean["har"] and not os.environ.get("ZYVOR_HAR_PATH"):
+            raise ValueError("provide a HAR path for replay (or set ZYVOR_HAR_PATH)")
+    if kind == "import_codegen":
+        script = (params.get("script") or "").strip()
+        if not script:
+            raise ValueError("paste a Playwright codegen script")
+        clean["script"] = script[:50000]
+        url = (params.get("url") or "").strip()
+        if url and not url.startswith(("http://", "https://")):
+            raise ValueError("url must start with http:// or https://")
+        clean["url"] = url[:500] if url else ""
+        clean["run"] = bool(params.get("run"))
+        clean["insecure"] = bool(params.get("insecure"))
+        if clean["run"] and not clean["url"]:
+            raise ValueError("url is required when run is enabled")
+    if kind == "smoke":
+        clean["grep"] = (params.get("grep") or "").strip()[:200]
+        clean["shard"] = (params.get("shard") or "").strip()[:20]
+        if clean["shard"] and not re.match(r"^\d+/\d+$", clean["shard"]):
+            raise ValueError("shard must look like 1/2")
     if kind in PROBE_KINDS:
         target = (params.get("url") or params.get("host") or "").strip()
         if kind == "dns_records":
@@ -610,11 +649,24 @@ def _job_smoke(params: dict[str, Any]) -> dict[str, Any]:
 
     t0 = _time.time()
     base_url = os.environ.get("ZYVOR_BASE_URL", "https://zyvor.dev")
-    log_progress(f"running tests/manual against {base_url} (Playwright + Chromium, video on)…")
+    grep = params.get("grep") or ""
+    shard = params.get("shard") or ""
+    extra = []
+    if grep:
+        extra.append(f"grep={grep}")
+    if shard:
+        extra.append(f"shard={shard}")
+    log_progress(
+        f"running tests/manual against {base_url} (Playwright + Chromium, video on"
+        + (f", {', '.join(extra)}" if extra else "")
+        + ")…"
+    )
     with _env_overrides({"ZYVOR_VIDEO": "on"}):
         results = run_playwright(
             test_dirs=[str(_repo_root() / "tests" / "manual")],
             base_url=base_url,
+            grep=grep or None,
+            shard=shard or None,
             on_line=_stream_line,
         )
     _check_cancel()
@@ -1644,6 +1696,145 @@ def _auth_report_bundle(url: str, data: dict) -> dict[str, str]:
         return {}
 
 
+def _job_har_replay(params: dict[str, Any]) -> dict[str, Any]:
+    """Record or replay a HAR against a live URL."""
+    import json as _json
+    import subprocess
+    import tempfile
+    import time as _time
+
+    from agents.common.models import PipelineReport
+    from orchestrator.dashboard import history
+
+    t0 = _time.time()
+    url = params["url"]
+    mode = params["mode"]
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    rel_dir = f"artifacts/har/{stamp}"
+    out_dir = _repo_root() / "reports" / rel_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    script = _repo_root() / "playwright" / "scripts" / "har-replay.mjs"
+
+    har = params.get("har") or os.environ.get("ZYVOR_HAR_PATH") or ""
+    if mode == "record" and not har:
+        har = str(out_dir / "capture.har")
+    elif har and not Path(har).is_absolute():
+        har = str(_repo_root() / har)
+
+    cfg = {
+        "base": url,
+        "mode": mode,
+        "har": har,
+        "routes": params.get("routes") or ["/"],
+        "expect_text": params.get("expect_text") or "",
+        "not_found_ok": params.get("not_found_ok", False),
+        "insecure": params.get("insecure", False),
+    }
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+        _json.dump(cfg, fh)
+        cfg_file = fh.name
+
+    env = {**os.environ, "ZYVOR_NO_SANDBOX": os.environ.get("ZYVOR_NO_SANDBOX", "false")}
+    if params.get("insecure"):
+        env["ZYVOR_IGNORE_HTTPS_ERRORS"] = "true"
+    log_progress(f"HAR {mode} on {url}…")
+    proc = subprocess.run(
+        ["node", str(script), cfg_file, str(out_dir)],
+        cwd=_repo_root(),
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        os.unlink(cfg_file)
+    except OSError:
+        pass
+    for line in (proc.stderr or "").splitlines():
+        if line.strip():
+            _stream_line_generic(line.strip())
+    if proc.returncode != 0 or not (proc.stdout or "").strip():
+        raise RuntimeError(f"HAR {mode} failed: {(proc.stderr or '')[:200]}")
+    data = _json.loads(proc.stdout)
+    _check_cancel()
+
+    if data.get("shot"):
+        data["shot_url"] = f"/reports/{rel_dir}/{data['shot']}"
+    if data.get("har"):
+        # expose a reports-relative path when under reports/
+        try:
+            data["har_rel"] = str(Path(data["har"]).relative_to(_repo_root() / "reports"))
+        except ValueError:
+            data["har_rel"] = data["har"]
+
+    passed, failed, total = data.get("passed", 0), data.get("failed", 0), data.get("total", 0)
+    log_progress(f"HAR {mode} done: {passed}/{total} checks")
+
+    try:
+        from agents.reporter.exports import build_checks_bundle
+
+        data["report"] = build_checks_bundle(url, data, kind="har", title=f"HAR {mode}")
+    except Exception as exc:
+        log_progress(f"report bundle failed: {str(exc)[:80]}")
+        data["report"] = {}
+
+    hist = PipelineReport(
+        summary=f"HAR {mode} {url}: {passed}/{total}",
+        passed=passed,
+        failed=failed,
+        total=total,
+    )
+    history.append_run(hist, source="dashboard-har", duration_s=_time.time() - t0)
+    _auto_findings("har_replay", url, data)
+    return data
+
+
+def _job_import_codegen(params: dict[str, Any]) -> dict[str, Any]:
+    """Parse Playwright codegen output into flow steps; optionally run as a flow."""
+    from agents.flow.codegen_import import import_codegen
+
+    steps = import_codegen(params["script"])
+    log_progress(f"imported {len(steps)} step(s) from codegen")
+    result: dict[str, Any] = {
+        "steps": steps,
+        "step_count": len(steps),
+        "passed": len(steps),
+        "failed": 0,
+        "total": len(steps),
+    }
+    if not params.get("run"):
+        return result
+
+    # Reuse flow job with explicit steps
+    lines = []
+    for s in steps:
+        action = s.get("action", "assert")
+        if action == "goto":
+            lines.append(f"goto {s.get('target', '/')}")
+        elif action == "click":
+            lines.append(f'click "{s.get("target", "")}"')
+        elif action == "fill":
+            lines.append(f'fill {s.get("target", "")} = {s.get("value", "")}')
+        elif action == "select":
+            lines.append(f'select {s.get("target", "")} = {s.get("value", "")}')
+        elif action == "press":
+            lines.append(f'press {s.get("value", "Enter")}')
+        elif action == "assert":
+            lines.append(f'assert "{s.get("assertion") or s.get("target", "")}"')
+        else:
+            lines.append(f'{action} {s.get("target", "")}')
+    flow_params = {
+        "url": params["url"],
+        "description": "\n".join(lines),
+        "steps_mode": True,
+        "insecure": params.get("insecure", False),
+        "record": True,
+    }
+    flow_result = _job_flow(flow_params)
+    flow_result["imported_steps"] = steps
+    flow_result["step_count"] = len(steps)
+    return flow_result
+
+
 def _job_realtime(params: dict[str, Any]) -> dict[str, Any]:
     """Assert WebSocket / SSE streams are live, and that dashboard live regions update."""
     import json as _json
@@ -1752,8 +1943,8 @@ def _auto_findings(kind: str, url: str, data: dict[str, Any]) -> None:
                 if not s.get("ok"):
                     items.append({"severity": "high", "title": f"workflow step failed: {s.get('desc')}",
                                   "detail": s.get("error", ""), "where": f"{s.get('method')} {s.get('path')}"})
-        elif kind in ("realtime", "auth_test"):
-            sev_map = {"auth_test": "high", "realtime": "medium"}
+        elif kind in ("realtime", "auth_test", "har_replay"):
+            sev_map = {"auth_test": "high", "realtime": "medium", "har_replay": "medium"}
             for c in data.get("checks") or []:
                 if not c.get("ok"):
                     items.append({"severity": sev_map[kind], "title": f"{kind.replace('_', ' ')}: {c.get('name')} failed",
@@ -1917,6 +2108,8 @@ _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "realtime": _job_realtime,
     "auth_test": _job_auth_test,
     "ai_flow": _job_ai_flow,
+    "har_replay": _job_har_replay,
+    "import_codegen": _job_import_codegen,
     "full": _job_full,
     "generate": _job_generate,
     "discover": _job_discover,

@@ -101,60 +101,198 @@ async function tryLogin(page) {
   } catch (err) { emit(`flow: login skipped (${err})`); }
 }
 
-async function runStep(page, step, n) {
+async function resolveLocator(root, target) {
+  if (!target) return root.locator('body').first();
+  const byRole = root.getByRole('button', { name: new RegExp(escapeRe(target), 'i') }).first();
+  const byLink = root.getByRole('link', { name: new RegExp(escapeRe(target), 'i') }).first();
+  const byText = root.getByText(target, { exact: false }).first();
+  if (await byRole.count()) return byRole;
+  if (await byLink.count()) return byLink;
+  if (await byText.count()) return byText;
+  return root.locator(target).first();
+}
+
+async function resolveField(root, target) {
+  const byLabel = root.getByLabel(new RegExp(escapeRe(target), 'i')).first();
+  const byPh = root.getByPlaceholder(new RegExp(escapeRe(target), 'i')).first();
+  if (await byLabel.count()) return byLabel;
+  if (await byPh.count()) return byPh;
+  return root.locator(`input[name*="${target}" i], textarea[name*="${target}" i], select[name*="${target}" i], ${target}`).first();
+}
+
+// iframe scope for subsequent steps; null = main page
+let activeFrame = null;
+let pendingDialog = null; // { action: 'accept'|'dismiss', text?: string }
+
+function rootOf(page) {
+  return activeFrame || page;
+}
+
+async function runStep(page, step, n, seenResponses = []) {
   const { action, target, value, assertion } = step;
-  const desc = describe(step);
+  const root = rootOf(page);
   switch (action) {
     case 'goto': {
       const url = /^https?:/.test(target) ? target : base + (target?.startsWith('/') ? target : '/' + (target || ''));
       await gotoRetry(page, url, { waitUntil: 'load', timeout: 30000, tries: 3 });
       await page.waitForLoadState('domcontentloaded').catch(() => {});
       await dismissOverlays(page);
+      activeFrame = null;
+      break;
+    }
+    case 'hover': {
+      const loc = await resolveLocator(root, target);
+      await loc.hover({ timeout: 10000 });
       break;
     }
     case 'click': {
-      const byRole = page.getByRole('button', { name: new RegExp(escapeRe(target), 'i') }).first();
-      const byLink = page.getByRole('link', { name: new RegExp(escapeRe(target), 'i') }).first();
-      const byText = page.getByText(target, { exact: false }).first();
-      if (await byRole.count()) await byRole.click({ timeout: 10000 });
-      else if (await byLink.count()) await byLink.click({ timeout: 10000 });
-      else if (await byText.count()) await byText.click({ timeout: 10000 });
-      else await page.locator(target).first().click({ timeout: 10000 });
+      if (pendingDialog) {
+        const cfg = pendingDialog;
+        pendingDialog = null;
+        page.once('dialog', async (dlg) => {
+          if (cfg.text && !String(dlg.message() || '').includes(cfg.text)) {
+            await dlg.dismiss();
+            throw new Error(`dialog message did not match "${cfg.text}": ${dlg.message()}`);
+          }
+          if (cfg.action === 'dismiss') await dlg.dismiss();
+          else await dlg.accept(cfg.promptValue || undefined);
+        });
+      }
+      const loc = await resolveLocator(root, target);
+      await loc.click({ timeout: 10000 });
       await page.waitForTimeout(400);
       break;
     }
     case 'fill': {
       const val = value ?? '';
-      const byLabel = page.getByLabel(new RegExp(escapeRe(target), 'i')).first();
-      const byPh = page.getByPlaceholder(new RegExp(escapeRe(target), 'i')).first();
-      if (await byLabel.count()) await byLabel.fill(val, { timeout: 8000 });
-      else if (await byPh.count()) await byPh.fill(val, { timeout: 8000 });
-      else await page.locator(`input[name*="${target}" i], textarea[name*="${target}" i], ${target}`).first().fill(val, { timeout: 8000 });
+      const field = await resolveField(root, target);
+      await field.fill(val, { timeout: 8000 });
+      break;
+    }
+    case 'select': {
+      const field = await resolveField(root, target);
+      await field.selectOption({ label: value }).catch(async () => {
+        await field.selectOption(value);
+      });
+      break;
+    }
+    case 'upload': {
+      const field = await resolveField(root, target);
+      await field.setInputFiles(value || target);
+      break;
+    }
+    case 'download': {
+      const [download] = await Promise.all([
+        page.waitForEvent('download', { timeout: 30000 }),
+        (await resolveLocator(root, target)).click({ timeout: 10000 }),
+      ]);
+      const dest = value || path.join(outDir, download.suggestedFilename());
+      await download.saveAs(dest);
+      emit(`flow: downloaded ${dest}`);
+      break;
+    }
+    case 'dialog': {
+      pendingDialog = { action: (value || 'accept').toLowerCase(), text: assertion || '' };
+      break;
+    }
+    case 'iframe': {
+      if (!target) {
+        activeFrame = null;
+        emit('flow: iframe scope cleared');
+      } else {
+        activeFrame = page.frameLocator(target);
+        emit(`flow: iframe scope ${target}`);
+      }
+      break;
+    }
+    case 'drag': {
+      const src = await resolveLocator(root, target);
+      const dst = await resolveLocator(root, value);
+      await src.dragTo(dst);
       break;
     }
     case 'press':
       await page.keyboard.press(value || 'Enter');
       break;
+    case 'clock': {
+      const v = String(value || '').trim();
+      if (v === 'install' || v.startsWith('install')) {
+        await page.clock.install();
+      } else if (v.startsWith('set:') || v.startsWith('set ')) {
+        const t = v.replace(/^set[:\s]+/i, '').trim();
+        await page.clock.setFixedTime(new Date(t));
+      } else if (v.startsWith('fastForward:') || v.startsWith('fast-forward:') || v.startsWith('fastforward')) {
+        const ms = Number(String(v).replace(/^[^\d]+/, '')) || 1000;
+        await page.clock.fastForward(ms);
+      } else {
+        throw new Error(`unknown clock value: ${v} (use install | set:ISO | fastForward:ms)`);
+      }
+      break;
+    }
     case 'wait':
       if (target) await page.waitForSelector(target, { timeout: 15000 });
       else await page.waitForTimeout(Number(value) || 1500);
       break;
+    case 'wait_until': {
+      const text = target || assertion;
+      const timeout = Number(value) || 30000;
+      const looksLikeSel = text && (/^[.#\[]/.test(text) || text.includes('='));
+      const loc = looksLikeSel
+        ? root.locator(text).first()
+        : root.getByText(text, { exact: false }).first();
+      await loc.waitFor({ state: 'visible', timeout });
+      break;
+    }
     case 'assert': {
       const text = assertion || target;
       if (/^https?:|^\//.test(text || '')) {
         await page.waitForURL(new RegExp(escapeRe(text)), { timeout: 10000 });
       } else if (text) {
-        const loc = page.getByText(text, { exact: false }).first();
+        const loc = root.getByText(text, { exact: false }).first();
         await loc.waitFor({ state: 'visible', timeout: 10000 });
       } else {
-        await page.getByRole('heading').first().waitFor({ state: 'visible', timeout: 10000 });
+        await root.getByRole('heading').first().waitFor({ state: 'visible', timeout: 10000 });
+      }
+      break;
+    }
+    case 'assert_url': {
+      const text = assertion || target;
+      await page.waitForURL(new RegExp(escapeRe(text)), { timeout: 10000 });
+      break;
+    }
+    case 'assert_api': {
+      const substr = target;
+      const wantStatus = value ? Number(value) : null;
+      const match = (r) => r.url.includes(substr) && (wantStatus == null || r.status === wantStatus);
+      const already = seenResponses.find(match);
+      if (already) break;
+      const resp = await page.waitForResponse(
+        (r) => r.url().includes(substr) && (wantStatus == null || r.status() === wantStatus),
+        { timeout: 30000 },
+      );
+      if (wantStatus != null && resp.status() !== wantStatus) {
+        throw new Error(`assert_api ${substr}: expected ${wantStatus}, got ${resp.status()}`);
+      }
+      break;
+    }
+    case 'assert_aria': {
+      const sel = target || 'body';
+      const loc = root.locator(sel).first();
+      const got = await loc.ariaSnapshot();
+      const want = (assertion || value || '').trim();
+      if (want && !got.includes(want.replace(/^- /, '').split('\n')[0].trim()) && got.trim() !== want) {
+        // soft structural match: every non-empty want line must appear in got
+        const lines = want.split('\n').map((l) => l.trim()).filter(Boolean);
+        const missing = lines.filter((l) => !got.includes(l.replace(/^- /, '')));
+        if (missing.length) {
+          throw new Error(`assert_aria mismatch; missing: ${missing.slice(0, 3).join(' | ')}\n--- got ---\n${got.slice(0, 500)}`);
+        }
       }
       break;
     }
     case 'assert_not': {
-      // text/element must NOT be visible — pass if hidden or absent within the window
       const text = assertion || target;
-      const loc = page.getByText(text, { exact: false }).first();
+      const loc = root.getByText(text, { exact: false }).first();
       const deadline = Date.now() + 8000;
       // eslint-disable-next-line no-constant-condition
       while (true) {
@@ -167,16 +305,13 @@ async function runStep(page, step, n) {
       break;
     }
     case 'assert_count': {
-      // target = selector, value = expected integer count
       const want = Number(value);
-      const got = await page.locator(target).count();
+      const got = await root.locator(target).count();
       if (got !== want) throw new Error(`expected ${want} of "${target}", found ${got}`);
       break;
     }
     case 'assert_value': {
-      // target = field, value = expected input value
-      const byLabel = page.getByLabel(new RegExp(escapeRe(target), 'i')).first();
-      const field = (await byLabel.count()) ? byLabel : page.locator(`input[name*="${target}" i], textarea[name*="${target}" i], ${target}`).first();
+      const field = await resolveField(root, target);
       const got = await field.inputValue({ timeout: 8000 });
       if (String(got) !== String(value ?? '')) throw new Error(`expected ${target} = "${value}", got "${got}"`);
       break;
@@ -193,11 +328,23 @@ async function runStep(page, step, n) {
 function describe(step) {
   const { action, target, value, assertion } = step;
   if (action === 'goto') return `go to ${target || '/'}`;
+  if (action === 'hover') return `hover "${target}"`;
   if (action === 'click') return `click "${target}"`;
   if (action === 'fill') return `fill ${target} = "${value}"`;
+  if (action === 'select') return `select ${target} = "${value}"`;
+  if (action === 'upload') return `upload ${target} = "${value}"`;
+  if (action === 'download') return `download "${target}"`;
+  if (action === 'dialog') return `dialog ${value}${assertion ? ` "${assertion}"` : ''}`;
+  if (action === 'iframe') return target ? `iframe ${target}` : 'iframe off';
+  if (action === 'drag') return `drag "${target}" to "${value}"`;
   if (action === 'press') return `press ${value}`;
+  if (action === 'clock') return `clock ${value}`;
   if (action === 'wait') return `wait ${target || (value || '') + 'ms'}`;
+  if (action === 'wait_until') return `wait until "${target}"`;
   if (action === 'assert') return `assert "${assertion || target}"`;
+  if (action === 'assert_url') return `assert url "${assertion || target}"`;
+  if (action === 'assert_api') return `assert api ${target}${value ? ` = ${value}` : ''}`;
+  if (action === 'assert_aria') return `assert aria ${target}`;
   if (action === 'assert_not') return `assert NOT "${assertion || target}"`;
   if (action === 'assert_count') return `assert count "${target}" = ${value}`;
   if (action === 'assert_value') return `assert ${target} value = "${value}"`;
@@ -248,6 +395,10 @@ async function main() {
   const page = await context.newPage();
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(String(e.message || e)));
+  const seenResponses = [];
+  page.on('response', (r) => {
+    seenResponses.push({ url: r.url(), status: r.status() });
+  });
 
   // network throttle (chromium only — CDP)
   const throttle = process.env.ZYVOR_THROTTLE;
@@ -274,7 +425,7 @@ async function main() {
     const before = pageErrors.length;
     let status = 'passed', error = '';
     try {
-      await runStep(page, step, i + 1);
+      await runStep(page, step, i + 1, seenResponses);
       if (pageErrors.length > before) throw new Error(`console: ${pageErrors[before]}`);
       emit(`✓ step ${i + 1}: ${desc}`);
       passed++;

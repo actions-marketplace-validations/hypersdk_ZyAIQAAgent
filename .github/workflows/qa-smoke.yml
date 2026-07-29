@@ -13,6 +13,10 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
 
     steps:
       - uses: actions/checkout@v4
@@ -34,8 +38,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run smoke tests
-        run: zyvor-qa test
+      - name: Run smoke tests (shard ${{ matrix.shard }}/2)
+        run: zyvor-qa test --grep @smoke --shard ${{ matrix.shard }}/2
         env:
           ZYVOR_BASE_URL: https://zyvor.dev
           ENABLE_API_VALIDATION: true
@@ -44,7 +48,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-shard-${{ matrix.shard }}
           path: |
             reports/
             test-results/
@@ -73,7 +77,7 @@ jobs:
           npx playwright install --with-deps
 
       - name: Run multi-browser tests
-        run: npx playwright test --config=playwright/playwright.config.ts tests/manual
+        run: npx playwright test --config=playwright/playwright.config.ts tests/manual --grep @smoke
         env:
           ZYVOR_BASE_URL: https://zyvor.dev
           ENABLE_MULTI_BROWSER: true

@@ -64,10 +64,22 @@ zyvor-qa flow https://app.example.com --steps checkout.flow \
 |------|----------------------|
 | `go to <path>` / `goto` / `open` / `navigate` | `page.goto(base + path)` + wait for load |
 | `click "<text>"` | `getByRole('button'/'link')` → `getByText` → CSS fallback |
+| `hover "<text>"` | hover the matched control |
 | `fill <field> = <value>` (`type`/`enter`) | `getByLabel` / `getByPlaceholder` / CSS `.fill(value)` |
+| `select <field> = <option>` | `selectOption` by label or value |
+| `upload <field> = <path>` | `setInputFiles` |
+| `download "<text>" [to <path>]` | click + wait for download event |
+| `dialog accept\|dismiss [text]` | arm next `dialog` handler before the click that opens it |
+| `iframe <selector>` / `iframe off` | scope following steps to a frame (or clear) |
+| `drag "<src>" to "<dst>"` | `dragTo` |
 | `press <key>` | `page.keyboard.press(value)` — e.g. `press Enter` |
+| `clock install\|set:ISO\|fastForward:ms` | `page.clock.*` time mocking |
 | `wait [for] <selector\|ms>` | `waitForSelector` or `waitForTimeout` |
+| `wait until "<text\|sel>" [Nms]` | poll until visible (eventual UI) |
 | `assert "<text>"` / `assert /path` (`verify`/`expect`/`check`) | text visible, heading, or URL match |
+| `assert url <path>` | URL must match |
+| `assert api <substr> [= status]` | wait for a matching network response |
+| `assert aria <sel> = <snapshot>` | aria-tree fragment must appear |
 | `assert not "<text>"` / `assert no "<text>"` | text/element must **not** be visible (spinner gone, error absent) |
 | `assert count <selector> = <n>` | exactly `n` elements match the CSS selector |
 | `assert value <field> = <value>` | an input holds the expected value |
@@ -75,6 +87,8 @@ zyvor-qa flow https://app.example.com --steps checkout.flow \
 A bare line with no verb is treated as `assert "<that text>"`. A step **fails** not only on a Playwright error but also if a runtime error fires during it — the runner scans the page body for `Something went wrong`, `ReferenceError`, `is not defined`, and hooks `page.on('pageerror')`. That catches "the button clicked but the app threw" bugs a naive click test would miss.
 
 The prose parser also detects negatives — "the spinner is **no longer** visible", "the error **should not** appear" become `assert_not` steps.
+
+Import a Playwright codegen recording with `zyvor-qa import-codegen script.js` (or Mission Control's 📥 Import codegen card). Local headed recording: `npm run record-flow -- https://app.example.com out.flow.json`.
 
 ### Robustness
 

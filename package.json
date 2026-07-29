@@ -7,6 +7,9 @@
     "test": "playwright test --config=playwright/playwright.config.ts",
     "test:manual": "playwright test --config=playwright/playwright.config.ts tests/manual",
     "test:generated": "playwright test --config=playwright/playwright.config.ts tests/generated",
+    "test:snapshots": "playwright test --config=playwright/playwright.config.ts --grep @visual",
+    "test:snapshots:update": "playwright test --config=playwright/playwright.config.ts --grep @visual --update-snapshots",
+    "record-flow": "node playwright/scripts/record-flow.mjs",
     "crawl": "node playwright/scripts/crawl-site.mjs",
     "report": "playwright show-report reports",
     "report:pdf": "node playwright/scripts/html-to-pdf.mjs reports/qa-summary.html reports/qa-summary.pdf"

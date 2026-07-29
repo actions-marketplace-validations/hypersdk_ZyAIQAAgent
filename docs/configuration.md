@@ -110,8 +110,14 @@ Consumed by: `orchestrator/graph.py`, `orchestrator/nodes/autofix.py`, `orchestr
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ENABLE_MULTI_BROWSER` | `false` | Add firefox and webkit projects alongside chromium |
+| `ENABLE_AUTH_SETUP` | `false` | Login once via `playwright/auth.setup.ts` and reuse `storageState` (`playwright/.auth/user.json`). Requires `ENABLE_DASHBOARD_TESTS=true` + credentials. |
+| `ENABLE_EMULATION_PROJECTS` | `false` | Add chromium-dark / reduced-motion / locale projects |
+| `ZYVOR_LOCALE` | `en-US` | Locale for the `chromium-locale` emulation project |
+| `ZYVOR_GREP` | *(none)* | Default Playwright `--grep` filter (e.g. `@smoke`) for `zyvor-qa test` |
+| `ZYVOR_SHARD` | *(none)* | Default Playwright `--shard=i/n` for CI |
+| `ZYVOR_HAR_PATH` | *(none)* | Default HAR file for `zyvor-qa har-replay --mode replay` |
 
-Consumed by: `playwright/playwright.config.ts`. Install browsers first: `npx playwright install --with-deps`.
+Consumed by: `playwright/playwright.config.ts`, `agents/execution/runner.py`. Install browsers first: `npx playwright install --with-deps`.
 
 ---
 
@@ -157,6 +163,9 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`. St
 | `ZYVOR_VIDEO` | *(off)* | `on` records a video for every test (dashboard job runs set this) |
 | `ZYVOR_NO_SANDBOX` | *(off)* | `true` runs Chromium with `--no-sandbox` (required in containers/as root; set in the image) |
 | `ZYVOR_PW_WORKERS` | *(CPU count)* | Cap Playwright parallelism (set to `2` in the image so in-pod runs don't OOM) |
+| `ZYVOR_GREP` | *(none)* | Filter smoke/suite by Playwright tag (e.g. `@smoke`) |
+| `ZYVOR_SHARD` | *(none)* | Playwright shard `i/n` for CI matrix runs |
+| `ZYVOR_HAR_PATH` | *(none)* | Default HAR for Mission Control / CLI HAR replay |
 | `VISUAL_MAX_DIFF_RATIO` | `2.0` | Route-sweep pixel-diff pass threshold (percent); routes above it are flagged |
 | `VISUAL_SETTLE_MS` | `1500` | Extra settle time per route before the sweep screenshots it |
 | `ZYVOR_BROWSER` | `chromium` | Flow engine: `chromium` / `firefox` / `webkit` (set by `flow --browser`) |
@@ -164,7 +173,7 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`. St
 | `ZYVOR_THROTTLE` | *(none)* | `3g` / `offline` network emulation via CDP (set by `--throttle`) |
 | `ZYVOR_SLOW_MS` | `12000` | Live-data per-request latency budget before a page is flagged `slow` |
 
-The **🎬 Flow test** action (`flow` job / `zyvor-qa flow`) drives a multi-step journey recorded as one video, with a Playwright `trace.zip` (open at trace.playwright.dev) and richer assertions (`assert_not` / `assert_count` / `assert_value`); the **🗺 Route sweep** action (`route_sweep` / `zyvor-qa route-sweep`) screenshots routes at desktop/mobile and diffs them against baselines under `reports/artifacts/route-baselines/`, and can `--auto`-discover routes by crawling. Both honour `ZYVOR_IGNORE_HTTPS_ERRORS`, `ZYVOR_NO_SANDBOX`, and (flow) `ZYVOR_VIDEO`, and both are schedulable. Serve the dashboard over HTTPS with `zyvor-qa serve --tls` (self-signed cert under `~/.zyvor-qa/tls`) or the deploy script's `--tls`. A target-site login password passed to a flow/crawl is redacted (`***`) from the job-status API, history, and live panel — it is never echoed back to a dashboard reader. See [Tutorial 11](tutorials/11-flow-tests.md).
+The **🎬 Flow test** action (`flow` job / `zyvor-qa flow`) drives a multi-step journey recorded as one video, with a Playwright `trace.zip` (open at trace.playwright.dev) and richer assertions (`assert_not` / `assert_count` / `assert_value` / `assert_url` / `assert_api` / `assert_aria` / `upload` / `download` / `dialog` / `iframe` / `clock` / `wait_until`); the **🗺 Route sweep** action (`route_sweep` / `zyvor-qa route-sweep`) screenshots routes at desktop/mobile and diffs them against baselines under `reports/artifacts/route-baselines/`, and can `--auto`-discover routes by crawling. **📼 HAR record/replay** (`har_replay` / `zyvor-qa har-replay`) captures network as HAR then drives the UI against it. **📥 Import codegen** (`import_codegen` / `zyvor-qa import-codegen`) turns pasted Playwright codegen into flow steps (optionally runs them). Both honour `ZYVOR_IGNORE_HTTPS_ERRORS`, `ZYVOR_NO_SANDBOX`, and (flow) `ZYVOR_VIDEO`, and both are schedulable. Serve the dashboard over HTTPS with `zyvor-qa serve --tls` (self-signed cert under `~/.zyvor-qa/tls`) or the deploy script's `--tls`. A target-site login password passed to a flow/crawl is redacted (`***`) from the job-status API, history, and live panel — it is never echoed back to a dashboard reader. See [Tutorial 11](tutorials/11-flow-tests.md).
 
 Four **product-testing** actions go beyond the page (see [Tutorial 12](tutorials/12-api-auth-realtime.md)): **🔌 API contract** (`api_contract` / `zyvor-qa api-test`) validates REST endpoints against their OpenAPI schema and runs multi-step API workflows; **🔐 Auth & session** (`auth_test` / `zyvor-qa auth-test`) logs in, saves a reusable session under `reports/artifacts/auth/`, and asserts logout/expiry/negative-auth — the saved session can be reused by `flow`/`realtime` via their `session` param; **📡 Live data** (`realtime` / `zyvor-qa realtime`) asserts WebSocket/SSE streams are live (Bearer / `Sec-WebSocket-Protocol` / one-time ticket auth); **📊 Web Vitals** (`vitals` / `zyvor-qa vitals`) grades LCP/CLS/INP with device + network throttle.
 
