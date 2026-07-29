@@ -6,6 +6,7 @@
 |--------------|------|
 | Install and first smoke | [Getting Started](getting-started.md) |
 | Learn Mission Control | [Using the Dashboard](using-the-dashboard.md) |
+| Test zyvor.dev (video + HAR) | [Test zyvor.dev](test-zyvor-dev.md) |
 | Follow a card, step by step | [Page-by-page guides](pages/README.md) |
 | Multi-step jobs (flow, HAR, API…) | [Common workflows](workflows.md) |
 | Look up any surface | [Complete page index](PAGE_INDEX.md) |
@@ -62,6 +63,7 @@ Deep engineering docs live under [`../`](../) (architecture, tutorials, configur
 | Status & pods | `/dashboard` hero + Workloads / Pods |
 | Smoke / full pipeline | Actions → ▶ Run tests |
 | E2E journey + video | Actions → 🎬 Flow test |
+| Demo site recording | [Test zyvor.dev](test-zyvor-dev.md) |
 | HAR record / replay | Actions → 📼 HAR |
 | Import Playwright codegen | Actions → 📥 Import codegen |
 | API / auth / live data | Actions → 🔌 / 🔐 / 📡 |

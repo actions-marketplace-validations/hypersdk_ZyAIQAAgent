@@ -1,8 +1,10 @@
 # Tutorial 10 — Mission Control Dashboard
 
-A live, self-refreshing operations console served by the webhook server. It shows Kubernetes pod health and logs, QA run history with trends, and a full **Actions** panel that runs 20+ QA capabilities — every CLI command plus a whole suite of web-quality, security, and performance checks — with live-streamed output and downloadable CSV/HTML/PDF reports. Styled as a blue-biased "mission control" console (see the [showcase page](https://claude.ai/code/artifact/0a1c36a4-7a7c-4241-a43f-ac98a3f72d70)).
+A live, self-refreshing operations console served by the webhook server. It shows Kubernetes pod health and logs, QA run history with trends, and a full **Actions** panel that runs 20+ QA capabilities — every CLI command plus a whole suite of web-quality, security, and performance checks — with live-streamed output and downloadable CSV/HTML/PDF reports.
 
-**Prerequisites:** [Tutorial 1](01-getting-started.md). A Kubernetes cluster is optional — without one the pod panel shows an offline state and everything else still works.
+**UX:** full-bleed layout, glass sticky topbar/footer, boot splash, live signal-field constellation, primary Smoke CTA, card motion, ⌘K palette, NOC wall mode (double-click brand), and warp flash (`` ` `` / type `zyvor`). Reduced-motion aware.
+
+**Prerequisites:** [Tutorial 1](01-getting-started.md). A Kubernetes cluster is optional — without one the pod panel shows an offline state and everything else still works. To practice against the public site with video + HAR, see [Tutorial 13](13-test-zyvor-dev-recording.md).
 
 ---
 
@@ -16,16 +18,18 @@ open http://localhost:8080/dashboard
 
 What you'll see:
 
+- **Boot splash** — brief “warming Mission Control…” then the console
 - **Status hero** — one glanceable verdict with stat tiles for pods, replicas, last QA run, and a countdown to the next scheduled smoke run:
   - `ALL SYSTEMS GO` — every pod healthy, last QA run green
   - `DEGRADED` — some pods unhealthy or the last QA run failed
   - `SYSTEMS DOWN` — every pod unhealthy
   - `CLUSTER OFFLINE` — no Kubernetes API reachable (normal on a laptop)
+- **Signal field** — live constellation canvas behind the hero (atmosphere)
 - **Workloads** — per-deployment replica readiness; per-cronjob schedule, last run, and "in 4h 12m" countdown
 - **Pods** — one card per pod: phase, ready containers, restart count, age, node, image, recent Warning events. **Click a pod** to open the log drawer (last 100 lines, live-refreshing; hover pauses refresh).
 - **QA Runs** — latest result, pass-rate sparkline over the last 30 runs (hover for per-run detail), and a recent-runs table
 
-Keyboard: `r` refreshes immediately, `esc` closes the log drawer. Everything auto-refreshes every 5 seconds.
+Keyboard: `r` refreshes immediately, `esc` closes the log drawer, `` ` `` warps, ⌘K opens the palette. Double-click the brand for **NOC** wall mode. Everything auto-refreshes every 5 seconds.
 
 ## 2. Where run history comes from
 
@@ -105,6 +109,8 @@ A green run pops confetti and a rising sound cue (both mutable / reduced-motion 
 | ✨ Create from English | `zyvor-qa create "…" [--execute]` — LLM when a key is set, heuristic parser otherwise |
 | 👁 Visual regression | `zyvor-qa regression [--update-baselines]` |
 | 🎬 Flow test | `zyvor-qa flow <url> --describe "…" \| --steps <file> [--video/--no-video --insecure --username --password]` |
+| 📼 HAR record / replay | `zyvor-qa har-replay <url> --mode record\|replay --har <path> [--routes …]` |
+| 📥 Import codegen | `zyvor-qa import-codegen <file> [--run --url …]` |
 | 🗺 Route sweep | `zyvor-qa route-sweep <url> --routes "/,/pricing" [--mobile --update-baselines --insecure]` |
 
 ### Web-quality & site actions

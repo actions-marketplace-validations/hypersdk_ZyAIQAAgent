@@ -17,6 +17,8 @@
 2. Or [Import codegen](pages/journeys/dashboard-actions-import-codegen.md) from Playwright codegen
 3. [HAR record / replay](pages/journeys/dashboard-actions-har.md) when you need offline network fixtures
 
+**Public demo:** [Test zyvor.dev](test-zyvor-dev.md) — watch the committed journey `.webm`, then re-run smoke / flow / HAR against `https://zyvor.dev`.
+
 ## API, auth, and live data
 
 1. [Auth & session](pages/api/dashboard-actions-auth.md) → save session file

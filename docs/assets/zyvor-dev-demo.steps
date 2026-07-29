@@ -1,0 +1,7 @@
+goto /
+wait until "HyperSDK" 20000ms
+assert "HyperSDK"
+wait 1500ms
+click "Products"
+wait until "HyperSDK" 15000ms
+assert "HyperSDK"

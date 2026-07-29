@@ -22,9 +22,10 @@ const TOP_LEVEL_POSITION = {
   'index.md': 1,
   'getting-started.md': 2,
   'using-the-dashboard.md': 3,
-  'workflows.md': 4,
-  'admin-basics.md': 5,
-  'page-index.md': 7,
+  'test-zyvor-dev.md': 4,
+  'workflows.md': 5,
+  'admin-basics.md': 6,
+  'page-index.md': 8,
 }
 
 const REPO_ONLY = new RegExp(
@@ -44,12 +45,15 @@ function renameTarget(p) {
 }
 
 function transformLinks(md) {
-  return md.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (full, text, target) => {
-    const t = target.trim()
-    if (/^(https?:|mailto:|#)/.test(t)) return full
-    if (REPO_ONLY.test(t)) return text
-    return `[${text}](${renameTarget(t)})`
-  })
+  return md
+    .replace(/\[([^\]]*)\]\(([^)]+)\)/g, (full, text, target) => {
+      const t = target.trim()
+      if (/^(https?:|mailto:|#)/.test(t)) return full
+      if (REPO_ONLY.test(t)) return text
+      return `[${text}](${renameTarget(t)})`
+    })
+    .replaceAll('../assets/zyvor-dev-mission-control-demo.webm', `/downloads/${SLUG}-docs/zyvor-dev-mission-control-demo.webm`)
+    .replaceAll('../assets/zyvor-dev-demo.steps', `/downloads/${SLUG}-docs/zyvor-dev-demo.steps`)
 }
 
 function rewriteIndexPdfSection(md) {
@@ -141,5 +145,17 @@ if (existsSync(pdfDir)) {
   }
 }
 
+// Demo journey video + steps (from docs/assets, not under gitignored reports/)
+const assetsDir = resolve(ROOT, 'docs/assets')
+const demoAssets = ['zyvor-dev-mission-control-demo.webm', 'zyvor-dev-demo.steps']
+let demos = 0
+for (const name of demoAssets) {
+  const src = join(assetsDir, name)
+  if (!existsSync(src)) continue
+  cpSync(src, join(PDF_TARGET, name))
+  demos++
+}
+
 console.log(`Synced ${written} markdown files -> ${TARGET}`)
 console.log(`Copied ${pdfs} PDFs -> ${PDF_TARGET}`)
+if (demos) console.log(`Copied ${demos} demo assets -> ${PDF_TARGET}`)

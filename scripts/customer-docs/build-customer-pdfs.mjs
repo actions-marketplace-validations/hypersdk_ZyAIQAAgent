@@ -151,7 +151,12 @@ const books = [
   {
     id: `${PDF_PREFIX}-Getting-Started`,
     title: 'Getting Started',
-    sources: [join(CUSTOMER, 'getting-started.md'), join(CUSTOMER, 'using-the-dashboard.md'), join(CUSTOMER, 'workflows.md')],
+    sources: [
+      join(CUSTOMER, 'getting-started.md'),
+      join(CUSTOMER, 'using-the-dashboard.md'),
+      join(CUSTOMER, 'test-zyvor-dev.md'),
+      join(CUSTOMER, 'workflows.md'),
+    ],
   },
   { id: `${PDF_PREFIX}-Admin-Basics`, title: 'Admin Basics', sources: [join(CUSTOMER, 'admin-basics.md')] },
   {

@@ -62,7 +62,9 @@ This is the customer-facing onboarding guide — how to access the product, your
   1. In CI prefer suggestions-only mode (`ENABLE_AUTOFIX=true`, `ENABLE_AUTOFIX_APPLY=false`) with a human-reviewed commit.
 - **Operate live from Mission Control**
   1. Start the console: `zyvor-qa serve --port 8080` and open `http://localhost:8080/dashboard` (add `--tls` for HTTPS beyond localhost).
-  1. Run any capability from a card or press ⌘K (Ctrl-K) for the command palette; watch per-test ✓/✗ chips stream live, with a ⏹ Stop button and CSV/HTML/PDF download row.
+  1. Expect the **boot splash**, full-bleed glass topbar, and **signal-field** constellation behind the hero; ⌘K opens the palette; double-click the brand for **NOC** wall mode; `` ` `` warps.
+  1. Run any capability from a card; watch per-test ✓/✗ chips stream live, with a ⏹ Stop button and CSV/HTML/PDF download row.
+  1. Practice on the public site: watch the [journey .webm](assets/zyvor-dev-mission-control-demo.webm), then re-run — [Test zyvor.dev](customer/test-zyvor-dev.md) / [Tutorial 13](tutorials/13-test-zyvor-dev-recording.md).
   1. Generate run history for the trends sparkline: `zyvor-qa run --source local` (each run appends to `reports/history/`).
   1. Turn any job into a recurring monitor from the Schedules panel (5 min – 6 h) — e.g. smoke every 15 min, TLS check daily.
   1. Point at a cluster (in-cluster SA or local kubeconfig) to activate the Pods/Workloads panels; set `DASHBOARD_PASSWORD` before exposing it since it reads pod logs.
@@ -172,9 +174,11 @@ _Every run ends in an explanation a human can act on and a bundle they can share
 _A live console that runs every capability on demand and watches your cluster while it does._
 
 - **Live Status Console** — A self-refreshing dashboard with a glanceable verdict, stat tiles, and streamed per-test pass/fail output for the running job. — _One screen tells you whether everything is green right now._
-  - **How:** Run `zyvor-qa serve` and open `/dashboard` — the status hero shows ALL SYSTEMS GO / DEGRADED / SYSTEMS DOWN / CLUSTER OFFLINE and auto-refreshes every 5 s (press `r` to refresh now). Scriptable via `GET /api/dashboard/overview`.
+  - **How:** Run `zyvor-qa serve` and open `/dashboard` — boot splash → full-bleed glass topbar, signal-field constellation, status hero (ALL SYSTEMS GO / DEGRADED / SYSTEMS DOWN / CLUSTER OFFLINE). Auto-refreshes every 5 s (press `r` to refresh now). Scriptable via `GET /api/dashboard/overview`.
+- **Console UX extras** — Boot splash, primary Smoke CTA, card motion, NOC wall mode, warp flash, and achievement toasts — reduced-motion aware. — _The console feels like an ops wall, not a generic admin form._
+  - **How:** Double-click the brand for NOC wall mode; press `` ` `` or type `zyvor` for warp; first-visit toasts unlock as you explore. Details: [Using the Dashboard](customer/using-the-dashboard.md).
 - **On-Demand Actions Panel** — Launch any of 20+ QA capabilities from a card or the ⌘K command palette, with a stop button and live log. — _Run any check without touching a terminal._
-  - **How:** Click any Actions card, or press ⌘K (Ctrl-K) for the command palette; one job runs at a time with a ⏹ Stop button and live log. Scriptable via `POST /api/dashboard/jobs {kind, params}`, `GET /jobs/status`, `POST /jobs/cancel`.
+  - **How:** Click any Actions card, or press ⌘K (Ctrl-K) for the command palette; one job runs at a time with a ⏹ Stop button and live log. Scriptable via `POST /api/dashboard/jobs {kind, params}`, `GET /jobs/status`, `POST /jobs/cancel`. Try Flow + HAR against zyvor.dev: [Test zyvor.dev](customer/test-zyvor-dev.md).
 - **Recurring Schedules** — Turns any job into a recurring monitor from 5 minutes to 6 hours, re-triggered by a background scheduler. — _Smoke every 15 minutes, audit hourly, TLS daily — set and forget._
   - **How:** Add/remove schedules from the dashboard's Schedules panel or the ⌘K palette (interval 5 min – 6 h; a background thread re-triggers due jobs, single-flight). Scriptable via `GET/POST/DELETE /api/dashboard/schedules[/{id}]`.
 - **Kubernetes Pod Health** — Shows per-pod phase, restarts, events, CPU/memory, and live log tails, with a restart button and namespace events. — _Watch the platform under test and the agent's own pods in one place._
@@ -204,10 +208,11 @@ _Wires into GitHub, your chat tools, your LLM of choice, and your cluster._
 ## Getting started
 
 1. **Install** — Copy `.env.example` to `.env` and run `make install` (needs Python 3.9+ and Node.js 20+).
-2. **Run a smoke test** — `zyvor-qa test` runs the hand-written smoke suite against your target — no LLM key required.
-3. **Open Mission Control** — `zyvor-qa serve` then browse to `/dashboard` to run any of the 20+ actions live.
-4. **Wire up GitHub** — Set `ZYVOR_PRODUCT_REPO`, authenticate `gh`, then `zyvor-qa run --source github --spec docs/specs/my-feature.md`.
-5. **Add an LLM (optional)** — Set `LLM_PROVIDER` and the matching API key to unlock AI generation, analysis, and natural-language tests.
+2. **Run a smoke test** — `zyvor-qa test --grep @smoke` against your target (try `ZYVOR_BASE_URL=https://zyvor.dev`) — no LLM key required.
+3. **Watch / re-record a journey** — open [`docs/assets/zyvor-dev-mission-control-demo.webm`](assets/zyvor-dev-mission-control-demo.webm), then `zyvor-qa flow https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video` — see [Test zyvor.dev](customer/test-zyvor-dev.md).
+4. **Open Mission Control** — `zyvor-qa serve` then browse to `/dashboard` (boot splash + signal field + ⌘K) to run any of the 20+ actions live.
+5. **Wire up GitHub** — Set `ZYVOR_PRODUCT_REPO`, authenticate `gh`, then `zyvor-qa run --source github --spec docs/specs/my-feature.md`.
+6. **Add an LLM (optional)** — Set `LLM_PROVIDER` and the matching API key to unlock AI generation, analysis, and natural-language tests.
 
 > **Good to know:** Many features are opt-in behind flags (regression, autofix, coverage expansion, V8 coverage, multi-browser, Rust diff) and are off by default. Without an LLM key the agent still runs but uses rule-based fallbacks for parsing, generation, analysis, and summaries; only `zyvor-qa create` strictly requires an LLM. API validation checks HTTP statuses and OpenAPI schemas rather than full business logic. The Mission Control dashboard reads pod logs, so it is intentionally not exposed through the ingress and should be protected with a password. Kubernetes panels require a reachable cluster; without one they show an offline state while everything else keeps working. Multi-browser and load testing are best-effort in-pod and capped to avoid resource exhaustion.
 

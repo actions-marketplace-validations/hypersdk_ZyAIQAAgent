@@ -37,11 +37,11 @@ When `DASHBOARD_PASSWORD` is set, sign in at `/login` (defaults often `admin` / 
 
 ## 4. Orient yourself
 
-1. **Hero** — pods, replicas, last QA run, pass rate, next smoke.
+1. **Boot splash → hero** — pods, replicas, last QA run, pass rate, next smoke; signal field behind the hero.
 2. **Actions** — smoke, generate, flow, HAR, API, auth, vitals, probes, …
 3. **Live job panel** — streaming log, ✓/✗ chips, Stop.
 4. **Schedules / Findings / QA Runs** — monitors, collected issues, history.
-5. **⌘K** — jump to any card by name.
+5. **⌘K** — jump to any card; double-click brand for **NOC**; `` ` `` for warp.
 
 ## 5. First workflows
 
@@ -49,9 +49,18 @@ When `DASHBOARD_PASSWORD` is set, sign in at `/login` (defaults often `admin` / 
 
 Mission Control → ▶ Smoke (optional `@smoke` grep).
 
-### B. Drive a short journey
+### B. Drive a short journey (record video)
 
 Actions → 🎬 Flow test — paste steps or English, run with video recording.
+
+Against the public demo site:
+
+```bash
+ZYVOR_BASE_URL=https://zyvor.dev
+zyvor-qa flow https://zyvor.dev --steps /tmp/zyvor-home.steps --video
+```
+
+Full recipe + **watch the journey video**: [Test zyvor.dev](test-zyvor-dev.md).
 
 ### C. Full pipeline from a spec
 
@@ -62,6 +71,7 @@ zyvor-qa run --source local --spec path/to/spec.md
 ## Related
 
 - [Using the Dashboard](using-the-dashboard.md)
+- [Test zyvor.dev](test-zyvor-dev.md)
 - [Common workflows](workflows.md)
 - [Admin basics](admin-basics.md)
 - [Page-by-page guides](pages/README.md)

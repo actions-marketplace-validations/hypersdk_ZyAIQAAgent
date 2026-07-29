@@ -7,7 +7,26 @@
 
 Autonomous AI testing agent for [Zyvor](https://zyvor.dev) — an AI-first infrastructure platform. Continuously validates the Zyvor platform by reading requirements from GitHub, generating Playwright tests, executing them after deployments, detecting regressions, and producing actionable reports.
 
-Ships with **Mission Control** — a live web console (`zyvor-qa serve` → `/dashboard`) that runs 20+ QA capabilities on demand with streamed output and CSV/HTML/PDF reports: the full test pipeline, **E2E flow tests** (multi-step journey → one video + Playwright trace, cross-browser/device/throttle), **API contract tests** (OpenAPI schema validation + multi-step workflows), **auth & session** tests (reusable login), **live-data** tests (WebSocket/SSE assertions), **Core Web Vitals**, **route sweeps** (visual diff at desktop/mobile), site audits (a11y/SEO/perf/security with an A–F grade), ten network & security probes, load and TLS checks, flaky detection, screenshots, and recurring monitors. See [`docs/tutorials/10-mission-control-dashboard.md`](docs/tutorials/10-mission-control-dashboard.md), [`11-flow-tests.md`](docs/tutorials/11-flow-tests.md), and [`12-api-auth-realtime.md`](docs/tutorials/12-api-auth-realtime.md).
+Ships with **Mission Control** — a live web console (`zyvor-qa serve` → `/dashboard`) that runs 20+ QA capabilities on demand with streamed output and CSV/HTML/PDF reports: the full test pipeline, **E2E flow tests** (multi-step journey → one video + Playwright trace, cross-browser/device/throttle), **HAR record / replay**, **Playwright codegen import**, **API contract tests** (OpenAPI schema validation + multi-step workflows), **auth & session** tests (reusable login), **live-data** tests (WebSocket/SSE assertions), **Core Web Vitals**, **route sweeps** (visual diff at desktop/mobile), site audits (a11y/SEO/perf/security with an A–F grade), ten network & security probes, load and TLS checks, flaky detection, screenshots, and recurring monitors. See [`docs/tutorials/10-mission-control-dashboard.md`](docs/tutorials/10-mission-control-dashboard.md), [`11-flow-tests.md`](docs/tutorials/11-flow-tests.md), and [`12-api-auth-realtime.md`](docs/tutorials/12-api-auth-realtime.md).
+
+### Mission Control UX
+
+The console is a full-bleed ops surface (glass sticky topbar/footer, larger type, primary **Smoke** CTA, card motion) with a short **boot splash**, a live **signal-field / constellation** canvas, **⌘K** command palette, **NOC wall mode** (double-click the brand), and light **warp** cues (`` ` `` or type `zyvor`). Reduced-motion preferences are respected.
+
+### Watch a zyvor.dev test recording
+
+Real Playwright journey video against [zyvor.dev](https://zyvor.dev) (home → HyperSDK → Products):
+
+https://github.com/hypersdk/ZyAIQAAgent/raw/main/docs/assets/zyvor-dev-mission-control-demo.webm
+
+<video src="docs/assets/zyvor-dev-mission-control-demo.webm" controls width="720" title="Zyvor QA Agent — zyvor.dev journey recording">
+</video>
+
+[Download .webm](docs/assets/zyvor-dev-mission-control-demo.webm) · steps used: [`docs/assets/zyvor-dev-demo.steps`](docs/assets/zyvor-dev-demo.steps) · how-to: [Tutorial 13](docs/tutorials/13-test-zyvor-dev-recording.md)
+
+```bash
+zyvor-qa flow https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video
+```
 
 ## Architecture
 
@@ -48,8 +67,10 @@ make install
 ### Run smoke tests (no LLM required)
 
 ```bash
-zyvor-qa test
+zyvor-qa test --grep @smoke
 ```
+
+Against the public demo site (video + HAR): [Tutorial 13](docs/tutorials/13-test-zyvor-dev-recording.md).
 
 ### Run full pipeline from GitHub (your product repo)
 
@@ -80,7 +101,8 @@ See [**Writing Tests & GitHub Integration**](docs/test-authoring.md) for the ful
 | [**Architecture**](docs/architecture.md) | Pipeline internals: LangGraph nodes, state, agents, fallback design |
 | [**Configuration**](docs/configuration.md) | Complete environment variable reference with defaults |
 | [**Writing Tests & GitHub Integration**](docs/test-authoring.md) | Command reference; manual, spec-driven, and NL test creation |
-| [**Mission Control dashboard**](docs/tutorials/10-mission-control-dashboard.md) | The live console: 20+ QA actions, audits, probes, schedules, reports |
+| [**Mission Control dashboard**](docs/tutorials/10-mission-control-dashboard.md) | The live console: 20+ QA actions, UX cues, audits, probes, schedules, reports |
+| [**Test zyvor.dev (recording)**](docs/tutorials/13-test-zyvor-dev-recording.md) | Smoke + flow video + HAR against https://zyvor.dev |
 | [**Remote deployment**](docs/remote-deploy.md) | `deploy-remote.sh` — bare host, container, or k3s in one command |
 | [**Releases & container image**](docs/releases.md) | GHCR image, how to pull it, how to cut a release |
 | [**Troubleshooting**](docs/troubleshooting.md) | Common errors and fixes |
@@ -109,6 +131,8 @@ Full examples: [**docs/test-authoring.md**](docs/test-authoring.md)
 | `zyvor-qa regression --update-baselines` | Capture new screenshot baselines |
 | `zyvor-qa flow <url> --steps <file>` | Drive a multi-step journey, recorded as one video + trace |
 | `zyvor-qa flow <url> --describe "…"` | Same, from a plain-English journey |
+| `zyvor-qa har-replay <url> --mode record\|replay --har <path>` | Capture network as HAR, then drive the UI against it |
+| `zyvor-qa import-codegen <file>` | Convert Playwright codegen JS/TS into flow steps |
 | `zyvor-qa route-sweep <url> --auto` | Screenshot every crawled route (desktop/mobile), diff vs baselines |
 | `zyvor-qa api-test <base> --spec <url>` | Validate REST endpoints against their OpenAPI schema; `--workflow` for multi-step API flows |
 | `zyvor-qa auth-test <base> --api-login <path>` | Log in, save a reusable session, assert logout/expiry/negative-auth |
