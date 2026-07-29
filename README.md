@@ -78,6 +78,7 @@ See [**Writing Tests & GitHub Integration**](docs/test-authoring.md) for the ful
 | [**Writing Tests & GitHub Integration**](docs/test-authoring.md) | Command reference; manual, spec-driven, and NL test creation |
 | [**Mission Control dashboard**](docs/tutorials/10-mission-control-dashboard.md) | The live console: 20+ QA actions, audits, probes, schedules, reports |
 | [**Remote deployment**](docs/remote-deploy.md) | `deploy-remote.sh` — bare host, container, or k3s in one command |
+| [**Releases & container image**](docs/releases.md) | GHCR image, how to pull it, how to cut a release |
 | [**Troubleshooting**](docs/troubleshooting.md) | Common errors and fixes |
 | [**Contributing**](CONTRIBUTING.md) | Dev setup, conventions, how to add a pipeline stage |
 | [`kubernetes/README.md`](kubernetes/README.md) | Kubernetes deployment |
@@ -224,6 +225,7 @@ See [**docs/configuration.md**](docs/configuration.md) for the complete annotate
 - **Smoke tests**: `.github/workflows/qa-smoke.yml` — push, PR, nightly
 - **Multi-browser**: manual `workflow_dispatch` trigger in same workflow
 - **Post-deploy**: `.github/workflows/qa-post-deploy.yml` — `repository_dispatch: staging-deployed`
+- **Release**: `.github/workflows/release.yml` — on tag push `v*.*.*`, builds and pushes the container image to [GHCR](https://ghcr.io/hypersdk/zyaiqaagent) and creates a GitHub Release; see [docs/releases.md](docs/releases.md)
 
 Run the unit suite locally:
 
