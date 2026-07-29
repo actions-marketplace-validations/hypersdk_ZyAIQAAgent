@@ -1,0 +1,136 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Admin Basics — ZyAIQAAgent</title>
+<style>
+@page{size:A4;margin:15mm 16mm}*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:#1f2937;line-height:1.58;font-size:10.5pt}
+.cover{height:262mm;margin:-15mm -16mm 0;background:linear-gradient(135deg,#0a0d12,#1e3a5f,#0d1b2a);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;page-break-after:always;position:relative}
+.cover .kicker{letter-spacing:5px;text-transform:uppercase;opacity:.72;margin-bottom:1.4em}
+.cover h1{font-size:3.2em;font-weight:800;letter-spacing:-2px}
+.cover h1 span{color:#3b82f6}
+.cover .sub{font-size:1.3em;font-weight:300;opacity:.93;margin:1em 0;max-width:24em}
+.cover .badge{display:inline-block;background:rgba(96,165,250,.2);border:1px solid #3b82f6;padding:8px 22px;border-radius:20px;margin-top:2em}
+.cover .foot{position:absolute;bottom:34px;font-size:.82em;opacity:.6}
+h2{page-break-before:always;margin:0 0 .35em;font-size:1.55em;font-weight:750;color:#12203a;border-bottom:2px solid #e5edfb;padding-bottom:.28em}
+h2:first-of-type{page-break-before:avoid}
+h3{margin:1.1em 0 .4em;font-size:1.12em;font-weight:700}
+p,li{margin:.4em 0}ul,ol{margin:.5em 0 .9em 1.4em}
+a{color:#2563eb;text-decoration:none}
+code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-size:.86em;font-family:ui-monospace,Menlo,monospace}
+pre{background:#0f172a;color:#e2e8f0;padding:12px 15px;border-radius:9px;overflow-x:auto;margin:.8em 0}
+table{width:100%;border-collapse:collapse;margin:.8em 0 1.1em;font-size:9.5pt}
+th,td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f1f5f9}
+hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
+</style></head><body>
+<section class="cover"><div class="kicker">ZyvorAI Labs · Customer Documentation</div>
+<h1>ZyAI<span>QA</span>Agent</h1>
+<div class="sub">Admin Basics</div>
+<div class="badge">2026-07-29</div>
+<div class="foot">zyvor.dev · Confidential — for licensed customers</div></section>
+<main><h2>Ports &amp; URLs</h2>
+<table>
+<thead>
+<tr>
+<th>Port</th>
+<th>Surface</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>30080</strong></td>
+<td>Mission Control (lab / k3s NodePort)</td>
+<td>Persisted by <code>deploy-remote.sh</code></td>
+</tr>
+<tr>
+<td><strong>8080</strong></td>
+<td>Local <code>zyvor-qa serve --port 8080</code></td>
+<td>Dev default</td>
+</tr>
+<tr>
+<td><strong>443 / TLS</strong></td>
+<td><code>zyvor-qa serve --tls</code></td>
+<td>When terminating TLS in-process</td>
+</tr>
+</tbody></table>
+<pre><code class="language-bash">curl -s http://127.0.0.1:8080/health
+# remote lab example:
+curl -s http://175.110.122.71:30080/health
+</code></pre>
+<h2>Auth</h2>
+<ul>
+<li>When <code>DASHBOARD_PASSWORD</code> is set, <code>/dashboard</code> and <code>/api/dashboard/*</code> require a session from <code>/login</code>.</li>
+<li>Lab defaults are often <strong><code>admin</code> / <code>Admin@321</code></strong> — rotate for anything exposed.</li>
+<li>Override with <code>DASHBOARD_USER</code> / <code>DASHBOARD_PASSWORD</code> or host file <code>.zyvor-qa-auth</code>.</li>
+<li><code>GET /health</code> stays open for probes.</li>
+</ul>
+<h2>Key environment</h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ZYVOR_BASE_URL</code></td>
+<td>Target under test</td>
+</tr>
+<tr>
+<td><code>LLM_PROVIDER</code> / keys</td>
+<td>OpenAI, Anthropic, Azure, Google, Ollama</td>
+</tr>
+<tr>
+<td><code>ZYVOR_PRODUCT_REPO</code></td>
+<td>GitHub <code>owner/repo</code> for specs / issues</td>
+</tr>
+<tr>
+<td><code>ENABLE_MULTI_BROWSER</code></td>
+<td>Firefox + WebKit projects</td>
+</tr>
+<tr>
+<td><code>ENABLE_AUTH_SETUP</code></td>
+<td>Playwright setup → <code>storageState</code></td>
+</tr>
+<tr>
+<td><code>ENABLE_EMULATION_PROJECTS</code></td>
+<td>Dark / reduced-motion / locale projects</td>
+</tr>
+<tr>
+<td><code>ZYVOR_GREP</code> / <code>ZYVOR_SHARD</code></td>
+<td>Default suite filters</td>
+</tr>
+<tr>
+<td><code>ZYVOR_HAR_PATH</code></td>
+<td>Default HAR for replay</td>
+</tr>
+<tr>
+<td><code>ENABLE_REGRESSION</code> / <code>VISUAL_MAX_DIFF_RATIO</code></td>
+<td>Visual pipeline threshold</td>
+</tr>
+<tr>
+<td><code>ENABLE_AUTOFIX</code> / <code>ENABLE_AUTOFIX_APPLY</code></td>
+<td>Self-healing suggestions / apply</td>
+</tr>
+<tr>
+<td><code>GITHUB_WEBHOOK_SECRET</code></td>
+<td>HMAC for <code>POST /webhook/github</code></td>
+</tr>
+</tbody></table>
+<p>Canonical list: repo <a href="../../.env.example"><code>.env.example</code></a> and <a href="../configuration.md"><code>docs/configuration.md</code></a>.</p>
+<h2>Deploy sketch</h2>
+<pre><code class="language-bash">./scripts/deploy-remote.sh &lt;host&gt; &lt;user&gt; --quick --service   # systemd (needs free port)
+./scripts/deploy-remote.sh &lt;host&gt; &lt;user&gt; --k3s               # preferred when :30080 is NodePort
+</code></pre>
+<p>If k3s already binds <strong>:30080</strong> as the <code>zyvor-qa-webhook</code> NodePort, prefer <code>--k3s</code> — bare systemd cannot steal that port.</p>
+<p>Logs: <code>journalctl -u zyvor-qa -f</code> or <code>kubectl logs deploy/zyvor-qa-webhook</code>.</p>
+<h2>Security notes</h2>
+<ul>
+<li>Always set <code>DASHBOARD_PASSWORD</code> before exposing pod logs publicly.</li>
+<li>Treat webhook secrets and LLM keys as production secrets.</li>
+<li>Support: <a href="https://github.com/hypersdk/ZyAIQAAgent/issues">GitHub issues</a>.</li>
+</ul>
+<h2>Related</h2>
+<ul>
+<li><a href="getting-started.md">Getting Started</a></li>
+<li><a href="using-the-dashboard.md">Using the Dashboard</a></li>
+</ul>
+</main></body></html>

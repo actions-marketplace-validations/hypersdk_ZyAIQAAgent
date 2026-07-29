@@ -1,0 +1,75 @@
+#!/usr/bin/env node
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+const PAGES = resolve(ROOT, 'docs/customer/pages')
+const { routes } = JSON.parse(readFileSync(resolve(ROOT, 'scripts/customer-docs/routes.json'), 'utf8'))
+const purposes = JSON.parse(readFileSync(resolve(ROOT, 'scripts/customer-docs/page-purposes.json'), 'utf8'))
+const PRODUCT = process.env.CUSTOMER_DOCS_PRODUCT || 'ZyAIQAAgent'
+
+function catDir(category) {
+  return category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'other'
+}
+function slug(path) {
+  return path.replace(/^\//, '').replace(/\//g, '-').replace(/:/g, '') || 'home'
+}
+
+function guideTemplate({ title, path, category, purpose }) {
+  return `# ${title}
+
+## Purpose
+
+${purpose}
+
+## When to use it
+
+- Open this card when the job matches the purpose above
+- Prefer **Mission Control** (\`/dashboard\`) and the **⌘K** command palette if you are unsure where to start
+- Confirm \`ZYVOR_BASE_URL\`, dashboard auth, and that Playwright browsers are installed if runs fail immediately
+
+## How to get there
+
+- Surface: \`${path}\`
+- UI: Mission Control → **${category}** → **${title}** (scroll the Actions grid, or search with ⌘K / Ctrl-K)
+
+## What you can do
+
+1. Open \`/dashboard\` (sign in at \`/login\` when \`DASHBOARD_PASSWORD\` is set).
+2. Fill the card fields for **${title}**, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).
+3. After success, check **Findings**, **QA Runs**, and any video / report links the card produces.
+4. Turn recurring checks into a **Schedule** (5 min – 6 h) when you want continuous monitoring.
+
+If the card stays idle or errors, hit \`GET /health\`, confirm the webhook/dashboard process is up (\`zyvor-qa serve\`), and re-check env from [.env.example](../../../../.env.example).
+
+## Related pages
+
+- [Getting Started](../../getting-started.md)
+- [Using the Dashboard](../../using-the-dashboard.md)
+- [Mission Control](../overview/dashboard.md)
+- [Page index](../../PAGE_INDEX.md)
+`
+}
+
+let written = 0
+let skipped = 0
+for (const r of routes) {
+  const file = join(PAGES, catDir(r.category), `${slug(r.path)}.md`)
+  mkdirSync(dirname(file), { recursive: true })
+  if (existsSync(file)) {
+    skipped++
+    continue
+  }
+  writeFileSync(
+    file,
+    guideTemplate({
+      title: r.label,
+      path: r.path,
+      category: r.category,
+      purpose: purposes[r.path] || `${r.label} surface in ${PRODUCT} Mission Control.`,
+    }),
+  )
+  written++
+}
+console.log(`Wrote ${written} guides (skipped existing ${skipped})`)

@@ -1,0 +1,86 @@
+# ZyAIQAAgent — Complete page index
+
+Every Mission Control surface and action card.
+
+_Generated: 2026-07-29 · 34 routes_
+
+Regenerate: `node scripts/customer-docs/generate-page-index.mjs`
+
+## Overview
+
+| Page | Route | Purpose | Guide |
+|------|-------|---------|-------|
+| Mission Control | `/dashboard` | Live Mission Control console — status hero, workloads, pods, action cards, schedules, findings, and QA run history. | [Open](pages/overview/dashboard.md) |
+| Login | `/login` | Session login gate for Mission Control when DASHBOARD_PASSWORD is configured. | [Open](pages/overview/login.md) |
+| Hero status | `/dashboard/hero` | Cluster/app health banner with pods, replicas, last QA run, pass rate, and next scheduled smoke. | [Open](pages/overview/dashboard-hero.md) |
+| Workloads | `/dashboard/workloads` | Deployment and CronJob strip for the zyvor-qa namespace (when kube access is available). | [Open](pages/overview/dashboard-workloads.md) |
+| Pods | `/dashboard/pods` | Pod cards with phase, restarts, and click-through logs; optional cluster events toggle. | [Open](pages/overview/dashboard-pods.md) |
+| Live job panel | `/dashboard/job-live` | Live panel for the running job — elapsed time, per-test chips, streaming log, Stop / download. | [Open](pages/overview/dashboard-job-live.md) |
+| Command palette | `/dashboard/command-palette` | ⌘K / Ctrl-K spotlight to jump to any action card by name. | [Open](pages/overview/dashboard-command-palette.md) |
+
+## Pipeline
+
+| Page | Route | Purpose | Guide |
+|------|-------|---------|-------|
+| Run tests | `/dashboard/actions/run-tests` | Run ▶ Smoke (optional grep/shard) or ▶ Full LangGraph pipeline from local or GitHub specs. | [Open](pages/pipeline/dashboard-actions-run-tests.md) |
+| Generate tests | `/dashboard/actions/generate` | Generate Playwright tests from a product spec (local path or GitHub). | [Open](pages/pipeline/dashboard-actions-generate.md) |
+| Discover coverage | `/dashboard/actions/discover` | Scan repo code/docs for untested routes and pages, then propose coverage. | [Open](pages/pipeline/dashboard-actions-discover.md) |
+| Create from English | `/dashboard/actions/create` | Turn an English description into a one-off test (LLM when keyed, heuristic otherwise). | [Open](pages/pipeline/dashboard-actions-create.md) |
+
+## Visual
+
+| Page | Route | Purpose | Guide |
+|------|-------|---------|-------|
+| Visual regression | `/dashboard/actions/regression` | Pixel-compare visual snapshots against baselines; optionally update baselines. | [Open](pages/visual/dashboard-actions-regression.md) |
+| Compare URLs | `/dashboard/actions/compare` | Side-by-side visual diff of two URLs (e.g. staging vs production). | [Open](pages/visual/dashboard-actions-compare.md) |
+| Screenshot | `/dashboard/actions/screenshot` | Capture desktop / tablet / mobile screenshots of any URL. | [Open](pages/visual/dashboard-actions-screenshot.md) |
+| Route sweep | `/dashboard/actions/route-sweep` | Screenshot many routes (or auto-crawl) and diff against route-sweep baselines. | [Open](pages/visual/dashboard-actions-route-sweep.md) |
+
+## Quality
+
+| Page | Route | Purpose | Guide |
+|------|-------|---------|-------|
+| Site audit | `/dashboard/actions/audit` | Crawl pages for a11y (axe), broken links, SEO, console, perf, and security headers. | [Open](pages/quality/dashboard-actions-audit.md) |
+| Flaky check | `/dashboard/actions/flaky` | Re-run the suite N times and surface unstable tests. | [Open](pages/quality/dashboard-actions-flaky.md) |
+| Web Vitals | `/dashboard/actions/vitals` | Measure Core Web Vitals (LCP / CLS / INP) with optional device and network throttle. | [Open](pages/quality/dashboard-actions-vitals.md) |
+| Crawl & test | `/dashboard/actions/crawl` | Crawl an arbitrary site and validate every discovered page. | [Open](pages/quality/dashboard-actions-crawl.md) |
+
+## Probes
+
+| Page | Route | Purpose | Guide |
+|------|-------|---------|-------|
+| Uptime ping | `/dashboard/actions/ping` | HTTP uptime / latency checks across a list of URLs. | [Open](pages/probes/dashboard-actions-ping.md) |
+| Load test | `/dashboard/actions/loadtest` | Simple concurrency load test for latency under pressure. | [Open](pages/probes/dashboard-actions-loadtest.md) |
+| TLS check | `/dashboard/actions/tls` | Certificate and DNS health for a hostname. | [Open](pages/probes/dashboard-actions-tls.md) |
+| Probes | `/dashboard/actions/probes` | One-shot network & security probes: redirects, headers, cookies, robots, exposed paths, API, sitemap, DNS, CORS, compression. | [Open](pages/probes/dashboard-actions-probes.md) |
+
+## Journeys
+
+| Page | Route | Purpose | Guide |
+|------|-------|---------|-------|
+| Flow test | `/dashboard/actions/flow` | Multi-step user journey (English or step DSL) with optional login/session, video, and trace. | [Open](pages/journeys/dashboard-actions-flow.md) |
+| HAR record / replay | `/dashboard/actions/har` | Record a HAR while browsing routes, or replay the UI against a captured HAR. | [Open](pages/journeys/dashboard-actions-har.md) |
+| Import codegen | `/dashboard/actions/import-codegen` | Paste Playwright codegen JS/TS and convert it into flow steps (optionally run). | [Open](pages/journeys/dashboard-actions-import-codegen.md) |
+| AI test | `/dashboard/actions/ai-test` | Describe a goal; the autonomous browser agent drives the app toward it. | [Open](pages/journeys/dashboard-actions-ai-test.md) |
+
+## API
+
+| Page | Route | Purpose | Guide |
+|------|-------|---------|-------|
+| API contract | `/dashboard/actions/api-contract` | Validate REST endpoints against an OpenAPI schema (Forge preset available). | [Open](pages/api/dashboard-actions-api-contract.md) |
+| Live data | `/dashboard/actions/realtime` | Assert WebSocket / SSE streams and optional live-region updates. | [Open](pages/api/dashboard-actions-realtime.md) |
+| Auth & session | `/dashboard/actions/auth` | Login → reusable session file → logout / expiry / negative auth checks. | [Open](pages/api/dashboard-actions-auth.md) |
+
+## Operations
+
+| Page | Route | Purpose | Guide |
+|------|-------|---------|-------|
+| Schedules | `/dashboard/schedules` | Turn smoke, audit, ping, TLS, flow, route sweep, API, realtime, or vitals into a 5 min–6 h loop. | [Open](pages/operations/dashboard-schedules.md) |
+| Findings | `/dashboard/findings` | Collected issues from API, auth, live-data, vitals, and audit jobs with export/clear. | [Open](pages/operations/dashboard-findings.md) |
+| QA Runs | `/dashboard/runs` | History table of QA runs with pass/fail chips and sparkline trends. | [Open](pages/operations/dashboard-runs.md) |
+| Videos | `/dashboard/videos` | Browse and download recorded journey videos / traces from recent jobs. | [Open](pages/operations/dashboard-videos.md) |
+
+## Related
+
+- [Customer docs home](README.md)
+- [Page-by-page guides](pages/README.md)

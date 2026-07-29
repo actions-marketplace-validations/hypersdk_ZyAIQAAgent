@@ -207,6 +207,8 @@ def run_ai_flow(
             obs = json.loads(line[len(OBS):].strip())
             try:
                 action = decide(goal, obs, history)
+                from orchestrator.security.agent_policy import enforce_agent_action
+                action = enforce_agent_action(action, obs, initial_url=url)
             except Exception as exc:  # LLM/parse failure → end gracefully
                 action = {"action": "done", "success": False, "summary": f"decider error: {str(exc)[:120]}"}
             history.append(_history_line(action))
@@ -231,7 +233,8 @@ def _history_line(action: dict[str, Any]) -> str:
     if "i" in action:
         bits.append(str(action["i"]))
     if action.get("value") is not None:
-        bits.append(f"= {action['value']}")
+        from orchestrator.security.redaction import redact_text
+        bits.append(f"= {redact_text(str(action['value']))}")
     if action.get("reason") or action.get("summary"):
         bits.append(f"({action.get('reason') or action.get('summary')})")
     return " ".join(bits)

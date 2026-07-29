@@ -60,7 +60,9 @@ def _now() -> str:
 
 
 def log_progress(message: str) -> None:
-    """Append a stage line visible live in the dashboard's job panel."""
+    """Append a redacted stage line visible live in the dashboard's job panel."""
+    from orchestrator.security.redaction import redact_text
+    message = redact_text(message)
     stamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
     with _lock:
         _progress.append(f"[{stamp}] {message}")
@@ -130,21 +132,10 @@ def cancel() -> dict[str, Any]:
     return status()
 
 
-_SECRET_PARAM_KEYS = ("password", "token", "apiKey", "api_key")
-
-
 def _redact_params(params: Any) -> Any:
-    """Never echo credentials (passwords, bearer tokens, API keys) back through
-    the status/history API — including one level of nesting (e.g. auth.token)."""
-    if not isinstance(params, dict):
-        return params
-    out = dict(params)
-    for k, v in out.items():
-        if k in _SECRET_PARAM_KEYS and v:
-            out[k] = "***"
-        elif isinstance(v, dict):
-            out[k] = _redact_params(v)
-    return out
+    """Deeply redact credentials in status, history and schedule responses."""
+    from orchestrator.security.redaction import redact
+    return redact(params)
 
 
 def status() -> dict[str, Any]:
@@ -427,6 +418,22 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
             clean["expect_status"] = int(params.get("expect_status") or 200)
             clean["json_path"] = (params.get("json_path") or "").strip()[:100]
             clean["contains"] = (params.get("contains") or "").strip()[:100]
+    # Enforce one target policy for every network-capable job. This final
+    # pass also catches URL fields added by future job kinds.
+    from orchestrator.security.target_policy import TargetPolicy
+    policy = TargetPolicy.from_env()
+    for key in ("url", "url_a", "url_b", "login_url", "protected", "logout_url", "ticket_url"):
+        value = clean.get(key)
+        if isinstance(value, str) and value.startswith(("http://", "https://")):
+            clean[key] = policy.validate_url(value)
+    if isinstance(clean.get("urls"), list):
+        clean["urls"] = [policy.validate_url(value) for value in clean["urls"]]
+    spec_value = clean.get("spec")
+    if isinstance(spec_value, str) and spec_value.startswith(("http://", "https://")):
+        clean["spec"] = policy.validate_url(spec_value)
+    if kind == "tls" and clean.get("host"):
+        clean["host"] = policy.validate_host(clean["host"], int(clean.get("port") or 443))
+
     return clean
 
 

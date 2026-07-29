@@ -34,7 +34,7 @@ LangGraph Orchestrator (Python)
 
 ### Prerequisites
 
-- Python 3.9+ (3.11+ recommended)
+- Python 3.10+ (3.11+ recommended)
 - Node.js 20+
 - Git
 
@@ -68,10 +68,14 @@ See [**Writing Tests & GitHub Integration**](docs/test-authoring.md) for the ful
 
 ## Documentation
 
+**Customer manual (page-by-page Mission Control):** [`docs/customer/`](docs/customer/README.md) — regenerate guides / PDFs / website sync with `scripts/customer-docs/` (same pattern as Zeus OS).
+
 **New here? Start with the [step-by-step tutorials](docs/tutorials/README.md)** — nine hands-on guides from install to Kubernetes.
 
 | Guide | Description |
 |-------|-------------|
+| [**Customer docs**](docs/customer/README.md) | Mission Control page-by-page manual · PDFs · `sync-to-website.mjs` |
+| [**Enterprise v2**](docs/enterprise-v2.md) | Fail-closed security, SSRF allowlists, durable SQLite jobs, `/api/v2`, RBAC |
 | [**Tutorials**](docs/tutorials/README.md) | Getting started, spec-to-test, NL tests, GitHub, coverage, regression, autofix, notifications, CI/CD, dashboard, E2E flow tests |
 | [**Architecture**](docs/architecture.md) | Pipeline internals: LangGraph nodes, state, agents, fallback design |
 | [**Configuration**](docs/configuration.md) | Complete environment variable reference with defaults |

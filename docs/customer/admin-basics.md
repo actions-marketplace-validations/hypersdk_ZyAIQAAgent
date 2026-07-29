@@ -1,0 +1,62 @@
+# Admin Basics (ZyAIQAAgent)
+
+## Ports & URLs
+
+| Port | Surface | Notes |
+|------|---------|--------|
+| **30080** | Mission Control (lab / k3s NodePort) | Persisted by `deploy-remote.sh` |
+| **8080** | Local `zyvor-qa serve --port 8080` | Dev default |
+| **443 / TLS** | `zyvor-qa serve --tls` | When terminating TLS in-process |
+
+```bash
+curl -s http://127.0.0.1:8080/health
+# remote lab example:
+curl -s http://175.110.122.71:30080/health
+```
+
+## Auth
+
+- When `DASHBOARD_PASSWORD` is set, `/dashboard` and `/api/dashboard/*` require a session from `/login`.
+- Lab defaults are often **`admin` / `Admin@321`** — rotate for anything exposed.
+- Override with `DASHBOARD_USER` / `DASHBOARD_PASSWORD` or host file `.zyvor-qa-auth`.
+- `GET /health` stays open for probes.
+
+## Key environment
+
+| Variable | Purpose |
+|----------|---------|
+| `ZYVOR_BASE_URL` | Target under test |
+| `LLM_PROVIDER` / keys | OpenAI, Anthropic, Azure, Google, Ollama |
+| `ZYVOR_PRODUCT_REPO` | GitHub `owner/repo` for specs / issues |
+| `ENABLE_MULTI_BROWSER` | Firefox + WebKit projects |
+| `ENABLE_AUTH_SETUP` | Playwright setup → `storageState` |
+| `ENABLE_EMULATION_PROJECTS` | Dark / reduced-motion / locale projects |
+| `ZYVOR_GREP` / `ZYVOR_SHARD` | Default suite filters |
+| `ZYVOR_HAR_PATH` | Default HAR for replay |
+| `ENABLE_REGRESSION` / `VISUAL_MAX_DIFF_RATIO` | Visual pipeline threshold |
+| `ENABLE_AUTOFIX` / `ENABLE_AUTOFIX_APPLY` | Self-healing suggestions / apply |
+| `GITHUB_WEBHOOK_SECRET` | HMAC for `POST /webhook/github` |
+
+Canonical list: repo [`.env.example`](../../.env.example) and [`docs/configuration.md`](../configuration.md).
+
+## Deploy sketch
+
+```bash
+./scripts/deploy-remote.sh <host> <user> --quick --service   # systemd (needs free port)
+./scripts/deploy-remote.sh <host> <user> --k3s               # preferred when :30080 is NodePort
+```
+
+If k3s already binds **:30080** as the `zyvor-qa-webhook` NodePort, prefer `--k3s` — bare systemd cannot steal that port.
+
+Logs: `journalctl -u zyvor-qa -f` or `kubectl logs deploy/zyvor-qa-webhook`.
+
+## Security notes
+
+- Always set `DASHBOARD_PASSWORD` before exposing pod logs publicly.
+- Treat webhook secrets and LLM keys as production secrets.
+- Support: [GitHub issues](https://github.com/hypersdk/ZyAIQAAgent/issues).
+
+## Related
+
+- [Getting Started](getting-started.md)
+- [Using the Dashboard](using-the-dashboard.md)

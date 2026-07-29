@@ -1,0 +1,67 @@
+# Getting Started with ZyAIQAAgent
+
+## What you need
+
+| Requirement | Notes |
+|-------------|--------|
+| Python 3.11+ + Node 20+ | `make install` wires CLI, npm, and Playwright Chromium |
+| Target under test | Set `ZYVOR_BASE_URL` (e.g. `https://zyvor.dev`) |
+| Optional LLM | `LLM_PROVIDER` + API key for NL create / richer generation |
+| Optional GitHub | `gh auth login` + `ZYVOR_PRODUCT_REPO` for GitHub specs / PR comments |
+
+Full env table: [Admin basics](admin-basics.md) · repo [`.env.example`](../../.env.example).
+
+## 1. Install
+
+```bash
+git clone https://github.com/hypersdk/ZyAIQAAgent.git
+cd ZyAIQAAgent
+cp .env.example .env   # set ZYVOR_BASE_URL at minimum
+make install           # zyvor-qa CLI + Playwright browsers
+```
+
+## 2. First smoke (no LLM required)
+
+```bash
+zyvor-qa test --grep @smoke
+```
+
+## 3. Open Mission Control
+
+```bash
+zyvor-qa serve --port 8080
+# → http://localhost:8080/dashboard
+```
+
+When `DASHBOARD_PASSWORD` is set, sign in at `/login` (defaults often `admin` / `Admin@321` on lab hosts — override via env).
+
+## 4. Orient yourself
+
+1. **Hero** — pods, replicas, last QA run, pass rate, next smoke.
+2. **Actions** — smoke, generate, flow, HAR, API, auth, vitals, probes, …
+3. **Live job panel** — streaming log, ✓/✗ chips, Stop.
+4. **Schedules / Findings / QA Runs** — monitors, collected issues, history.
+5. **⌘K** — jump to any card by name.
+
+## 5. First workflows
+
+### A. Smoke from the UI
+
+Mission Control → ▶ Smoke (optional `@smoke` grep).
+
+### B. Drive a short journey
+
+Actions → 🎬 Flow test — paste steps or English, run with video recording.
+
+### C. Full pipeline from a spec
+
+```bash
+zyvor-qa run --source local --spec path/to/spec.md
+```
+
+## Related
+
+- [Using the Dashboard](using-the-dashboard.md)
+- [Common workflows](workflows.md)
+- [Admin basics](admin-basics.md)
+- [Page-by-page guides](pages/README.md)

@@ -1,0 +1,144 @@
+"""Versioned enterprise API for durable jobs, schedules, findings and audit."""
+
+from __future__ import annotations
+
+import uuid
+from typing import Any
+
+from fastapi import APIRouter, Body, HTTPException, Query, Request, Response
+
+from orchestrator.dashboard.durable_jobs import get_service
+from orchestrator.observability.metrics import render
+from orchestrator.persistence.store import get_store
+from orchestrator.security.rbac import require_scope
+from orchestrator.security.target_policy import TargetPolicyError
+
+router = APIRouter(prefix="/api/v2", tags=["mission-control-v2"])
+
+
+def _request_context(request: Request) -> tuple[str, str, str]:
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    forwarded = request.headers.get("x-forwarded-for", "")
+    client_ip = forwarded.split(",")[0].strip() if forwarded else (request.client.host if request.client else "")
+    return request_id, client_ip, request.url.path
+
+
+@router.post("/jobs", status_code=202)
+async def enqueue_job(request: Request, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    identity = require_scope(request, "jobs:write")
+    kind = str(payload.get("kind", "")).strip()
+    params = payload.get("params") or {}
+    if not isinstance(params, dict):
+        raise HTTPException(status_code=400, detail="params must be an object")
+    try:
+        return get_service().enqueue(
+            kind,
+            params,
+            requested_by=identity.subject,
+            idempotency_key=request.headers.get("idempotency-key") or payload.get("idempotency_key"),
+            priority=max(1, min(int(payload.get("priority") or 100), 1000)),
+        )
+    except (ValueError, TargetPolicyError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/jobs")
+async def list_jobs(request: Request, limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
+    require_scope(request, "jobs:read")
+    return {"jobs": get_store().list_jobs(limit)}
+
+
+@router.get("/jobs/{job_id}")
+async def get_job(request: Request, job_id: str) -> dict[str, Any]:
+    require_scope(request, "jobs:read")
+    job = get_store().get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="job not found")
+    return job
+
+
+@router.post("/jobs/{job_id}/cancel", status_code=202)
+async def cancel_job(request: Request, job_id: str) -> dict[str, Any]:
+    identity = require_scope(request, "jobs:write")
+    changed = get_store().cancel_job(job_id)
+    get_store().audit(
+        "job.cancel", actor=identity.subject, resource_type="job", resource_id=job_id,
+        outcome="success" if changed else "ignored",
+    )
+    if not changed:
+        raise HTTPException(status_code=409, detail="job is absent or already complete")
+    return {"cancel_requested": True, "job_id": job_id}
+
+
+@router.get("/schedules")
+async def list_schedules(request: Request) -> dict[str, Any]:
+    require_scope(request, "schedules:read")
+    return {"schedules": get_store().list_schedules()}
+
+
+@router.post("/schedules", status_code=201)
+async def add_schedule(request: Request, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    identity = require_scope(request, "schedules:write")
+    kind = str(payload.get("kind", "")).strip()
+    params = payload.get("params") or {}
+    if not isinstance(params, dict):
+        raise HTTPException(status_code=400, detail="params must be an object")
+    try:
+        # Validate through the same durable enqueue service without actually enqueueing.
+        from orchestrator.dashboard import jobs
+        from orchestrator.dashboard.durable_jobs import _validation_view
+
+        jobs._validate(kind, _validation_view(params))
+        schedule = get_store().add_schedule(
+            kind, params, int(payload.get("interval_s") or 300), requested_by=identity.subject
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    get_store().audit(
+        "schedule.create", actor=identity.subject, resource_type="schedule",
+        resource_id=schedule["id"], detail={"kind": kind, "interval_s": schedule["interval_s"]},
+    )
+    return schedule
+
+
+@router.delete("/schedules/{schedule_id}")
+async def delete_schedule(request: Request, schedule_id: str) -> dict[str, Any]:
+    identity = require_scope(request, "schedules:write")
+    removed = get_store().remove_schedule(schedule_id)
+    get_store().audit(
+        "schedule.delete", actor=identity.subject, resource_type="schedule",
+        resource_id=schedule_id, outcome="success" if removed else "ignored",
+    )
+    if not removed:
+        raise HTTPException(status_code=404, detail="schedule not found")
+    return {"removed": True}
+
+
+@router.get("/findings")
+async def list_findings(
+    request: Request,
+    limit: int = Query(200, ge=1, le=500),
+    severity: str = Query(""),
+) -> dict[str, Any]:
+    require_scope(request, "findings:read")
+    return get_store().list_findings(limit, severity or None)
+
+
+@router.delete("/findings")
+async def close_findings(request: Request) -> dict[str, Any]:
+    identity = require_scope(request, "findings:write")
+    count = get_store().clear_findings()
+    get_store().audit("findings.close_all", actor=identity.subject, detail={"count": count})
+    return {"closed": count}
+
+
+@router.get("/audit")
+async def audit_events(request: Request, limit: int = Query(200, ge=1, le=1000)) -> dict[str, Any]:
+    require_scope(request, "audit:read")
+    return {"events": get_store().list_audit(limit)}
+
+
+@router.get("/metrics", include_in_schema=False)
+async def metrics(request: Request) -> Response:
+    require_scope(request, "audit:read")
+    return Response(render(), media_type="text/plain; version=0.0.4")

@@ -270,7 +270,10 @@ async def add_schedule(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         jobs._validate(kind, params)  # reuse job validation
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    return scheduler.add(kind, params, interval)
+    try:
+        return scheduler.add(kind, params, interval)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.delete("/api/dashboard/schedules/{sid}")

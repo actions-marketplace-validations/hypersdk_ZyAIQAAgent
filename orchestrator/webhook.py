@@ -81,6 +81,9 @@ def create_app() -> FastAPI:
 
     app.include_router(dashboard_router)
 
+    from orchestrator.enterprise import install_enterprise
+    install_enterprise(app)
+
     @app.middleware("http")
     async def auth_middleware(request: Request, call_next):
         path = request.url.path
@@ -108,12 +111,23 @@ def create_app() -> FastAPI:
     ) -> dict[str, Any]:
         body = await request.body()
         secret = os.environ.get("GITHUB_WEBHOOK_SECRET", "")
-
-        if secret and not _verify_signature(body, x_hub_signature_256, secret):
-            raise HTTPException(status_code=401, detail="Invalid signature")
+        event = x_github_event or "unknown"
+        delivery_id = request.headers.get("x-github-delivery", "")
+        from orchestrator.security.webhook import WebhookSecurityError, verify_github_webhook
+        try:
+            verification = verify_github_webhook(
+                body,
+                x_hub_signature_256,
+                secret,
+                event=event,
+                delivery_id=delivery_id,
+            )
+        except WebhookSecurityError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        if verification.duplicate:
+            return {"status": "ignored", "event": event, "reason": "duplicate delivery"}
 
         payload = json.loads(body)
-        event = x_github_event or "unknown"
 
         supported = {"push", "pull_request", "repository_dispatch"}
         if event not in supported:

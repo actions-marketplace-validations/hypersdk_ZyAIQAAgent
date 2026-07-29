@@ -1,0 +1,1564 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Page-by-Page Product Manual — ZyAIQAAgent</title>
+<style>
+@page{size:A4;margin:15mm 16mm}*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:#1f2937;line-height:1.58;font-size:10.5pt}
+.cover{height:262mm;margin:-15mm -16mm 0;background:linear-gradient(135deg,#0a0d12,#1e3a5f,#0d1b2a);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;page-break-after:always;position:relative}
+.cover .kicker{letter-spacing:5px;text-transform:uppercase;opacity:.72;margin-bottom:1.4em}
+.cover h1{font-size:3.2em;font-weight:800;letter-spacing:-2px}
+.cover h1 span{color:#3b82f6}
+.cover .sub{font-size:1.3em;font-weight:300;opacity:.93;margin:1em 0;max-width:24em}
+.cover .badge{display:inline-block;background:rgba(96,165,250,.2);border:1px solid #3b82f6;padding:8px 22px;border-radius:20px;margin-top:2em}
+.cover .foot{position:absolute;bottom:34px;font-size:.82em;opacity:.6}
+h2{page-break-before:always;margin:0 0 .35em;font-size:1.55em;font-weight:750;color:#12203a;border-bottom:2px solid #e5edfb;padding-bottom:.28em}
+h2:first-of-type{page-break-before:avoid}
+h3{margin:1.1em 0 .4em;font-size:1.12em;font-weight:700}
+p,li{margin:.4em 0}ul,ol{margin:.5em 0 .9em 1.4em}
+a{color:#2563eb;text-decoration:none}
+code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-size:.86em;font-family:ui-monospace,Menlo,monospace}
+pre{background:#0f172a;color:#e2e8f0;padding:12px 15px;border-radius:9px;overflow-x:auto;margin:.8em 0}
+table{width:100%;border-collapse:collapse;margin:.8em 0 1.1em;font-size:9.5pt}
+th,td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f1f5f9}
+hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
+</style></head><body>
+<section class="cover"><div class="kicker">ZyvorAI Labs · Customer Documentation</div>
+<h1>ZyAI<span>QA</span>Agent</h1>
+<div class="sub">Page-by-Page Product Manual</div>
+<div class="badge">2026-07-29</div>
+<div class="foot">zyvor.dev · Confidential — for licensed customers</div></section>
+<main><h2>Page-by-page guides</h2>
+<p>Each guide follows: Purpose → When to use it → How to get there → What you can do → Related pages.</p>
+<p>Every route is also listed in the <a href="../PAGE_INDEX.md">complete page index</a>.</p>
+<h3>Api</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="api/dashboard-actions-api-contract.md">API contract</a></td>
+<td>Validate REST endpoints against an OpenAPI schema (Forge preset available).</td>
+</tr>
+<tr>
+<td><a href="api/dashboard-actions-auth.md">Auth &amp; session</a></td>
+<td>Login → reusable session file → logout / expiry / negative auth checks.</td>
+</tr>
+<tr>
+<td><a href="api/dashboard-actions-realtime.md">Live data</a></td>
+<td>Assert WebSocket / SSE streams and optional live-region updates.</td>
+</tr>
+</tbody></table>
+<h3>Journeys</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="journeys/dashboard-actions-ai-test.md">AI test</a></td>
+<td>Describe a goal; the autonomous browser agent drives the app toward it.</td>
+</tr>
+<tr>
+<td><a href="journeys/dashboard-actions-flow.md">Flow test</a></td>
+<td>Multi-step user journey (English or step DSL) with optional login/session, video, and Playwright <code>trace.zip</code>.</td>
+</tr>
+<tr>
+<td><a href="journeys/dashboard-actions-har.md">HAR record / replay</a></td>
+<td>Record a HAR while browsing routes, or replay the UI against a captured HAR (offline / deterministic network).</td>
+</tr>
+<tr>
+<td><a href="journeys/dashboard-actions-import-codegen.md">Import codegen</a></td>
+<td>Paste Playwright codegen JS/TS and convert it into ZyAIQAAgent flow steps (optionally run immediately).</td>
+</tr>
+</tbody></table>
+<h3>Operations</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="operations/dashboard-findings.md">Findings</a></td>
+<td>Collected issues from API, auth, live-data, vitals, and audit jobs with export/clear.</td>
+</tr>
+<tr>
+<td><a href="operations/dashboard-runs.md">QA Runs</a></td>
+<td>History table of QA runs with pass/fail chips and sparkline trends.</td>
+</tr>
+<tr>
+<td><a href="operations/dashboard-schedules.md">Schedules</a></td>
+<td>Turn smoke, audit, ping, TLS, flow, route sweep, API, realtime, or vitals into a 5 min–6 h loop.</td>
+</tr>
+<tr>
+<td><a href="operations/dashboard-videos.md">Videos</a></td>
+<td>Browse and download recorded journey videos / traces from recent jobs.</td>
+</tr>
+</tbody></table>
+<h3>Overview</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="overview/dashboard-command-palette.md">Command palette</a></td>
+<td>⌘K / Ctrl-K spotlight to jump to any action card by name.</td>
+</tr>
+<tr>
+<td><a href="overview/dashboard-hero.md">Hero status</a></td>
+<td>Cluster/app health banner with pods, replicas, last QA run, pass rate, and next scheduled smoke.</td>
+</tr>
+<tr>
+<td><a href="overview/dashboard-job-live.md">Live job panel</a></td>
+<td>Live panel for the running job — elapsed time, per-test chips, streaming log, Stop / download.</td>
+</tr>
+<tr>
+<td><a href="overview/dashboard-pods.md">Pods</a></td>
+<td>Pod cards with phase, restarts, and click-through logs; optional cluster events toggle.</td>
+</tr>
+<tr>
+<td><a href="overview/dashboard-workloads.md">Workloads</a></td>
+<td>Deployment and CronJob strip for the zyvor-qa namespace (when kube access is available).</td>
+</tr>
+<tr>
+<td><a href="overview/dashboard.md">Mission Control</a></td>
+<td>Live Mission Control console — status hero, workloads, pods, action cards, schedules, findings, and QA run history.</td>
+</tr>
+<tr>
+<td><a href="overview/login.md">Login</a></td>
+<td>Session login gate for Mission Control when DASHBOARD_PASSWORD is configured.</td>
+</tr>
+</tbody></table>
+<h3>Pipeline</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="pipeline/dashboard-actions-create.md">Create from English</a></td>
+<td>Turn an English description into a one-off test (LLM when keyed, heuristic otherwise).</td>
+</tr>
+<tr>
+<td><a href="pipeline/dashboard-actions-discover.md">Discover coverage</a></td>
+<td>Scan repo code/docs for untested routes and pages, then propose coverage.</td>
+</tr>
+<tr>
+<td><a href="pipeline/dashboard-actions-generate.md">Generate tests</a></td>
+<td>Generate Playwright tests from a product spec (local path or GitHub).</td>
+</tr>
+<tr>
+<td><a href="pipeline/dashboard-actions-run-tests.md">Run tests</a></td>
+<td>Run ▶ Smoke (optional grep/shard) or ▶ Full LangGraph pipeline from local or GitHub specs.</td>
+</tr>
+</tbody></table>
+<h3>Probes</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="probes/dashboard-actions-loadtest.md">Load test</a></td>
+<td>Simple concurrency load test for latency under pressure.</td>
+</tr>
+<tr>
+<td><a href="probes/dashboard-actions-ping.md">Uptime ping</a></td>
+<td>HTTP uptime / latency checks across a list of URLs.</td>
+</tr>
+<tr>
+<td><a href="probes/dashboard-actions-probes.md">Probes</a></td>
+<td>One-shot network &amp; security probes: redirects, headers, cookies, robots, exposed paths, API, sitemap, DNS, CORS, compression.</td>
+</tr>
+<tr>
+<td><a href="probes/dashboard-actions-tls.md">TLS check</a></td>
+<td>Certificate and DNS health for a hostname.</td>
+</tr>
+</tbody></table>
+<h3>Quality</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="quality/dashboard-actions-audit.md">Site audit</a></td>
+<td>Crawl pages for a11y (axe), broken links, SEO, console, perf, and security headers.</td>
+</tr>
+<tr>
+<td><a href="quality/dashboard-actions-crawl.md">Crawl &amp; test</a></td>
+<td>Crawl an arbitrary site and validate every discovered page.</td>
+</tr>
+<tr>
+<td><a href="quality/dashboard-actions-flaky.md">Flaky check</a></td>
+<td>Re-run the suite N times and surface unstable tests.</td>
+</tr>
+<tr>
+<td><a href="quality/dashboard-actions-vitals.md">Web Vitals</a></td>
+<td>Measure Core Web Vitals (LCP / CLS / INP) with optional device and network throttle.</td>
+</tr>
+</tbody></table>
+<h3>Visual</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="visual/dashboard-actions-compare.md">Compare URLs</a></td>
+<td>Side-by-side visual diff of two URLs (e.g. staging vs production).</td>
+</tr>
+<tr>
+<td><a href="visual/dashboard-actions-regression.md">Visual regression</a></td>
+<td>Pixel-compare visual snapshots against baselines; optionally update baselines.</td>
+</tr>
+<tr>
+<td><a href="visual/dashboard-actions-route-sweep.md">Route sweep</a></td>
+<td>Screenshot many routes (or auto-crawl) and diff against route-sweep baselines.</td>
+</tr>
+<tr>
+<td><a href="visual/dashboard-actions-screenshot.md">Screenshot</a></td>
+<td>Capture desktop / tablet / mobile screenshots of any URL.</td>
+</tr>
+</tbody></table>
+<hr>
+<p>34 guides. Regenerate: <code>node scripts/customer-docs/generate-guide-index.mjs</code>.</p>
+<hr>
+<h2>API contract</h2>
+<h3>Purpose</h3>
+<p>Validate REST endpoints against an OpenAPI schema (Forge preset available).</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/api-contract</code></li>
+<li>UI: Mission Control → <strong>API</strong> → <strong>API contract</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>API contract</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Auth &amp; session</h2>
+<h3>Purpose</h3>
+<p>Login → reusable session file → logout / expiry / negative auth checks.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/auth</code></li>
+<li>UI: Mission Control → <strong>API</strong> → <strong>Auth &amp; session</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Auth &amp; session</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Live data</h2>
+<h3>Purpose</h3>
+<p>Assert WebSocket / SSE streams and optional live-region updates.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/realtime</code></li>
+<li>UI: Mission Control → <strong>API</strong> → <strong>Live data</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Live data</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>AI test</h2>
+<h3>Purpose</h3>
+<p>Describe a goal; the autonomous browser agent drives the app toward it.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/ai-test</code></li>
+<li>UI: Mission Control → <strong>Journeys</strong> → <strong>AI test</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>AI test</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Flow test</h2>
+<h3>Purpose</h3>
+<p>Multi-step user journey (English or step DSL) with optional login/session, video, and Playwright <code>trace.zip</code>.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Prove a critical path after deploy (signup, checkout, create VM, …)</li>
+<li>Capture a single end-to-end video for stakeholders</li>
+<li>Reuse a session from <a href="../api/dashboard-actions-auth.md">Auth &amp; session</a></li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/flow</code></li>
+<li>UI: Mission Control → <strong>Journeys</strong> → <strong>Flow test</strong> (or ⌘K → “Flow”)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Enter the app URL and either English (“go to products, click Schedule Demo, assert contact”) or one step per line.</li>
+<li>Optional: login user/password, reuse a saved session file, pick browser / device / throttle.</li>
+<li>Keep <strong>record video</strong> on, then <strong>🎬 Run journey</strong>.</li>
+<li>Watch the live job panel; download video + trace when finished.</li>
+</ol>
+<h4>Step language (excerpt)</h4>
+<p><code>goto</code>, <code>click</code>, <code>hover</code>, <code>fill</code>, <code>select</code>, <code>upload</code>, <code>download</code>, <code>dialog</code>, <code>iframe</code>, <code>drag</code>, <code>press</code>, <code>clock</code>, <code>wait</code>, <code>wait until</code>, <code>assert</code>, <code>assert url</code>, <code>assert api</code>, <code>assert aria</code>, <code>assert not</code>, <code>assert count</code>, <code>assert value</code>.</p>
+<p>CLI equivalent: <code>zyvor-qa flow &lt;url&gt; --steps file</code>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="dashboard-actions-har.md">HAR record / replay</a></li>
+<li><a href="dashboard-actions-import-codegen.md">Import codegen</a></li>
+<li><a href="../api/dashboard-actions-auth.md">Auth &amp; session</a></li>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>HAR record / replay</h2>
+<h3>Purpose</h3>
+<p>Record a HAR while browsing routes, or replay the UI against a captured HAR (offline / deterministic network).</p>
+<h3>When to use it</h3>
+<ul>
+<li>Freeze API responses for flaky backends</li>
+<li>Diff UI behavior with vs without live network</li>
+<li>Share a network fixture with the team (<code>ZYVOR_HAR_PATH</code>)</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/har</code></li>
+<li>UI: Mission Control → <strong>Journeys</strong> → <strong>HAR record / replay</strong></li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li><strong>Record</strong> — set mode <code>record</code>, enter URL + routes (<code>/</code>, <code>/pricing</code>, …). HAR path can auto-generate.</li>
+<li><strong>Replay</strong> — set mode <code>replay</code>, point at the HAR file, optional expect-text, optional “allow missing routes”.</li>
+<li>Click <strong>📼 Run</strong> and review the live log.</li>
+<li>CLI: <code>zyvor-qa har-replay &lt;url&gt; --mode record|replay --har out.har</code>.</li>
+</ol>
+<h3>Related pages</h3>
+<ul>
+<li><a href="dashboard-actions-flow.md">Flow test</a></li>
+<li><a href="../visual/dashboard-actions-route-sweep.md">Route sweep</a></li>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Import codegen</h2>
+<h3>Purpose</h3>
+<p>Paste Playwright codegen JS/TS and convert it into ZyAIQAAgent flow steps (optionally run immediately).</p>
+<h3>When to use it</h3>
+<ul>
+<li>You already recorded a journey with <code>playwright codegen</code></li>
+<li>You want flow DSL without rewriting clicks by hand</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/import-codegen</code></li>
+<li>UI: Mission Control → <strong>Journeys</strong> → <strong>Import codegen</strong></li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Paste codegen output (<code>page.goto</code>, <code>getByRole().click</code>, <code>fill</code>, …).</li>
+<li>Optionally tick <strong>run as flow</strong> and provide the app URL.</li>
+<li>Click <strong>📥 Import</strong> — inspect emitted steps; run if requested.</li>
+<li>CLI: <code>zyvor-qa import-codegen script.js [--run --url …]</code>.</li>
+<li>Local headed record alternative: <code>npm run record-flow -- &lt;url&gt; out.flow.json</code>.</li>
+</ol>
+<h3>Related pages</h3>
+<ul>
+<li><a href="dashboard-actions-flow.md">Flow test</a></li>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Findings</h2>
+<h3>Purpose</h3>
+<p>Collected issues from API, auth, live-data, vitals, and audit jobs with export/clear.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/findings</code></li>
+<li>UI: Mission Control → <strong>Operations</strong> → <strong>Findings</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Findings</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>QA Runs</h2>
+<h3>Purpose</h3>
+<p>History table of QA runs with pass/fail chips and sparkline trends.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/runs</code></li>
+<li>UI: Mission Control → <strong>Operations</strong> → <strong>QA Runs</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>QA Runs</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Schedules</h2>
+<h3>Purpose</h3>
+<p>Turn smoke, audit, ping, TLS, flow, route sweep, API, realtime, or vitals into a 5 min–6 h loop.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/schedules</code></li>
+<li>UI: Mission Control → <strong>Operations</strong> → <strong>Schedules</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Schedules</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Videos</h2>
+<h3>Purpose</h3>
+<p>Browse and download recorded journey videos / traces from recent jobs.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/videos</code></li>
+<li>UI: Mission Control → <strong>Operations</strong> → <strong>Videos</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Videos</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Command palette</h2>
+<h3>Purpose</h3>
+<p>⌘K / Ctrl-K spotlight to jump to any action card by name.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/command-palette</code></li>
+<li>UI: Mission Control → <strong>Overview</strong> → <strong>Command palette</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Command palette</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Hero status</h2>
+<h3>Purpose</h3>
+<p>Cluster/app health banner with pods, replicas, last QA run, pass rate, and next scheduled smoke.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/hero</code></li>
+<li>UI: Mission Control → <strong>Overview</strong> → <strong>Hero status</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Hero status</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Live job panel</h2>
+<h3>Purpose</h3>
+<p>Live panel for the running job — elapsed time, per-test chips, streaming log, Stop / download.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/job-live</code></li>
+<li>UI: Mission Control → <strong>Overview</strong> → <strong>Live job panel</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Live job panel</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Pods</h2>
+<h3>Purpose</h3>
+<p>Pod cards with phase, restarts, and click-through logs; optional cluster events toggle.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/pods</code></li>
+<li>UI: Mission Control → <strong>Overview</strong> → <strong>Pods</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Pods</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Workloads</h2>
+<h3>Purpose</h3>
+<p>Deployment and CronJob strip for the zyvor-qa namespace (when kube access is available).</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/workloads</code></li>
+<li>UI: Mission Control → <strong>Overview</strong> → <strong>Workloads</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Workloads</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Mission Control</h2>
+<h3>Purpose</h3>
+<p>Live Mission Control console — status hero, workloads, pods, action cards, schedules, findings, and QA run history.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard</code></li>
+<li>UI: Mission Control → <strong>Overview</strong> → <strong>Mission Control</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Mission Control</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Login</h2>
+<h3>Purpose</h3>
+<p>Session login gate for Mission Control when DASHBOARD_PASSWORD is configured.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/login</code></li>
+<li>UI: Mission Control → <strong>Overview</strong> → <strong>Login</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Login</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Create from English</h2>
+<h3>Purpose</h3>
+<p>Turn an English description into a one-off test (LLM when keyed, heuristic otherwise).</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/create</code></li>
+<li>UI: Mission Control → <strong>Pipeline</strong> → <strong>Create from English</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Create from English</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Discover coverage</h2>
+<h3>Purpose</h3>
+<p>Scan repo code/docs for untested routes and pages, then propose coverage.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/discover</code></li>
+<li>UI: Mission Control → <strong>Pipeline</strong> → <strong>Discover coverage</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Discover coverage</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Generate tests</h2>
+<h3>Purpose</h3>
+<p>Generate Playwright tests from a product spec (local path or GitHub).</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/generate</code></li>
+<li>UI: Mission Control → <strong>Pipeline</strong> → <strong>Generate tests</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Generate tests</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Run tests</h2>
+<h3>Purpose</h3>
+<p>Run ▶ Smoke (optional grep/shard) or ▶ Full LangGraph pipeline from local or GitHub specs.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/run-tests</code></li>
+<li>UI: Mission Control → <strong>Pipeline</strong> → <strong>Run tests</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Run tests</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Load test</h2>
+<h3>Purpose</h3>
+<p>Simple concurrency load test for latency under pressure.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/loadtest</code></li>
+<li>UI: Mission Control → <strong>Probes</strong> → <strong>Load test</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Load test</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Uptime ping</h2>
+<h3>Purpose</h3>
+<p>HTTP uptime / latency checks across a list of URLs.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/ping</code></li>
+<li>UI: Mission Control → <strong>Probes</strong> → <strong>Uptime ping</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Uptime ping</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Probes</h2>
+<h3>Purpose</h3>
+<p>One-shot network &amp; security probes: redirects, headers, cookies, robots, exposed paths, API, sitemap, DNS, CORS, compression.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/probes</code></li>
+<li>UI: Mission Control → <strong>Probes</strong> → <strong>Probes</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Probes</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>TLS check</h2>
+<h3>Purpose</h3>
+<p>Certificate and DNS health for a hostname.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/tls</code></li>
+<li>UI: Mission Control → <strong>Probes</strong> → <strong>TLS check</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>TLS check</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Site audit</h2>
+<h3>Purpose</h3>
+<p>Crawl pages for a11y (axe), broken links, SEO, console, perf, and security headers.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/audit</code></li>
+<li>UI: Mission Control → <strong>Quality</strong> → <strong>Site audit</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Site audit</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Crawl &amp; test</h2>
+<h3>Purpose</h3>
+<p>Crawl an arbitrary site and validate every discovered page.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/crawl</code></li>
+<li>UI: Mission Control → <strong>Quality</strong> → <strong>Crawl &amp; test</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Crawl &amp; test</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Flaky check</h2>
+<h3>Purpose</h3>
+<p>Re-run the suite N times and surface unstable tests.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/flaky</code></li>
+<li>UI: Mission Control → <strong>Quality</strong> → <strong>Flaky check</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Flaky check</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Web Vitals</h2>
+<h3>Purpose</h3>
+<p>Measure Core Web Vitals (LCP / CLS / INP) with optional device and network throttle.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/vitals</code></li>
+<li>UI: Mission Control → <strong>Quality</strong> → <strong>Web Vitals</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Web Vitals</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Compare URLs</h2>
+<h3>Purpose</h3>
+<p>Side-by-side visual diff of two URLs (e.g. staging vs production).</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/compare</code></li>
+<li>UI: Mission Control → <strong>Visual</strong> → <strong>Compare URLs</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Compare URLs</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Visual regression</h2>
+<h3>Purpose</h3>
+<p>Pixel-compare visual snapshots against baselines; optionally update baselines.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/regression</code></li>
+<li>UI: Mission Control → <strong>Visual</strong> → <strong>Visual regression</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Visual regression</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Route sweep</h2>
+<h3>Purpose</h3>
+<p>Screenshot many routes (or auto-crawl) and diff against route-sweep baselines.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/route-sweep</code></li>
+<li>UI: Mission Control → <strong>Visual</strong> → <strong>Route sweep</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Route sweep</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>Screenshot</h2>
+<h3>Purpose</h3>
+<p>Capture desktop / tablet / mobile screenshots of any URL.</p>
+<h3>When to use it</h3>
+<ul>
+<li>Open this card when the job matches the purpose above</li>
+<li>Prefer <strong>Mission Control</strong> (<code>/dashboard</code>) and the <strong>⌘K</strong> command palette if you are unsure where to start</li>
+<li>Confirm <code>ZYVOR_BASE_URL</code>, dashboard auth, and that Playwright browsers are installed if runs fail immediately</li>
+</ul>
+<h3>How to get there</h3>
+<ul>
+<li>Surface: <code>/dashboard/actions/screenshot</code></li>
+<li>UI: Mission Control → <strong>Visual</strong> → <strong>Screenshot</strong> (scroll the Actions grid, or search with ⌘K / Ctrl-K)</li>
+</ul>
+<h3>What you can do</h3>
+<ol>
+<li>Open <code>/dashboard</code> (sign in at <code>/login</code> when <code>DASHBOARD_PASSWORD</code> is set).</li>
+<li>Fill the card fields for <strong>Screenshot</strong>, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).</li>
+<li>After success, check <strong>Findings</strong>, <strong>QA Runs</strong>, and any video / report links the card produces.</li>
+<li>Turn recurring checks into a <strong>Schedule</strong> (5 min – 6 h) when you want continuous monitoring.</li>
+</ol>
+<p>If the card stays idle or errors, hit <code>GET /health</code>, confirm the webhook/dashboard process is up (<code>zyvor-qa serve</code>), and re-check env from <a href="../../../../.env.example">.env.example</a>.</p>
+<h3>Related pages</h3>
+<ul>
+<li><a href="../../getting-started.md">Getting Started</a></li>
+<li><a href="../../using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="../overview/dashboard.md">Mission Control</a></li>
+<li><a href="../../PAGE_INDEX.md">Page index</a></li>
+</ul>
+<hr>
+<h2>ZyAIQAAgent — Complete page index</h2>
+<p>Every Mission Control surface and action card.</p>
+<p><em>Generated: 2026-07-29 · 34 routes</em></p>
+<p>Regenerate: <code>node scripts/customer-docs/generate-page-index.mjs</code></p>
+<h3>Overview</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mission Control</td>
+<td><code>/dashboard</code></td>
+<td>Live Mission Control console — status hero, workloads, pods, action cards, schedules, findings, and QA run history.</td>
+<td><a href="pages/overview/dashboard.md">Open</a></td>
+</tr>
+<tr>
+<td>Login</td>
+<td><code>/login</code></td>
+<td>Session login gate for Mission Control when DASHBOARD_PASSWORD is configured.</td>
+<td><a href="pages/overview/login.md">Open</a></td>
+</tr>
+<tr>
+<td>Hero status</td>
+<td><code>/dashboard/hero</code></td>
+<td>Cluster/app health banner with pods, replicas, last QA run, pass rate, and next scheduled smoke.</td>
+<td><a href="pages/overview/dashboard-hero.md">Open</a></td>
+</tr>
+<tr>
+<td>Workloads</td>
+<td><code>/dashboard/workloads</code></td>
+<td>Deployment and CronJob strip for the zyvor-qa namespace (when kube access is available).</td>
+<td><a href="pages/overview/dashboard-workloads.md">Open</a></td>
+</tr>
+<tr>
+<td>Pods</td>
+<td><code>/dashboard/pods</code></td>
+<td>Pod cards with phase, restarts, and click-through logs; optional cluster events toggle.</td>
+<td><a href="pages/overview/dashboard-pods.md">Open</a></td>
+</tr>
+<tr>
+<td>Live job panel</td>
+<td><code>/dashboard/job-live</code></td>
+<td>Live panel for the running job — elapsed time, per-test chips, streaming log, Stop / download.</td>
+<td><a href="pages/overview/dashboard-job-live.md">Open</a></td>
+</tr>
+<tr>
+<td>Command palette</td>
+<td><code>/dashboard/command-palette</code></td>
+<td>⌘K / Ctrl-K spotlight to jump to any action card by name.</td>
+<td><a href="pages/overview/dashboard-command-palette.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Pipeline</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Run tests</td>
+<td><code>/dashboard/actions/run-tests</code></td>
+<td>Run ▶ Smoke (optional grep/shard) or ▶ Full LangGraph pipeline from local or GitHub specs.</td>
+<td><a href="pages/pipeline/dashboard-actions-run-tests.md">Open</a></td>
+</tr>
+<tr>
+<td>Generate tests</td>
+<td><code>/dashboard/actions/generate</code></td>
+<td>Generate Playwright tests from a product spec (local path or GitHub).</td>
+<td><a href="pages/pipeline/dashboard-actions-generate.md">Open</a></td>
+</tr>
+<tr>
+<td>Discover coverage</td>
+<td><code>/dashboard/actions/discover</code></td>
+<td>Scan repo code/docs for untested routes and pages, then propose coverage.</td>
+<td><a href="pages/pipeline/dashboard-actions-discover.md">Open</a></td>
+</tr>
+<tr>
+<td>Create from English</td>
+<td><code>/dashboard/actions/create</code></td>
+<td>Turn an English description into a one-off test (LLM when keyed, heuristic otherwise).</td>
+<td><a href="pages/pipeline/dashboard-actions-create.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Visual</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Visual regression</td>
+<td><code>/dashboard/actions/regression</code></td>
+<td>Pixel-compare visual snapshots against baselines; optionally update baselines.</td>
+<td><a href="pages/visual/dashboard-actions-regression.md">Open</a></td>
+</tr>
+<tr>
+<td>Compare URLs</td>
+<td><code>/dashboard/actions/compare</code></td>
+<td>Side-by-side visual diff of two URLs (e.g. staging vs production).</td>
+<td><a href="pages/visual/dashboard-actions-compare.md">Open</a></td>
+</tr>
+<tr>
+<td>Screenshot</td>
+<td><code>/dashboard/actions/screenshot</code></td>
+<td>Capture desktop / tablet / mobile screenshots of any URL.</td>
+<td><a href="pages/visual/dashboard-actions-screenshot.md">Open</a></td>
+</tr>
+<tr>
+<td>Route sweep</td>
+<td><code>/dashboard/actions/route-sweep</code></td>
+<td>Screenshot many routes (or auto-crawl) and diff against route-sweep baselines.</td>
+<td><a href="pages/visual/dashboard-actions-route-sweep.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Quality</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Site audit</td>
+<td><code>/dashboard/actions/audit</code></td>
+<td>Crawl pages for a11y (axe), broken links, SEO, console, perf, and security headers.</td>
+<td><a href="pages/quality/dashboard-actions-audit.md">Open</a></td>
+</tr>
+<tr>
+<td>Flaky check</td>
+<td><code>/dashboard/actions/flaky</code></td>
+<td>Re-run the suite N times and surface unstable tests.</td>
+<td><a href="pages/quality/dashboard-actions-flaky.md">Open</a></td>
+</tr>
+<tr>
+<td>Web Vitals</td>
+<td><code>/dashboard/actions/vitals</code></td>
+<td>Measure Core Web Vitals (LCP / CLS / INP) with optional device and network throttle.</td>
+<td><a href="pages/quality/dashboard-actions-vitals.md">Open</a></td>
+</tr>
+<tr>
+<td>Crawl &amp; test</td>
+<td><code>/dashboard/actions/crawl</code></td>
+<td>Crawl an arbitrary site and validate every discovered page.</td>
+<td><a href="pages/quality/dashboard-actions-crawl.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Probes</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Uptime ping</td>
+<td><code>/dashboard/actions/ping</code></td>
+<td>HTTP uptime / latency checks across a list of URLs.</td>
+<td><a href="pages/probes/dashboard-actions-ping.md">Open</a></td>
+</tr>
+<tr>
+<td>Load test</td>
+<td><code>/dashboard/actions/loadtest</code></td>
+<td>Simple concurrency load test for latency under pressure.</td>
+<td><a href="pages/probes/dashboard-actions-loadtest.md">Open</a></td>
+</tr>
+<tr>
+<td>TLS check</td>
+<td><code>/dashboard/actions/tls</code></td>
+<td>Certificate and DNS health for a hostname.</td>
+<td><a href="pages/probes/dashboard-actions-tls.md">Open</a></td>
+</tr>
+<tr>
+<td>Probes</td>
+<td><code>/dashboard/actions/probes</code></td>
+<td>One-shot network &amp; security probes: redirects, headers, cookies, robots, exposed paths, API, sitemap, DNS, CORS, compression.</td>
+<td><a href="pages/probes/dashboard-actions-probes.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Journeys</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Flow test</td>
+<td><code>/dashboard/actions/flow</code></td>
+<td>Multi-step user journey (English or step DSL) with optional login/session, video, and trace.</td>
+<td><a href="pages/journeys/dashboard-actions-flow.md">Open</a></td>
+</tr>
+<tr>
+<td>HAR record / replay</td>
+<td><code>/dashboard/actions/har</code></td>
+<td>Record a HAR while browsing routes, or replay the UI against a captured HAR.</td>
+<td><a href="pages/journeys/dashboard-actions-har.md">Open</a></td>
+</tr>
+<tr>
+<td>Import codegen</td>
+<td><code>/dashboard/actions/import-codegen</code></td>
+<td>Paste Playwright codegen JS/TS and convert it into flow steps (optionally run).</td>
+<td><a href="pages/journeys/dashboard-actions-import-codegen.md">Open</a></td>
+</tr>
+<tr>
+<td>AI test</td>
+<td><code>/dashboard/actions/ai-test</code></td>
+<td>Describe a goal; the autonomous browser agent drives the app toward it.</td>
+<td><a href="pages/journeys/dashboard-actions-ai-test.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>API</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>API contract</td>
+<td><code>/dashboard/actions/api-contract</code></td>
+<td>Validate REST endpoints against an OpenAPI schema (Forge preset available).</td>
+<td><a href="pages/api/dashboard-actions-api-contract.md">Open</a></td>
+</tr>
+<tr>
+<td>Live data</td>
+<td><code>/dashboard/actions/realtime</code></td>
+<td>Assert WebSocket / SSE streams and optional live-region updates.</td>
+<td><a href="pages/api/dashboard-actions-realtime.md">Open</a></td>
+</tr>
+<tr>
+<td>Auth &amp; session</td>
+<td><code>/dashboard/actions/auth</code></td>
+<td>Login → reusable session file → logout / expiry / negative auth checks.</td>
+<td><a href="pages/api/dashboard-actions-auth.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Operations</h3>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Schedules</td>
+<td><code>/dashboard/schedules</code></td>
+<td>Turn smoke, audit, ping, TLS, flow, route sweep, API, realtime, or vitals into a 5 min–6 h loop.</td>
+<td><a href="pages/operations/dashboard-schedules.md">Open</a></td>
+</tr>
+<tr>
+<td>Findings</td>
+<td><code>/dashboard/findings</code></td>
+<td>Collected issues from API, auth, live-data, vitals, and audit jobs with export/clear.</td>
+<td><a href="pages/operations/dashboard-findings.md">Open</a></td>
+</tr>
+<tr>
+<td>QA Runs</td>
+<td><code>/dashboard/runs</code></td>
+<td>History table of QA runs with pass/fail chips and sparkline trends.</td>
+<td><a href="pages/operations/dashboard-runs.md">Open</a></td>
+</tr>
+<tr>
+<td>Videos</td>
+<td><code>/dashboard/videos</code></td>
+<td>Browse and download recorded journey videos / traces from recent jobs.</td>
+<td><a href="pages/operations/dashboard-videos.md">Open</a></td>
+</tr>
+</tbody></table>
+<h3>Related</h3>
+<ul>
+<li><a href="README.md">Customer docs home</a></li>
+<li><a href="pages/README.md">Page-by-page guides</a></li>
+</ul>
+</main></body></html>

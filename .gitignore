@@ -33,3 +33,13 @@ target/
 
 # Docker
 .docker/
+
+# Installer backups
+*.v1-backup
+
+# Local run artifacts
+reports/
+screenshots/
+test-results/
+traces/
+videos/

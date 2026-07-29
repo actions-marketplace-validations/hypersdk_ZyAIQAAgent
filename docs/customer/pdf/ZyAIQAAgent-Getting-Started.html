@@ -1,0 +1,185 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Getting Started — ZyAIQAAgent</title>
+<style>
+@page{size:A4;margin:15mm 16mm}*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:#1f2937;line-height:1.58;font-size:10.5pt}
+.cover{height:262mm;margin:-15mm -16mm 0;background:linear-gradient(135deg,#0a0d12,#1e3a5f,#0d1b2a);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;page-break-after:always;position:relative}
+.cover .kicker{letter-spacing:5px;text-transform:uppercase;opacity:.72;margin-bottom:1.4em}
+.cover h1{font-size:3.2em;font-weight:800;letter-spacing:-2px}
+.cover h1 span{color:#3b82f6}
+.cover .sub{font-size:1.3em;font-weight:300;opacity:.93;margin:1em 0;max-width:24em}
+.cover .badge{display:inline-block;background:rgba(96,165,250,.2);border:1px solid #3b82f6;padding:8px 22px;border-radius:20px;margin-top:2em}
+.cover .foot{position:absolute;bottom:34px;font-size:.82em;opacity:.6}
+h2{page-break-before:always;margin:0 0 .35em;font-size:1.55em;font-weight:750;color:#12203a;border-bottom:2px solid #e5edfb;padding-bottom:.28em}
+h2:first-of-type{page-break-before:avoid}
+h3{margin:1.1em 0 .4em;font-size:1.12em;font-weight:700}
+p,li{margin:.4em 0}ul,ol{margin:.5em 0 .9em 1.4em}
+a{color:#2563eb;text-decoration:none}
+code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-size:.86em;font-family:ui-monospace,Menlo,monospace}
+pre{background:#0f172a;color:#e2e8f0;padding:12px 15px;border-radius:9px;overflow-x:auto;margin:.8em 0}
+table{width:100%;border-collapse:collapse;margin:.8em 0 1.1em;font-size:9.5pt}
+th,td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f1f5f9}
+hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
+</style></head><body>
+<section class="cover"><div class="kicker">ZyvorAI Labs · Customer Documentation</div>
+<h1>ZyAI<span>QA</span>Agent</h1>
+<div class="sub">Getting Started</div>
+<div class="badge">2026-07-29</div>
+<div class="foot">zyvor.dev · Confidential — for licensed customers</div></section>
+<main><h2>What you need</h2>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Python 3.11+ + Node 20+</td>
+<td><code>make install</code> wires CLI, npm, and Playwright Chromium</td>
+</tr>
+<tr>
+<td>Target under test</td>
+<td>Set <code>ZYVOR_BASE_URL</code> (e.g. <code>https://zyvor.dev</code>)</td>
+</tr>
+<tr>
+<td>Optional LLM</td>
+<td><code>LLM_PROVIDER</code> + API key for NL create / richer generation</td>
+</tr>
+<tr>
+<td>Optional GitHub</td>
+<td><code>gh auth login</code> + <code>ZYVOR_PRODUCT_REPO</code> for GitHub specs / PR comments</td>
+</tr>
+</tbody></table>
+<p>Full env table: <a href="admin-basics.md">Admin basics</a> · repo <a href="../../.env.example"><code>.env.example</code></a>.</p>
+<h2>1. Install</h2>
+<pre><code class="language-bash">git clone https://github.com/hypersdk/ZyAIQAAgent.git
+cd ZyAIQAAgent
+cp .env.example .env   # set ZYVOR_BASE_URL at minimum
+make install           # zyvor-qa CLI + Playwright browsers
+</code></pre>
+<h2>2. First smoke (no LLM required)</h2>
+<pre><code class="language-bash">zyvor-qa test --grep @smoke
+</code></pre>
+<h2>3. Open Mission Control</h2>
+<pre><code class="language-bash">zyvor-qa serve --port 8080
+# → http://localhost:8080/dashboard
+</code></pre>
+<p>When <code>DASHBOARD_PASSWORD</code> is set, sign in at <code>/login</code> (defaults often <code>admin</code> / <code>Admin@321</code> on lab hosts — override via env).</p>
+<h2>4. Orient yourself</h2>
+<ol>
+<li><strong>Hero</strong> — pods, replicas, last QA run, pass rate, next smoke.</li>
+<li><strong>Actions</strong> — smoke, generate, flow, HAR, API, auth, vitals, probes, …</li>
+<li><strong>Live job panel</strong> — streaming log, ✓/✗ chips, Stop.</li>
+<li><strong>Schedules / Findings / QA Runs</strong> — monitors, collected issues, history.</li>
+<li><strong>⌘K</strong> — jump to any card by name.</li>
+</ol>
+<h2>5. First workflows</h2>
+<h3>A. Smoke from the UI</h3>
+<p>Mission Control → ▶ Smoke (optional <code>@smoke</code> grep).</p>
+<h3>B. Drive a short journey</h3>
+<p>Actions → 🎬 Flow test — paste steps or English, run with video recording.</p>
+<h3>C. Full pipeline from a spec</h3>
+<pre><code class="language-bash">zyvor-qa run --source local --spec path/to/spec.md
+</code></pre>
+<h2>Related</h2>
+<ul>
+<li><a href="using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="workflows.md">Common workflows</a></li>
+<li><a href="admin-basics.md">Admin basics</a></li>
+<li><a href="pages/README.md">Page-by-page guides</a></li>
+</ul>
+<hr>
+<p>ZyAIQAAgent’s <strong>Mission Control</strong> is a single live console at <code>/dashboard</code> (login at <code>/login</code> when password auth is on).</p>
+<h2>Surfaces</h2>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Hero</strong></td>
+<td>Health banner + stat tiles (pods, replicas, last run, pass rate, cron)</td>
+</tr>
+<tr>
+<td><strong>Workloads / Pods</strong></td>
+<td>K8s strip and pod cards with log drawer (needs kube SA or kubeconfig)</td>
+</tr>
+<tr>
+<td><strong>Actions grid</strong></td>
+<td>Every job card — smoke, flow, HAR, codegen, API, auth, vitals, probes, …</td>
+</tr>
+<tr>
+<td><strong>Live job panel</strong></td>
+<td>Streaming log, case chips, Stop, copy/download log</td>
+</tr>
+<tr>
+<td><strong>Schedules</strong></td>
+<td>Loop smoke / audit / ping / TLS / flow / sweep / API / realtime / vitals</td>
+</tr>
+<tr>
+<td><strong>Findings</strong></td>
+<td>Aggregated issues from quality jobs</td>
+</tr>
+<tr>
+<td><strong>QA Runs / Videos</strong></td>
+<td>History and recorded journeys</td>
+</tr>
+<tr>
+<td><strong>Command palette</strong></td>
+<td>⌘K / Ctrl-K to find any action by name</td>
+</tr>
+</tbody></table>
+<h2>Browse vs act</h2>
+<p>Reading pods, history, and findings is safe. Starting jobs mutates the target under test and writes reports under <code>reports/</code> — confirm URL, credentials, and scope before Run.</p>
+<h2>Related</h2>
+<ul>
+<li><a href="getting-started.md">Getting Started</a></li>
+<li><a href="pages/README.md">Page-by-page guides</a></li>
+<li><a href="workflows.md">Common workflows</a></li>
+</ul>
+<hr>
+<h2>Smoke after a deploy</h2>
+<ol>
+<li><a href="pages/pipeline/dashboard-actions-run-tests.md">Run tests</a> → ▶ Smoke (or <code>zyvor-qa test --grep @smoke</code>)</li>
+<li>Check <a href="pages/operations/dashboard-findings.md">Findings</a> and <a href="pages/operations/dashboard-runs.md">QA Runs</a></li>
+</ol>
+<h2>Spec → tests → report</h2>
+<ol>
+<li><a href="pages/pipeline/dashboard-actions-generate.md">Generate tests</a> or CLI <code>zyvor-qa run --source local --spec …</code></li>
+<li><a href="pages/pipeline/dashboard-actions-run-tests.md">Run tests</a> → Full pipeline</li>
+<li>Optional: enable autofix via <code>ENABLE_AUTOFIX</code> (see Admin basics)</li>
+</ol>
+<h2>Record and replay a journey</h2>
+<ol>
+<li><a href="pages/journeys/dashboard-actions-flow.md">Flow test</a> — English or step DSL, record video</li>
+<li>Or <a href="pages/journeys/dashboard-actions-import-codegen.md">Import codegen</a> from Playwright codegen</li>
+<li><a href="pages/journeys/dashboard-actions-har.md">HAR record / replay</a> when you need offline network fixtures</li>
+</ol>
+<h2>API, auth, and live data</h2>
+<ol>
+<li><a href="pages/api/dashboard-actions-auth.md">Auth &amp; session</a> → save session file</li>
+<li><a href="pages/api/dashboard-actions-api-contract.md">API contract</a> against OpenAPI</li>
+<li><a href="pages/api/dashboard-actions-realtime.md">Live data</a> for WebSocket / SSE</li>
+<li>Reuse the session on <a href="pages/journeys/dashboard-actions-flow.md">Flow test</a></li>
+</ol>
+<h2>Visual confidence</h2>
+<ol>
+<li><a href="pages/visual/dashboard-actions-route-sweep.md">Route sweep</a> or <a href="pages/visual/dashboard-actions-regression.md">Visual regression</a></li>
+<li><a href="pages/visual/dashboard-actions-compare.md">Compare URLs</a> for staging vs prod</li>
+<li><a href="pages/quality/dashboard-actions-vitals.md">Web Vitals</a> for LCP / CLS / INP</li>
+</ol>
+<h2>Continuous monitoring</h2>
+<ol>
+<li>Configure the card once (e.g. audit URL or flow steps)</li>
+<li><a href="pages/operations/dashboard-schedules.md">Schedules</a> → pick kind + interval</li>
+</ol>
+<h2>Related</h2>
+<ul>
+<li><a href="getting-started.md">Getting Started</a></li>
+<li><a href="using-the-dashboard.md">Using the Dashboard</a></li>
+<li><a href="PAGE_INDEX.md">Page index</a></li>
+</ul>
+</main></body></html>

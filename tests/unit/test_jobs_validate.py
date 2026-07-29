@@ -55,7 +55,8 @@ def test_flow_requires_description():
 
 def test_flow_clean_defaults():
     clean = _validate("flow", {"url": "https://zyvor.dev", "description": "go to /"})
-    assert clean["url"] == "https://zyvor.dev"
+    # TargetPolicy normalizes empty path to "/"
+    assert clean["url"] in {"https://zyvor.dev", "https://zyvor.dev/"}
     assert clean["record"] is True  # default on
     assert clean["steps_mode"] is False
     assert clean["insecure"] is False
