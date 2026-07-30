@@ -4,11 +4,14 @@ Canonical how-to for pointing ZyAIQAAgent at **[https://zyvor.dev](https://zyvor
 
 ## Watch the recording
 
+[![ZyAIQAAgent · Mission Control → GuestKit](https://img.youtube.com/vi/ys7SvKKqf9w/maxresdefault.jpg)](https://youtu.be/ys7SvKKqf9w)
+
 <video src="../assets/zyvor-dev-mission-control-demo.webm" controls width="720" title="zyvor.dev journey recording"></video>
 
+- **YouTube (with thumbnail):** https://youtu.be/ys7SvKKqf9w
 - **[Download the .webm](../assets/zyvor-dev-mission-control-demo.webm)**
 - Steps used: [`zyvor-dev-demo.steps`](../assets/zyvor-dev-demo.steps) in `docs/assets/`
-- Full tutorial: [Test zyvor.dev with recording](https://github.com/hypersdk/ZyAIQAAgent/blob/main/docs/tutorials/13-test-zyvor-dev-recording.md)
+- Full tutorial: [Test zyvor.dev with recording](../tutorials/13-test-zyvor-dev-recording.md)
 
 ## Setup
 

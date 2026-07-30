@@ -8,10 +8,15 @@ Hands-on recipe that points ZyAIQAAgent at **[https://zyvor.dev](https://zyvor.d
 
 ## Watch the recording
 
-This is a real Playwright capture of zyvor.dev (home → assert HyperSDK → click Products):
+Mission Control driving a GuestKit journey (login → Flow URL → live steps):
+
+[![ZyAIQAAgent · Mission Control → GuestKit](https://img.youtube.com/vi/ys7SvKKqf9w/maxresdefault.jpg)](https://youtu.be/ys7SvKKqf9w)
+
+Also a raw Playwright capture of zyvor.dev (home → assert HyperSDK → click Products):
 
 <video src="../assets/zyvor-dev-mission-control-demo.webm" controls width="720" title="zyvor.dev journey recording"></video>
 
+- **YouTube:** https://youtu.be/ys7SvKKqf9w
 - **Video file:** [`docs/assets/zyvor-dev-mission-control-demo.webm`](../assets/zyvor-dev-mission-control-demo.webm)
 - **Steps that produced it:** [`docs/assets/zyvor-dev-demo.steps`](../assets/zyvor-dev-demo.steps)
 - **Raw GitHub URL:** https://github.com/hypersdk/ZyAIQAAgent/raw/main/docs/assets/zyvor-dev-mission-control-demo.webm

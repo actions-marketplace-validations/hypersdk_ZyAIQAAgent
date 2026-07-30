@@ -4,6 +4,10 @@ A live, self-refreshing operations console served by the webhook server. It show
 
 **UX:** full-bleed layout, glass sticky topbar/footer, boot splash, live signal-field constellation, primary Smoke CTA, card motion, ⌘K palette, NOC wall mode (double-click brand), and warp flash (`` ` `` / type `zyvor`). Reduced-motion aware.
 
+**Watch:** Mission Control → GuestKit flow demo
+
+[![ZyAIQAAgent Mission Control demo](https://img.youtube.com/vi/ys7SvKKqf9w/maxresdefault.jpg)](https://youtu.be/ys7SvKKqf9w)
+
 **Prerequisites:** [Tutorial 1](01-getting-started.md). A Kubernetes cluster is optional — without one the pod panel shows an offline state and everything else still works. To practice against the public site with video + HAR, see [Tutorial 13](13-test-zyvor-dev-recording.md).
 
 ---

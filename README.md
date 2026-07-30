@@ -1,8 +1,10 @@
 # Zyvor QA Agent
 
-https://github.com/hypersdk/ZyAIQAAgent/raw/main/docs/assets/zyvor-dev-mission-control-demo.gif
+[![ZyAIQAAgent · Mission Control → GuestKit flow demo](https://img.youtube.com/vi/ys7SvKKqf9w/maxresdefault.jpg)](https://youtu.be/ys7SvKKqf9w)
 
-**Demo:** Playwright journey against [zyvor.dev](https://zyvor.dev) (home → HyperSDK → Products) — [play MP4](https://github.com/hypersdk/ZyAIQAAgent/blob/main/docs/assets/zyvor-dev-mission-control-demo.mp4) · [download WebM](docs/assets/zyvor-dev-mission-control-demo.webm) · [steps](docs/assets/zyvor-dev-demo.steps) · [how-to](docs/tutorials/13-test-zyvor-dev-recording.md)
+**Demo (YouTube):** Mission Control login → enter [GuestKit](https://github.com/hypersdk/guestkit) URL → Run journey — [watch](https://youtu.be/ys7SvKKqf9w) · [how-to](docs/tutorials/13-test-zyvor-dev-recording.md)
+
+Also: Playwright journey against [zyvor.dev](https://zyvor.dev) — [GIF](https://github.com/hypersdk/ZyAIQAAgent/raw/main/docs/assets/zyvor-dev-mission-control-demo.gif) · [MP4](https://github.com/hypersdk/ZyAIQAAgent/blob/main/docs/assets/zyvor-dev-mission-control-demo.mp4) · [steps](docs/assets/zyvor-dev-demo.steps)
 
 ```bash
 zyvor-qa flow https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video
