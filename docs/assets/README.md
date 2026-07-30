@@ -9,6 +9,7 @@ Committed demo artifacts for docs and the README (not under gitignored `reports/
 | [`zyvor-dev-mission-control-demo.webm`](zyvor-dev-mission-control-demo.webm) | Original Playwright journey capture |
 | [`zyvor-dev-demo.steps`](zyvor-dev-demo.steps) | Step file used to produce that video |
 | [`guestkit-mission-control-demo.webm`](guestkit-mission-control-demo.webm) / [`.mp4`](guestkit-mission-control-demo.mp4) | **Preferred:** Mission Control login → dashboard → enter GuestKit URL → Run journey → live log |
+| [`guestkit-mission-control-demo-thumb.jpg`](guestkit-mission-control-demo-thumb.jpg) | Thumbnail frame for the Mission Control demo (YouTube / docs) |
 | [`guestkit-github-demo.webm`](guestkit-github-demo.webm) / [`.mp4`](guestkit-github-demo.mp4) | Direct browser journey of the GitHub README (no dashboard) |
 | [`guestkit-github.steps`](guestkit-github.steps) | Steps used by the MC flow job / direct GitHub recording |
 | [`guestkit-product-demo.webm`](guestkit-product-demo.webm) / [`.mp4`](guestkit-product-demo.mp4) | Direct journey of [zyvor.dev/guestkit](https://zyvor.dev/guestkit) |
