@@ -173,6 +173,51 @@ Consumed by: `agents/discover/crawl.py`, `playwright/scripts/crawl-site.mjs`. St
 | `ZYVOR_THROTTLE` | *(none)* | `3g` / `offline` network emulation via CDP (set by `--throttle`) |
 | `ZYVOR_SLOW_MS` | `12000` | Live-data per-request latency budget before a page is flagged `slow` |
 
+### Knowledge RAG (optional Ask Zyvor)
+
+Requires Python **3.11 or 3.12**, `pip install -e ".[knowledge]"`, and a running Qdrant. Mission Control shows **Ask Zyvor**; API clients use `POST /v1/qa`.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LLM_API_KEY` | *(empty)* | API key for the chat model (OpenAI or compatible). Required to answer. |
+| `LLM_MODEL` | `gpt-5.5` | Chat model name |
+| `LLM_BASE_URL` | *(none)* | OpenAI-compatible base URL (e.g. vLLM) |
+| `LLM_TEMPERATURE` | `0` | Generation temperature |
+| `LLM_TIMEOUT_SECONDS` | `90` | Model call timeout |
+| `LLM_FALLBACK_MODEL` | *(none)* | Optional backup chat model used by `ModelFallbackMiddleware` |
+| `LLM_FALLBACK_API_KEY` | `LLM_API_KEY` | API key for the fallback model |
+| `LLM_FALLBACK_BASE_URL` | `LLM_BASE_URL` | Base URL for the fallback model |
+| `EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model |
+| `EMBEDDING_API_KEY` | `LLM_API_KEY` | Embedding API key |
+| `EMBEDDING_BASE_URL` | *(none)* | OpenAI-compatible embeddings URL |
+| `EMBEDDING_DIMENSIONS` | *(none)* | Optional fixed embedding dimensions |
+| `QDRANT_URL` | `http://localhost:6333` | Qdrant HTTP endpoint |
+| `QDRANT_API_KEY` | *(none)* | Qdrant API key when enabled |
+| `QDRANT_COLLECTION` | `zyvor_knowledge` | Collection name |
+| `APP_API_KEY` | *(none)* | Shared key for `POST /v1/qa` (dev). Prefer `AUTH_TOKENS_JSON` in production. |
+| `AUTH_TOKENS_JSON` | *(empty)* | JSON map of API token → `{tenant_id, access_levels}` |
+| `DEFAULT_ACCESS_LEVELS` | `public,customer` | Levels a non-mapped key may request |
+| `KNOWLEDGE_TENANT_ID` | `public` | Tenant used by Mission Control ask proxy (never from the browser) |
+| `KNOWLEDGE_ACCESS_LEVELS` | `public,customer` | Access levels for Mission Control ask proxy |
+| `KNOWLEDGE_CHECKPOINT_PATH` | `reports/knowledge-checkpoints.sqlite` | SQLite path for conversation checkpoints (`:memory:` for ephemeral) |
+| `ENABLE_LIVE_CLUSTER_TOOLS` | `false` | Opt-in read-only live K8s/KubeVirt/Cilium/Hubble/Ceph/node tools in Ask Zyvor |
+| `ENABLE_REMEDIATION_AGENT` | `false` | Separate HITL remediation planner (`POST /v1/remediation`); not part of Ask Zyvor |
+| `ENABLE_REMEDIATION_EXECUTOR` | `false` | After HITL approve, allowlisted pod restarts may execute |
+| `REMEDIATION_RESTART_NAMESPACES` | *(empty — deny all)* | Namespaces where approved restarts may run (`*` for any) |
+| `REMEDIATION_RESTART_NAME_PREFIXES` | *(empty — any name in allowlisted NS)* | Optional pod name prefixes required for executor restarts |
+| `ENABLE_QUERY_UNDERSTANDING` | `true` | Deterministic intent/product/multi-query rewrite before retrieval |
+| `ENABLE_ASK_STREAMING` | `true` | Mission Control uses `/api/dashboard/ask/stream` SSE progress when available |
+| `KNOWLEDGE_LIVE_NAMESPACES` | *(Mission Control namespace)* | Comma allowlist of namespaces live tools may query; `*` allows any valid name |
+| `ENABLE_PUBLIC_DOCUMENTS` | `true` | Also retrieve `tenant_id=public` docs for other tenants |
+| `RETRIEVAL_K` | `8` | Passages returned to the model after rerank |
+| `RETRIEVAL_FETCH_K` | `16` | Candidates fetched per expanded query |
+| `MAX_TOOL_CALLS` | `8` | Tool-call budget per answer (specialised tools may combine) |
+| `MAX_QUERY_LENGTH` | `4000` | Max question characters |
+
+Eval / observability: set `LANGSMITH_API_KEY` and run `zyvor-qa knowledge-evaluate --langsmith` to send traces to LangSmith (`LANGCHAIN_PROJECT`, default `zyvor-knowledge-eval`).
+
+Start Qdrant: `docker compose -f docker/docker-compose.yml up -d qdrant`. Ingest samples: `zyvor-qa knowledge-ingest knowledge_docs/sample --tenant-id public --access-level public`. See [Tutorial 14](tutorials/14-ask-zyvor-knowledge.md).
+
 The **🎬 Flow test** action (`flow` job / `zyvor-qa flow`) drives a multi-step journey recorded as one video, with a Playwright `trace.zip` (open at trace.playwright.dev) and richer assertions (`assert_not` / `assert_count` / `assert_value` / `assert_url` / `assert_api` / `assert_aria` / `upload` / `download` / `dialog` / `iframe` / `clock` / `wait_until`); the **🗺 Route sweep** action (`route_sweep` / `zyvor-qa route-sweep`) screenshots routes at desktop/mobile and diffs them against baselines under `reports/artifacts/route-baselines/`, and can `--auto`-discover routes by crawling. **📼 HAR record/replay** (`har_replay` / `zyvor-qa har-replay`) captures network as HAR then drives the UI against it. **📥 Import codegen** (`import_codegen` / `zyvor-qa import-codegen`) turns pasted Playwright codegen into flow steps (optionally runs them). Both honour `ZYVOR_IGNORE_HTTPS_ERRORS`, `ZYVOR_NO_SANDBOX`, and (flow) `ZYVOR_VIDEO`, and both are schedulable. Serve the dashboard over HTTPS with `zyvor-qa serve --tls` (self-signed cert under `~/.zyvor-qa/tls`) or the deploy script's `--tls`. A target-site login password passed to a flow/crawl is redacted (`***`) from the job-status API, history, and live panel — it is never echoed back to a dashboard reader. See [Tutorial 11](tutorials/11-flow-tests.md).
 
 Four **product-testing** actions go beyond the page (see [Tutorial 12](tutorials/12-api-auth-realtime.md)): **🔌 API contract** (`api_contract` / `zyvor-qa api-test`) validates REST endpoints against their OpenAPI schema and runs multi-step API workflows; **🔐 Auth & session** (`auth_test` / `zyvor-qa auth-test`) logs in, saves a reusable session under `reports/artifacts/auth/`, and asserts logout/expiry/negative-auth — the saved session can be reused by `flow`/`realtime` via their `session` param; **📡 Live data** (`realtime` / `zyvor-qa realtime`) asserts WebSocket/SSE streams are live (Bearer / `Sec-WebSocket-Protocol` / one-time ticket auth); **📊 Web Vitals** (`vitals` / `zyvor-qa vitals`) grades LCP/CLS/INP with device + network throttle.

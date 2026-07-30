@@ -1,4 +1,12 @@
 services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
   zyvor-qa:
     build:
       context: ..
@@ -16,6 +24,16 @@ services:
       dockerfile: docker/Dockerfile
     env_file:
       - ../.env
+    environment:
+      QDRANT_URL: http://qdrant:6333
     ports:
       - "8080:8080"
+    depends_on:
+      - qdrant
+    volumes:
+      - ../reports:/app/reports
+      - ../knowledge_docs:/app/knowledge_docs:ro
     command: ["serve", "--port", "8080", "--host", "0.0.0.0"]
+
+volumes:
+  qdrant_data:

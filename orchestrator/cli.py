@@ -716,9 +716,87 @@ def _ensure_tls_cert(cert: Optional[str], key: Optional[str], host: str) -> tupl
     return str(cert_path), str(key_path)
 
 
+@app.command("knowledge-ingest")
+def knowledge_ingest(
+    path: Path = typer.Argument(..., help="File or directory to ingest"),
+    tenant_id: str = typer.Option("public", "--tenant-id"),
+    access_level: str = typer.Option("public", "--access-level"),
+    product: Optional[str] = typer.Option(None, "--product"),
+    source: str = typer.Option("documentation", "--source"),
+    chunk_size: int = typer.Option(1400, "--chunk-size"),
+    chunk_overlap: int = typer.Option(180, "--chunk-overlap"),
+    batch_size: int = typer.Option(64, "--batch-size"),
+) -> None:
+    """Ingest docs into the Zyvor knowledge Qdrant collection (requires [knowledge])."""
+    _load_env()
+    try:
+        from scripts.knowledge_ingest import main as ingest_main
+    except ImportError as exc:
+        typer.echo(
+            "Knowledge extras missing. Install with: pip install -e '.[knowledge]'",
+            err=True,
+        )
+        raise typer.Exit(code=1) from exc
+
+    import sys
+
+    argv = [
+        str(path),
+        "--tenant-id",
+        tenant_id,
+        "--access-level",
+        access_level,
+        "--source",
+        source,
+        "--chunk-size",
+        str(chunk_size),
+        "--chunk-overlap",
+        str(chunk_overlap),
+        "--batch-size",
+        str(batch_size),
+    ]
+    if product:
+        argv.extend(["--product", product])
+    sys.argv = ["knowledge-ingest", *argv]
+    ingest_main()
+
+
+@app.command("knowledge-evaluate")
+def knowledge_evaluate(
+    base_url: str = typer.Option("http://localhost:8080", "--base-url"),
+    api_key: Optional[str] = typer.Option(None, "--api-key"),
+    tenant_id: str = typer.Option("public", "--tenant-id"),
+    dataset: Path = typer.Option(
+        Path("eval/knowledge_questions.jsonl"), "--dataset"
+    ),
+    output: Path = typer.Option(Path("eval/knowledge_report.json"), "--output"),
+) -> None:
+    """Evaluate a running knowledge QA API against the sample dataset."""
+    _load_env()
+    import sys
+
+    from scripts.knowledge_evaluate import main as evaluate_main
+
+    argv = [
+        "--base-url",
+        base_url,
+        "--tenant-id",
+        tenant_id,
+        "--dataset",
+        str(dataset),
+        "--output",
+        str(output),
+    ]
+    if api_key:
+        argv.extend(["--api-key", api_key])
+    sys.argv = ["knowledge-evaluate", *argv]
+    evaluate_main()
+
+
 if __name__ == "__main__":
     app()
 
 
 def main() -> None:
     app()
+

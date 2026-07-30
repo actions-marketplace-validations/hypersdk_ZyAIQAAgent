@@ -91,9 +91,21 @@ def create_app() -> FastAPI:
     from fastapi.staticfiles import StaticFiles
 
     from orchestrator.dashboard import auth
+    from orchestrator.dashboard.knowledge_routes import router as knowledge_dashboard_router
     from orchestrator.dashboard.routes import router as dashboard_router
 
     app.include_router(dashboard_router)
+    app.include_router(knowledge_dashboard_router)
+
+    try:
+        from knowledge import knowledge_deps_available
+        from knowledge.api import create_knowledge_router
+
+        if knowledge_deps_available():
+            app.include_router(create_knowledge_router())
+    except Exception:
+        # Optional [knowledge] extras — Mission Control still serves without RAG.
+        pass
 
     from orchestrator.enterprise import install_enterprise
     install_enterprise(app)
@@ -114,8 +126,25 @@ def create_app() -> FastAPI:
         app.mount(mount, StaticFiles(directory=target), name=directory)
 
     @app.get("/health")
-    async def health() -> dict[str, str]:
-        return {"status": "ok"}
+    async def health() -> dict[str, Any]:
+        payload: dict[str, Any] = {"status": "ok"}
+        try:
+            from knowledge import knowledge_deps_available
+            from knowledge.vectorstore import get_qdrant_client
+
+            if knowledge_deps_available():
+                try:
+                    get_qdrant_client().get_collections()
+                    payload["knowledge"] = "ok"
+                    payload["qdrant"] = "reachable"
+                except Exception:
+                    payload["knowledge"] = "degraded"
+                    payload["qdrant"] = "unreachable"
+            else:
+                payload["knowledge"] = "unavailable"
+        except Exception:
+            payload["knowledge"] = "unavailable"
+        return payload
 
     @app.post("/webhook/github")
     async def github_webhook(

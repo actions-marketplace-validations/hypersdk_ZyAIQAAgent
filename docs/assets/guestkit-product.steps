@@ -1,0 +1,17 @@
+# Explore https://zyvor.dev/guestkit
+goto /guestkit
+wait until "Offline VM Disk Intelligence" 30000ms
+assert "Offline VM Disk Intelligence"
+wait 1500ms
+press PageDown
+wait 1200ms
+assert "See GuestKit in action"
+wait 1000ms
+press PageDown
+wait 1200ms
+assert "What you get"
+wait 1000ms
+press PageDown
+wait 1200ms
+assert "Doctor, plan, and repair"
+wait 1500ms

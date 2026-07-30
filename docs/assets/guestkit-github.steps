@@ -1,0 +1,19 @@
+# Explore https://github.com/hypersdk/guestkit
+goto /
+wait until "GuestKit" 30000ms
+assert "GuestKit"
+wait 1500ms
+assert "Offline VM intelligence"
+wait 1000ms
+press PageDown
+wait 1200ms
+press PageDown
+wait 1200ms
+assert "Why GuestKit"
+wait 1000ms
+press PageDown
+wait 1200ms
+assert "doctor"
+wait 800ms
+assert "migrate-plan"
+wait 1500ms

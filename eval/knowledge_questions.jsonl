@@ -1,0 +1,8 @@
+{"id": "packetwolf-egress", "question": "How can PacketWolf allow namespace traffic but block the internet?", "product": "PacketWolf", "expected_keywords": ["default-deny", "DNS", "namespace"], "expect_abstain": false}
+{"id": "migration-validation", "question": "What should be validated after converting a VMware VM?", "product": "HyperSDK", "expected_keywords": ["boot", "network", "rollback"], "expect_abstain": false}
+{"id": "hubble-timeout", "question": "Why might Hubble Relay time out after 15000ms in PacketWolf?", "product": "PacketWolf", "expected_keywords": ["hubble-relay", "4245", "NetworkPolicy"], "expect_abstain": false}
+{"id": "packetwolf-api", "question": "Which PacketWolf API creates a NetworkPolicy?", "product": "PacketWolf", "expected_keywords": ["POST", "networkpolicies", "egress"], "expect_abstain": false}
+{"id": "egress-runbook", "question": "How do I verify PacketWolf egress deny after applying a policy?", "product": "PacketWolf", "expected_keywords": ["Hubble", "DNS", "namespace"], "expect_abstain": false}
+{"id": "unsupported-feature", "question": "Does PacketWolf support IPv9 anycast warp tunnels?", "product": "PacketWolf", "expected_keywords": [], "expect_abstain": true}
+{"id": "live-hubble", "question": "Is Hubble Relay healthy right now, and what docs say about timeouts?", "product": "PacketWolf", "expected_keywords": ["hubble", "relay"]}
+{"id": "live-vm", "question": "Are there KubeVirt VMs in the allowed namespace and what should I check after migration?", "product": "HyperSDK", "expected_keywords": ["VirtualMachine", "boot"]}

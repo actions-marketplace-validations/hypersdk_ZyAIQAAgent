@@ -79,6 +79,55 @@
   .topbar-spacer { flex: 1; min-width: 8px; }
   .topbar-hint { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.85rem; }
   .topbar .run-btn { padding: 6px 14px; }
+  .knowledge-lamp {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-muted);
+    padding: 4px 10px; border-radius: 999px; border: 1px solid var(--separator); background: var(--surface-muted);
+  }
+  .knowledge-lamp .kl-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--status-neutral);
+  }
+  .knowledge-lamp[data-status="ok"] .kl-dot { background: var(--status-ok); box-shadow: 0 0 10px var(--status-ok); }
+  .knowledge-lamp[data-status="degraded"] .kl-dot { background: var(--status-warn); box-shadow: 0 0 10px var(--status-warn); }
+  .knowledge-lamp[data-status="offline"] .kl-dot { background: var(--status-error); }
+
+  .ask-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 14px; }
+  @media (max-width: 980px) { .ask-layout { grid-template-columns: 1fr; } }
+  .ask-thread {
+    min-height: 280px; max-height: 440px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+    padding: 4px 2px;
+  }
+  .ask-bubble {
+    border: 1px solid var(--separator); border-radius: 14px; padding: 12px 14px; background: var(--surface-muted);
+  }
+  .ask-bubble.user { border-color: rgba(59,130,246,0.35); background: rgba(59,130,246,0.1); }
+  .ask-bubble.assistant { border-color: rgba(56,189,248,0.28); }
+  .ask-bubble.abstain { border-color: rgba(245,166,35,0.45); background: rgba(245,166,35,0.08); }
+  .ask-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 0.82rem; color: var(--text-muted); }
+  .ask-badge {
+    display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-weight: 650;
+    letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.72rem; border: 1px solid var(--separator);
+  }
+  .ask-badge.high { color: var(--status-ok); border-color: rgba(34,197,94,0.4); }
+  .ask-badge.medium { color: var(--status-warn); border-color: rgba(245,166,35,0.4); }
+  .ask-badge.low { color: var(--status-error); border-color: rgba(239,68,68,0.4); }
+  .ask-answer { white-space: pre-wrap; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.55; }
+  .ask-answer code {
+    font-family: var(--font-mono); font-size: 0.86em; background: rgba(0,0,0,0.28); padding: 1px 5px; border-radius: 6px;
+  }
+  .ask-cites { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .ask-cite {
+    font-size: 0.85rem; color: var(--text-muted); padding: 8px 10px; border-radius: 10px;
+    border: 1px solid var(--separator); background: rgba(0,0,0,0.18);
+  }
+  .ask-cite a { color: var(--accent-2); text-decoration: none; }
+  .ask-cite a:hover { text-decoration: underline; }
+  .ask-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .ask-chip {
+    cursor: pointer; border: 1px solid var(--separator); background: var(--surface-muted); color: var(--text-secondary);
+    border-radius: 999px; padding: 6px 12px; font-size: 0.82rem;
+  }
+  .ask-chip:hover { border-color: rgba(59,130,246,0.45); color: var(--text-primary); }
+  .ask-hint { font-size: 0.82rem; color: var(--text-muted); margin-top: 8px; }
 
   .glass {
     background: linear-gradient(165deg, rgba(255,255,255,0.035), transparent 42%), var(--surface-base);
@@ -432,6 +481,10 @@
     <div class="topbar-brand"><span class="topbar-dot" aria-hidden="true"></span> Zyvor Mission Control</div>
     <div class="topbar-spacer"></div>
     <div class="topbar-hint"><kbd>⌘K</kbd> command palette</div>
+    <span class="knowledge-lamp" id="knowledge-lamp" data-status="offline" title="Knowledge agent status">
+      <span class="kl-dot" aria-hidden="true"></span>
+      <span id="knowledge-lamp-label">Knowledge offline</span>
+    </span>
     <button type="button" class="run-btn primary" id="topbar-palette">Open commands</button>
   </div>
   <div class="hero" data-status="offline" id="hero">
@@ -458,6 +511,7 @@
       <div class="stat-tile"><span class="stat-label">Last QA run</span><span class="stat-value" id="stat-run">—</span><span class="stat-sub" id="stat-run-sub"></span></div>
       <div class="stat-tile"><span class="stat-label">Pass rate</span><span class="stat-value" id="stat-rate">—</span><span class="stat-sub" id="stat-rate-sub">last 30 runs</span></div>
       <div class="stat-tile"><span class="stat-label">Next smoke run</span><span class="stat-value" id="stat-cron">—</span><span class="stat-sub" id="stat-cron-sub"></span></div>
+      <div class="stat-tile"><span class="stat-label">Knowledge</span><span class="stat-value" id="stat-knowledge">—</span><span class="stat-sub" id="stat-knowledge-sub">Ask Zyvor</span></div>
     </div>
   </div>
 
@@ -807,6 +861,63 @@
       <button class="dl-btn" id="sc-add">＋ Schedule</button>
     </div>
     <div class="feed" id="schedules"><span class="d">No schedules — add one to monitor on a loop.</span></div>
+  </div>
+
+  <h2 id="ask-zyvor-heading" style="display:flex;align-items:center;gap:10px">Ask Zyvor
+    <span class="d" style="font-weight:400">citation-first product knowledge</span>
+    <button class="dl-btn" id="ask-new-thread" style="margin-left:auto">New thread</button>
+    <button class="dl-btn" id="ask-copy-md" title="Copy last answer as Markdown">⧉ copy MD</button>
+  </h2>
+  <div class="glass card" id="ask-panel" style="margin-bottom:14px">
+    <div class="ask-layout">
+      <div>
+        <div class="act-row" style="margin-bottom:10px">
+          <select class="inp" id="ask-product" title="Product filter">
+            <option value="">Any product</option>
+            <option value="PacketWolf">PacketWolf</option>
+            <option value="HyperSDK">HyperSDK</option>
+            <option value="GuestKit">GuestKit</option>
+            <option value="Zeus OS">Zeus OS</option>
+            <option value="Machina">Machina</option>
+            <option value="Veyron">Veyron</option>
+            <option value="Aether">Aether</option>
+            <option value="Forge">Forge</option>
+          </select>
+          <select class="inp" id="ask-doctype" title="Document type">
+            <option value="">Any document type</option>
+            <option value="customer-manual">customer-manual</option>
+            <option value="api-reference">api-reference</option>
+            <option value="migration-guide">migration-guide</option>
+            <option value="known-issue">known-issue</option>
+            <option value="runbook">runbook</option>
+            <option value="documentation">documentation</option>
+          </select>
+        </div>
+        <textarea class="inp grow" id="ask-question" rows="3" placeholder="Ask about PacketWolf, HyperSDK, GuestKit, migration, APIs…"></textarea>
+        <div class="act-row" style="margin-top:10px">
+          <button class="run-btn primary" id="ask-submit">Ask</button>
+          <span class="d" id="ask-status"></span>
+          <span class="d" id="ask-latency" style="margin-left:auto"></span>
+        </div>
+        <div class="ask-chips" id="ask-chips"></div>
+        <div class="ask-hint" id="ask-hint">Read-only knowledge agent — it will not mutate cluster state. Live remediation stays in a separate controlled workflow.</div>
+        <div id="remediation-panel" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--separator)">
+          <div class="k" style="margin-bottom:8px">HITL remediation (separate agent)</div>
+          <textarea class="inp grow" id="remediation-issue" rows="2" placeholder="Describe the incident to plan remediation…"></textarea>
+          <div class="act-row" style="margin-top:8px">
+            <button class="run-btn" id="remediation-submit">Plan remediation</button>
+            <button class="dl-btn" id="remediation-approve" style="display:none">Approve interrupt</button>
+            <button class="dl-btn" id="remediation-reject" style="display:none">Reject</button>
+            <span class="d" id="remediation-status"></span>
+          </div>
+          <pre id="remediation-out" style="margin-top:8px;max-height:160px;overflow:auto;font-family:var(--font-mono);font-size:0.82rem;color:var(--text-secondary);white-space:pre-wrap"></pre>
+        </div>
+      </div>
+      <div>
+        <div class="k" style="margin-bottom:8px">Thread <span class="d" id="ask-thread-label">new</span></div>
+        <div class="ask-thread" id="ask-thread"><span class="d">Ask a question to start a grounded, cited answer.</span></div>
+      </div>
+    </div>
   </div>
 
   <h2 style="display:flex;align-items:center;gap:10px">🐞 Findings — what's broken
@@ -1448,6 +1559,7 @@ $("drawer").addEventListener("mouseenter", () => { drawerHover = true; });
 $("drawer").addEventListener("mouseleave", () => { drawerHover = false; });
 /* ⌘K / Ctrl-K command palette */
 const PALETTE_CMDS = [
+  { label: "Ask Zyvor (knowledge QA)", action: () => focusAskZyvor() },
   { label: "Run smoke tests", kind: "smoke" },
   { label: "Run full pipeline", kind: "full" },
   { label: "Site audit", kind: "audit" },
@@ -1506,6 +1618,369 @@ $("palette-input").addEventListener("keydown", (ev) => {
   else if (ev.key === "Escape") closePalette();
 });
 $("palette").addEventListener("click", (ev) => { if (ev.target.id === "palette") closePalette(); });
+
+/* ── Ask Zyvor (knowledge RAG) ── */
+const ASK_LS_PRODUCT = "zyvor-ask-product";
+const ASK_LS_DRAFT = "zyvor-ask-draft";
+let askThreadId = null;
+let askLastPayload = null;
+let askBusy = false;
+let askStreamingPreferred = true;
+let remediationThreadId = null;
+
+function focusAskZyvor() {
+  const heading = $("ask-zyvor-heading");
+  if (heading) heading.scrollIntoView({ behavior: "smooth", block: "start" });
+  const q = $("ask-question");
+  if (q) q.focus();
+}
+
+function formatAskAnswer(text) {
+  const escaped = esc(text || "");
+  return escaped
+    .replace(/```([\s\S]*?)```/g, "<code>$1</code>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function renderAskBubble(role, html, metaHtml) {
+  const cls = role === "user" ? "ask-bubble user" : "ask-bubble assistant";
+  return '<div class="' + cls + '">'
+    + (metaHtml || "")
+    + '<div class="ask-answer">' + html + "</div></div>";
+}
+
+function citationMarkdown(citations) {
+  if (!citations || !citations.length) return "";
+  return "\n\n## Sources\n" + citations.map((c, i) => {
+    const bits = [c.title || c.document_id, c.section, c.source].filter(Boolean).join(" · ");
+    return (i + 1) + ". " + bits + (c.url ? " — " + c.url : "");
+  }).join("\n");
+}
+
+function lastAnswerMarkdown() {
+  if (!askLastPayload) return "";
+  const p = askLastPayload;
+  let md = "# Zyvor knowledge answer\n\n" + (p.answer || "") + "\n";
+  md += "\nConfidence: " + (p.confidence || "unknown") + "\n";
+  if (p.insufficient_context) md += "\nInsufficient context: true\n";
+  if (p.missing_information && p.missing_information.length) {
+    md += "\nMissing information:\n" + p.missing_information.map((m) => "- " + m).join("\n") + "\n";
+  }
+  if (p.recommended_action) md += "\nRecommended action: " + p.recommended_action + "\n";
+  md += citationMarkdown(p.citations || []);
+  return md;
+}
+
+function appendAskTurn(role, html, metaHtml, abstain) {
+  const el = $("ask-thread");
+  if (el.querySelector(".d") && !el.querySelector(".ask-bubble")) el.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.innerHTML = renderAskBubble(role, html, metaHtml);
+  const node = wrap.firstChild;
+  if (abstain && node) node.classList.add("abstain");
+  el.appendChild(node);
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderAssistantPayload(payload, latencyMs) {
+  const conf = payload.confidence || "low";
+  const retrieval = payload.retrieval || {};
+  let meta = '<div class="ask-meta">'
+    + '<span class="ask-badge ' + esc(conf) + '">' + esc(conf) + "</span>";
+  if (payload.insufficient_context) meta += '<span class="ask-badge low">insufficient context</span>';
+  if (latencyMs != null) meta += "<span>" + Math.round(latencyMs) + " ms</span>";
+  if (retrieval.documents_considered != null) {
+    meta += "<span>" + retrieval.validated_citations + "/" + retrieval.documents_considered + " citations validated</span>";
+  }
+  meta += "</div>";
+
+  let body = formatAskAnswer(payload.answer || "");
+  if (payload.missing_information && payload.missing_information.length) {
+    body += "\n\nMissing information:\n" + payload.missing_information.map((m) => "• " + esc(m)).join("\n");
+  }
+  if (payload.recommended_action) {
+    body += "\n\nRecommended action: " + esc(payload.recommended_action);
+  }
+  if (payload.citations && payload.citations.length) {
+    body += '<div class="ask-cites">' + payload.citations.map((c) => {
+      const title = esc(c.title || c.document_id || "Source");
+      const section = c.section ? " · " + esc(c.section) : "";
+      const source = c.source ? " · " + esc(c.source) : "";
+      const link = c.url
+        ? ' <a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + title + "</a>"
+        : title;
+      return '<div class="ask-cite">' + link + section + source + "</div>";
+    }).join("") + "</div>";
+  }
+  appendAskTurn("assistant", body, meta, !!payload.insufficient_context);
+}
+
+async function loadKnowledgeStatus() {
+  try {
+    const data = await fetch("/api/dashboard/knowledge/status").then((r) => r.json());
+    const status = data.status || "offline";
+    const lamp = $("knowledge-lamp");
+    if (lamp) lamp.dataset.status = status;
+    const label = $("knowledge-lamp-label");
+    if (label) {
+      label.textContent = status === "ok" ? "Knowledge ready"
+        : status === "degraded" ? "Knowledge degraded"
+        : "Knowledge offline";
+    }
+    const tile = $("stat-knowledge");
+    if (tile) tile.textContent = status === "ok" ? "ready" : status;
+    const sub = $("stat-knowledge-sub");
+    if (sub) {
+      if (data.live_tools) sub.textContent = "live tools on";
+      else sub.textContent = data.qdrant === "reachable" ? "Qdrant up" : (data.detail || "Ask Zyvor");
+    }
+    const hint = $("ask-hint");
+    if (hint) {
+      hint.textContent = data.live_tools
+        ? "Read-only knowledge + live cluster diagnostics enabled for: "
+          + ((data.live_namespaces || []).join(", ") || "configured namespaces")
+          + ". Mutations remain out of scope."
+        : "Read-only knowledge agent — it will not mutate cluster state. Enable ENABLE_LIVE_CLUSTER_TOOLS for observed-state diagnostics.";
+    }
+    askStreamingPreferred = data.streaming !== false;
+    const remPanel = $("remediation-panel");
+    if (remPanel) remPanel.style.display = data.remediation ? "block" : "none";
+  } catch (err) {
+    const lamp = $("knowledge-lamp");
+    if (lamp) lamp.dataset.status = "offline";
+  }
+}
+
+async function loadAskSuggestions() {
+  const chips = $("ask-chips");
+  if (!chips) return;
+  try {
+    const data = await fetch("/api/dashboard/knowledge/suggestions").then((r) => r.json());
+    const items = data.suggestions || [];
+    chips.innerHTML = items.map((s) =>
+      '<button type="button" class="ask-chip" data-q="' + esc(s.question) + '" data-p="' + esc(s.product || "") + '">'
+      + esc((s.product ? s.product + ": " : "") + s.question) + "</button>"
+    ).join("");
+    for (const btn of chips.querySelectorAll(".ask-chip")) {
+      btn.addEventListener("click", () => {
+        $("ask-question").value = btn.dataset.q || "";
+        if (btn.dataset.p) $("ask-product").value = btn.dataset.p;
+        focusAskZyvor();
+      });
+    }
+  } catch (err) {
+    chips.innerHTML = "";
+  }
+}
+
+async function submitAsk() {
+  if (askBusy) return;
+  const question = ($("ask-question").value || "").trim();
+  if (question.length < 2) {
+    toast("Ask Zyvor", false, "Enter a question");
+    return;
+  }
+  askBusy = true;
+  $("ask-submit").disabled = true;
+  $("ask-status").textContent = askStreamingPreferred ? "streaming…" : "searching…";
+  $("ask-latency").textContent = "";
+  appendAskTurn("user", esc(question));
+  try {
+    localStorage.setItem(ASK_LS_DRAFT, "");
+    localStorage.setItem(ASK_LS_PRODUCT, $("ask-product").value || "");
+  } catch (e) { /* ignore */ }
+
+  const body = {
+    question,
+    product: $("ask-product").value || null,
+    document_type: $("ask-doctype").value || null,
+    thread_id: askThreadId,
+  };
+  const started = performance.now();
+  try {
+    if (askStreamingPreferred) {
+      await submitAskStream(body, started);
+    } else {
+      await submitAskJson(body, started);
+    }
+  } catch (err) {
+    appendAskTurn("assistant", esc(String(err)), "", true);
+    $("ask-status").textContent = "error";
+  } finally {
+    askBusy = false;
+    $("ask-submit").disabled = false;
+  }
+}
+
+async function submitAskJson(body, started) {
+  const res = await fetch("/api/dashboard/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const latency = parseFloat(res.headers.get("X-Response-Time-Ms") || "") || (performance.now() - started);
+  const payload = await res.json();
+  if (!res.ok) {
+    appendAskTurn("assistant", esc(payload.detail || "Ask failed"), "", true);
+    toast("Ask Zyvor", false, payload.detail || ("HTTP " + res.status));
+    $("ask-status").textContent = "failed";
+    return;
+  }
+  finishAskPayload(payload, latency);
+}
+
+async function submitAskStream(body, started) {
+  const res = await fetch("/api/dashboard/ask/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok || !res.body) {
+    // Fall back to non-streaming ask.
+    await submitAskJson(body, started);
+    return;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let gotFinal = false;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() || "";
+    for (const part of parts) {
+      const line = part.split("\n").find((l) => l.startsWith("data: "));
+      if (!line) continue;
+      let event;
+      try { event = JSON.parse(line.slice(6)); } catch (e) { continue; }
+      if (event.event === "understanding") {
+        $("ask-status").textContent = "understood · " + (event.data && event.data.intent ? event.data.intent : "routing");
+      } else if (event.event === "tool_call") {
+        $("ask-status").textContent = "tools · " + (event.tools || []).join(", ");
+      } else if (event.event === "tool_result") {
+        $("ask-status").textContent = "tool result · " + (event.tool || "ok");
+      } else if (event.event === "warning") {
+        $("ask-status").textContent = "degraded stream";
+      } else if (event.event === "error") {
+        appendAskTurn("assistant", esc(event.detail || "stream error"), "", true);
+        $("ask-status").textContent = "failed";
+        return;
+      } else if (event.event === "final") {
+        gotFinal = true;
+        const payload = { ...(event.data || {}), thread_id: event.thread_id || (event.data && event.data.thread_id) };
+        finishAskPayload(payload, performance.now() - started);
+      }
+    }
+  }
+  if (!gotFinal) {
+    await submitAskJson(body, started);
+  }
+}
+
+function finishAskPayload(payload, latency) {
+  askThreadId = payload.thread_id || askThreadId;
+  askLastPayload = payload;
+  $("ask-thread-label").textContent = askThreadId ? askThreadId.slice(0, 18) : "new";
+  renderAssistantPayload(payload, Number.isFinite(latency) ? latency : null);
+  $("ask-question").value = "";
+  $("ask-status").textContent = payload.insufficient_context ? "abstained" : "answered";
+  if (Number.isFinite(latency)) $("ask-latency").textContent = Math.round(latency) + " ms";
+}
+
+async function submitRemediation() {
+  const issue = ($("remediation-issue").value || "").trim();
+  if (issue.length < 2) { toast("Remediation", false, "Describe the issue"); return; }
+  $("remediation-status").textContent = "planning…";
+  $("remediation-approve").style.display = "none";
+  $("remediation-reject").style.display = "none";
+  try {
+    const res = await fetch("/api/dashboard/remediation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ issue, thread_id: remediationThreadId }),
+    });
+    const data = await res.json();
+    $("remediation-out").textContent = JSON.stringify(data, null, 2);
+    if (!data.enabled) {
+      $("remediation-status").textContent = "disabled";
+      return;
+    }
+    remediationThreadId = data.thread_id || remediationThreadId;
+    if (data.interrupted) {
+      $("remediation-status").textContent = "awaiting approval";
+      $("remediation-approve").style.display = "";
+      $("remediation-reject").style.display = "";
+    } else {
+      $("remediation-status").textContent = "planned";
+    }
+  } catch (err) {
+    $("remediation-status").textContent = "error";
+    $("remediation-out").textContent = String(err);
+  }
+}
+
+async function resumeRemediation(decision) {
+  if (!remediationThreadId) { toast("Remediation", false, "No interrupt thread"); return; }
+  $("remediation-status").textContent = decision + "…";
+  const res = await fetch("/api/dashboard/remediation/resume", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ thread_id: remediationThreadId, decision }),
+  });
+  const data = await res.json();
+  $("remediation-out").textContent = JSON.stringify(data, null, 2);
+  $("remediation-approve").style.display = data.interrupted ? "" : "none";
+  $("remediation-reject").style.display = data.interrupted ? "" : "none";
+  $("remediation-status").textContent = data.interrupted ? "awaiting approval" : (decision + "d");
+}
+
+$("remediation-submit")?.addEventListener("click", submitRemediation);
+$("remediation-approve")?.addEventListener("click", () => resumeRemediation("approve"));
+$("remediation-reject")?.addEventListener("click", () => resumeRemediation("reject"));
+
+function resetAskThread() {
+  askThreadId = null;
+  askLastPayload = null;
+  $("ask-thread").innerHTML = '<span class="d">Ask a question to start a grounded, cited answer.</span>';
+  $("ask-thread-label").textContent = "new";
+  $("ask-status").textContent = "";
+  $("ask-latency").textContent = "";
+}
+
+$("ask-submit")?.addEventListener("click", submitAsk);
+$("ask-new-thread")?.addEventListener("click", resetAskThread);
+$("ask-copy-md")?.addEventListener("click", async () => {
+  const md = lastAnswerMarkdown();
+  if (!md) { toast("Ask Zyvor", false, "No answer to copy yet"); return; }
+  try {
+    await navigator.clipboard.writeText(md);
+    toast("Ask Zyvor", true, "Copied Markdown for Slack/Jira");
+  } catch (err) {
+    toast("Ask Zyvor", false, "Clipboard unavailable");
+  }
+});
+$("ask-question")?.addEventListener("keydown", (ev) => {
+  if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
+    ev.preventDefault();
+    submitAsk();
+  }
+});
+$("ask-question")?.addEventListener("input", () => {
+  try { localStorage.setItem(ASK_LS_DRAFT, $("ask-question").value || ""); } catch (e) { /* ignore */ }
+});
+$("ask-product")?.addEventListener("change", () => {
+  try { localStorage.setItem(ASK_LS_PRODUCT, $("ask-product").value || ""); } catch (e) { /* ignore */ }
+});
+try {
+  const draft = localStorage.getItem(ASK_LS_DRAFT);
+  const product = localStorage.getItem(ASK_LS_PRODUCT);
+  if (draft && $("ask-question")) $("ask-question").value = draft;
+  if (product && $("ask-product")) $("ask-product").value = product;
+} catch (e) { /* ignore */ }
+loadAskSuggestions();
+loadKnowledgeStatus();
 
 /* sound cue on finish — rising tone on green, falling on red (mutable) */
 function beep(ok) {
@@ -2199,6 +2674,7 @@ async function sync() {
       $("session-user").textContent = overview.auth.user;
     }
     await refreshDrawer();
+    loadKnowledgeStatus();
     lastSync = Date.now();
   } catch (err) {
     $("sync").textContent = "sync failed: " + err;
