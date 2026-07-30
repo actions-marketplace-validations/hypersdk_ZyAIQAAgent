@@ -16,7 +16,7 @@ Hands-on, step-by-step guides. Follow them in order the first time; each later t
 | 10 | [Mission Control dashboard](10-mission-control-dashboard.md) | The live console: 20+ QA actions, UX cues, audits, probes, schedules, reports | ~20 min |
 | 11 | [E2E flow tests & route sweeps](11-flow-tests.md) | Drive a multi-step user journey recorded as one video; sweep many routes visually | ~20 min |
 | 12 | [API, Auth, Live-data & Web-quality](12-api-auth-realtime.md) | Test the product beyond the page: OpenAPI contracts, auth/session, WebSocket/SSE, Core Web Vitals, device/cross-browser | ~30 min |
-| 13 | [Test zyvor.dev with recording](13-test-zyvor-dev-recording.md) | Smoke + flow video + HAR against https://zyvor.dev; Mission Control UX walkthrough | ~15 min |
+| 13 | [Test zyvor.dev with recording](13-test-zyvor-dev-recording.md) | YouTube Mission Control demo + smoke/flow/HAR against https://zyvor.dev | ~15 min |
 | 14 | [Ask Zyvor (knowledge RAG)](14-ask-zyvor-knowledge.md) | Optional citation-first product Q&A with Qdrant hybrid retrieval in Mission Control | ~20 min |
 
 Deployment: [**Remote deploy**](../remote-deploy.md) — `deploy-remote.sh` puts the agent + dashboard on any host (bare metal, container, or k3s) in one command.

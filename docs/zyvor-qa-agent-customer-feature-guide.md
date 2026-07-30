@@ -64,7 +64,7 @@ This is the customer-facing onboarding guide — how to access the product, your
   1. Start the console: `zyvor-qa serve --port 8080` and open `http://localhost:8080/dashboard` (add `--tls` for HTTPS beyond localhost).
   1. Expect the **boot splash**, full-bleed glass topbar, and **signal-field** constellation behind the hero; ⌘K opens the palette; double-click the brand for **NOC** wall mode; `` ` `` warps.
   1. Run any capability from a card; watch per-test ✓/✗ chips stream live, with a ⏹ Stop button and CSV/HTML/PDF download row.
-  1. Practice on the public site: watch the [journey .webm](assets/zyvor-dev-mission-control-demo.webm), then re-run — [Test zyvor.dev](customer/test-zyvor-dev.md) / [Tutorial 13](tutorials/13-test-zyvor-dev-recording.md).
+  1. Practice on the public site: watch the [YouTube Mission Control demo](https://youtu.be/ys7SvKKqf9w) (or the [journey .webm](assets/zyvor-dev-mission-control-demo.webm)), then re-run — [Test zyvor.dev](customer/test-zyvor-dev.md) / [Tutorial 13](tutorials/13-test-zyvor-dev-recording.md).
   1. Generate run history for the trends sparkline: `zyvor-qa run --source local` (each run appends to `reports/history/`).
   1. Turn any job into a recurring monitor from the Schedules panel (5 min – 6 h) — e.g. smoke every 15 min, TLS check daily.
   1. Point at a cluster (in-cluster SA or local kubeconfig) to activate the Pods/Workloads panels; set `DASHBOARD_PASSWORD` before exposing it since it reads pod logs.
@@ -185,6 +185,8 @@ _A live console that runs every capability on demand and watches your cluster wh
   - **How:** Activates automatically when a cluster is reachable (in-cluster service account, else local kubeconfig). Scope it with `DASHBOARD_NAMESPACE` and `DASHBOARD_POD_SELECTOR` in `.env`. Scriptable via `GET /api/dashboard/pods`, `…/pods/{name}/logs`, `DELETE …/pods/{name}` (restart).
 - **Authenticated & TLS-Ready** — Optional password login (rate-limited, signed-cookie sessions) gates the dashboard, API, and artifacts; serve over HTTPS with a self-signed cert. — _Safe to expose a console that can read pod logs._
   - **How:** Config in `.env`: set `DASHBOARD_PASSWORD` (+ optional `DASHBOARD_USER`) to enable login; `/health` and `/webhook/github` stay open. Serve HTTPS with `zyvor-qa serve --tls` (self-signed under `~/.zyvor-qa/tls`) or `--tls-cert`/`--tls-key`.
+- **Ask Zyvor (knowledge RAG)** — Optional citation-first Q&A over product docs (Qdrant hybrid retrieval) inside Mission Control, with streaming answers and optional read-only live cluster tools. — _Ask “why is egress failing?” without leaving the console._
+  - **How:** Install `pip install -e ".[knowledge]"`, start Qdrant, ingest docs, set `LLM_API_KEY` — see [Tutorial 14](tutorials/14-ask-zyvor-knowledge.md). Dashboard card **Ask Zyvor**; API `POST /v1/qa` (+ `/v1/qa/stream`). Primary agent stays read-only; remediation HITL is a separate gated agent.
 - **Scriptable JSON API** — The whole console is a thin client over documented JSON endpoints for jobs, schedules, runs, pods, and reports. — _Automate the same actions the UI performs from your own tooling._
   - **How:** Call the JSON endpoints directly, e.g. `POST /api/dashboard/jobs {kind, params}` to run an action, `GET /api/dashboard/runs` for history, `GET /api/dashboard/jobs/report.pdf` for the bundle; read endpoints degrade to `"available": false` when no cluster is reachable.
 
@@ -209,10 +211,11 @@ _Wires into GitHub, your chat tools, your LLM of choice, and your cluster._
 
 1. **Install** — Copy `.env.example` to `.env` and run `make install` (needs Python 3.9+ and Node.js 20+).
 2. **Run a smoke test** — `zyvor-qa test --grep @smoke` against your target (try `ZYVOR_BASE_URL=https://zyvor.dev`) — no LLM key required.
-3. **Watch / re-record a journey** — open [`docs/assets/zyvor-dev-mission-control-demo.webm`](assets/zyvor-dev-mission-control-demo.webm), then `zyvor-qa flow https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video` — see [Test zyvor.dev](customer/test-zyvor-dev.md).
-4. **Open Mission Control** — `zyvor-qa serve` then browse to `/dashboard` (boot splash + signal field + ⌘K) to run any of the 20+ actions live.
+3. **Watch / re-record a journey** — open the [YouTube Mission Control demo](https://youtu.be/ys7SvKKqf9w) (thumbnail preview on [GitHub README](https://github.com/hypersdk/ZyAIQAAgent)), then `zyvor-qa flow https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video` — see [Test zyvor.dev](customer/test-zyvor-dev.md).
+4. **Open Mission Control** — `zyvor-qa serve` then browse to `/dashboard` (boot splash + signal field + ⌘K) to run any of the 20+ actions live. Optional: enable [Ask Zyvor](tutorials/14-ask-zyvor-knowledge.md).
 5. **Wire up GitHub** — Set `ZYVOR_PRODUCT_REPO`, authenticate `gh`, then `zyvor-qa run --source github --spec docs/specs/my-feature.md`.
 6. **Add an LLM (optional)** — Set `LLM_PROVIDER` and the matching API key to unlock AI generation, analysis, and natural-language tests.
+7. **Pull the container** — `docker pull ghcr.io/hypersdk/zyaiqaagent:v0.3.0` — see [Releases](releases.md).
 
 > **Good to know:** Many features are opt-in behind flags (regression, autofix, coverage expansion, V8 coverage, multi-browser, Rust diff) and are off by default. Without an LLM key the agent still runs but uses rule-based fallbacks for parsing, generation, analysis, and summaries; only `zyvor-qa create` strictly requires an LLM. API validation checks HTTP statuses and OpenAPI schemas rather than full business logic. The Mission Control dashboard reads pod logs, so it is intentionally not exposed through the ingress and should be protected with a password. Kubernetes panels require a reachable cluster; without one they show an offline state while everything else keeps working. Multi-browser and load testing are best-effort in-pod and capped to avoid resource exhaustion.
 

@@ -12,7 +12,7 @@ zyvor-qa flow https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video
 
 ## 📖 Feature Guide
 
-**[Zyvor QA Agent — Customer Feature Guide](docs/zyvor-qa-agent-customer-feature-guide.md)** — a complete, customer-facing reference covering all **42 features** across **8 areas**, grounded in the product's actual capabilities. Also available as a print-ready **[PDF](docs/zyvor-qa-agent-customer-feature-guide.pdf)**.
+**[Zyvor QA Agent — Customer Feature Guide](docs/zyvor-qa-agent-customer-feature-guide.md)** — a complete, customer-facing reference covering **Mission Control**, journeys, probes, and optional **Ask Zyvor** knowledge Q&A. Also available as a print-ready **[PDF](docs/zyvor-qa-agent-customer-feature-guide.pdf)**.
 
 Autonomous AI testing agent for [Zyvor](https://zyvor.dev) — an AI-first infrastructure platform. Continuously validates the Zyvor platform by reading requirements from GitHub, generating Playwright tests, executing them after deployments, detecting regressions, and producing actionable reports.
 
@@ -45,18 +45,18 @@ LangGraph Orchestrator (Python)
 
 ## Quick Start
 
-### Container (v0.2.0)
+### Container (v0.3.0)
 
 ```bash
-docker pull ghcr.io/hypersdk/zyaiqaagent:v0.2.0
+docker pull ghcr.io/hypersdk/zyaiqaagent:v0.3.0
 # or
 docker pull ghcr.io/hypersdk/zyaiqaagent:latest
 
-docker run --rm --env-file .env ghcr.io/hypersdk/zyaiqaagent:v0.2.0 test --grep @smoke
-docker run --rm -p 8080:8080 --env-file .env ghcr.io/hypersdk/zyaiqaagent:v0.2.0 serve --port 8080 --host 0.0.0.0
+docker run --rm --env-file .env ghcr.io/hypersdk/zyaiqaagent:v0.3.0 test --grep @smoke
+docker run --rm -p 8080:8080 --env-file .env ghcr.io/hypersdk/zyaiqaagent:v0.3.0 serve --port 8080 --host 0.0.0.0
 ```
 
-Release notes: [v0.2.0](https://github.com/hypersdk/ZyAIQAAgent/releases/tag/v0.2.0) · full pull/run guide: [docs/releases.md](docs/releases.md)
+Release notes: [v0.3.0](https://github.com/hypersdk/ZyAIQAAgent/releases/tag/v0.3.0) · full pull/run guide: [docs/releases.md](docs/releases.md)
 
 ### Prerequisites
 
@@ -111,7 +111,7 @@ See [**Writing Tests & GitHub Integration**](docs/test-authoring.md) for the ful
 | [**Mission Control dashboard**](docs/tutorials/10-mission-control-dashboard.md) | The live console: 20+ QA actions, UX cues, audits, probes, schedules, reports |
 | [**Test zyvor.dev (recording)**](docs/tutorials/13-test-zyvor-dev-recording.md) | Smoke + flow video + HAR against https://zyvor.dev |
 | [**Remote deployment**](docs/remote-deploy.md) | `deploy-remote.sh` — bare host, container, or k3s in one command |
-| [**Releases & container image**](docs/releases.md) | GHCR image (`v0.2.0` / `latest`), how to pull it, how to cut a release |
+| [**Releases & container image**](docs/releases.md) | GHCR image (`v0.3.0` / `latest`), how to pull it, how to cut a release |
 | [**Troubleshooting**](docs/troubleshooting.md) | Common errors and fixes |
 | [**Contributing**](CONTRIBUTING.md) | Dev setup, conventions, how to add a pipeline stage |
 | [`kubernetes/README.md`](kubernetes/README.md) | Kubernetes deployment |
@@ -260,7 +260,7 @@ See [**docs/configuration.md**](docs/configuration.md) for the complete annotate
 - **Smoke tests**: `.github/workflows/qa-smoke.yml` — push, PR, nightly
 - **Multi-browser**: manual `workflow_dispatch` trigger in same workflow
 - **Post-deploy**: `.github/workflows/qa-post-deploy.yml` — `repository_dispatch: staging-deployed`
-- **Release**: `.github/workflows/release.yml` — on tag push `v*.*.*`, builds and pushes `ghcr.io/hypersdk/zyaiqaagent:v0.2.0` (+ `:latest`) and creates a GitHub Release; see [docs/releases.md](docs/releases.md)
+- **Release**: `.github/workflows/release.yml` — on tag push `v*.*.*`, builds and pushes `ghcr.io/hypersdk/zyaiqaagent:v0.3.0` (+ `:latest`) and creates a GitHub Release; see [docs/releases.md](docs/releases.md)
 
 Run the unit suite locally:
 
