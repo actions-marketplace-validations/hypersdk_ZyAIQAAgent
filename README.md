@@ -1,10 +1,45 @@
 # Zyvor QA Agent
 
-[![ZyAIQAAgent · Mission Control → GuestKit flow demo](https://img.youtube.com/vi/ys7SvKKqf9w/maxresdefault.jpg)](https://youtu.be/ys7SvKKqf9w)
+[![ZyAIQAAgent Mission Control — Full KT Walkthrough](https://i.ytimg.com/vi/-_2jph4jW7c/maxresdefault.jpg)](https://youtu.be/-_2jph4jW7c)
 
-**Demo (YouTube):** Mission Control login → enter [GuestKit](https://github.com/hypersdk/guestkit) URL → Run journey — [watch](https://youtu.be/ys7SvKKqf9w) · [how-to](docs/tutorials/13-test-zyvor-dev-recording.md)
+**Full KT walkthrough (YouTube):** sign-in → status hero & pod fleet → the 20+ capability Actions panel → a live Smoke test run → a Flow test result → a Site audit grade → network & security probes → Ask Zyvor Q&A → NOC wall mode — [watch](https://youtu.be/-_2jph4jW7c)
 
-Also: Playwright journey against [zyvor.dev](https://zyvor.dev) — [GIF](https://github.com/hypersdk/ZyAIQAAgent/raw/main/docs/assets/zyvor-dev-mission-control-demo.gif) · [MP4](https://github.com/hypersdk/ZyAIQAAgent/blob/main/docs/assets/zyvor-dev-mission-control-demo.mp4) · [steps](docs/assets/zyvor-dev-demo.steps)
+## 🎬 More recordings
+
+<table>
+<tr>
+<td width="50%" align="center">
+<a href="https://youtu.be/ys7SvKKqf9w">
+<img src="https://i.ytimg.com/vi/ys7SvKKqf9w/maxresdefault.jpg" alt="Mission Control → GuestKit flow demo" width="100%">
+</a>
+<br><b>Mission Control → GuestKit flow</b><br>
+<sub>Login → enter a GuestKit URL → run journey — <a href="docs/tutorials/13-test-zyvor-dev-recording.md">how-to</a></sub>
+</td>
+<td width="50%" align="center">
+<a href="https://youtu.be/oXVVWZiRgQY">
+<img src="https://i.ytimg.com/vi/oXVVWZiRgQY/maxresdefault.jpg" alt="Autonomous Playwright journey against zyvor.dev" width="100%">
+</a>
+<br><b>Autonomous journey vs zyvor.dev</b><br>
+<sub>Steps file: <a href="docs/assets/zyvor-dev-demo.steps">zyvor-dev-demo.steps</a></sub>
+</td>
+</tr>
+<tr>
+<td width="50%" align="center">
+<a href="https://youtu.be/EwqVdjSabvE">
+<img src="https://i.ytimg.com/vi/EwqVdjSabvE/maxresdefault.jpg" alt="Direct browser journey of the GuestKit GitHub README" width="100%">
+</a>
+<br><b>GuestKit GitHub README journey</b><br>
+<sub>Direct browser journey, no dashboard</sub>
+</td>
+<td width="50%" align="center">
+<a href="https://youtu.be/43pSPf-FVsE">
+<img src="https://i.ytimg.com/vi/43pSPf-FVsE/maxresdefault.jpg" alt="Direct journey of zyvor.dev/guestkit" width="100%">
+</a>
+<br><b>zyvor.dev/guestkit journey</b><br>
+<sub>Direct journey of the GuestKit product page</sub>
+</td>
+</tr>
+</table>
 
 ```bash
 zyvor-qa flow https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video
