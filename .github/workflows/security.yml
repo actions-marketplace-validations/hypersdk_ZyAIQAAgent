@@ -25,7 +25,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - run: python -m pip install --upgrade pip
+      - run: python -m pip install --upgrade pip setuptools
       - run: pip install -e '.[dev]' mypy pip-audit bandit[toml] pytest-cov
       - run: ruff check .
       - run: mypy orchestrator agents --ignore-missing-imports
@@ -76,3 +76,5 @@ jobs:
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

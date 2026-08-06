@@ -1,6 +1,9 @@
 # syntax=docker/dockerfile:1.7
 FROM node:20-bookworm-slim AS node-deps
 WORKDIR /app
+# Patches CVEs in npm's own bundled deps (tar, brace-expansion) before anything
+# under /usr/local/lib/node_modules gets copied into the final image.
+RUN npm install -g npm@latest
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 RUN npx playwright install --with-deps chromium
@@ -35,6 +38,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 zyvor \
     && useradd --system --uid 10001 --gid 10001 --home /app --shell /usr/sbin/nologin zyvor
+
+# Patches CVEs in the base image's own bundled pip/setuptools (unused at runtime —
+# the app only ever runs via /opt/venv — but still scanned by container-scan).
+RUN pip install --no-cache-dir --upgrade pip setuptools
 
 WORKDIR /app
 COPY --from=node-deps /usr/local/bin/node /usr/local/bin/node
