@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+# Floor bumped past CVE-2025-47273 (path traversal in setuptools PackageIndex).
+requires = ["setuptools>=78.1.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -27,9 +28,11 @@ dependencies = [
     "Pillow>=10.0",
     "PyYAML>=6.0",
     "kubernetes>=29.0",
-    # Transitive floors bumped past known CVEs (pip-audit): PYSEC-2026-3545/6/7, PYSEC-2026-3552.
+    # Transitive floors bumped past known CVEs (pip-audit/trivy): PYSEC-2026-3545/6/7,
+    # PYSEC-2026-3552, GHSA-6v7p-g79w-8964 (msgpack, via langgraph-checkpoint).
     "aiohttp>=3.14.3",
     "cryptography>=50.0.0",
+    "msgpack>=1.2.1",
 ]
 
 [project.optional-dependencies]

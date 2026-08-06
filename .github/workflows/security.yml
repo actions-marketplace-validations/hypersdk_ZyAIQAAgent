@@ -67,6 +67,7 @@ jobs:
           image-ref: zyvor-qa-agent:test
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+          trivyignores: .trivyignore
           exit-code: '1'
 
   secret-scan:
