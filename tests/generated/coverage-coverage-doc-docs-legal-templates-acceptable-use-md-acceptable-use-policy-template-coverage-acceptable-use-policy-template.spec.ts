@@ -1,4 +1,4 @@
-// Copyright 2026 ZyvorAI Labs Private Limited
+// Copyright 2026 Zyvor AI Labs · https://zyvor.dev
 // SPDX-License-Identifier: Apache-2.0
 
 import { test, expect } from '../../playwright/fixtures/base';

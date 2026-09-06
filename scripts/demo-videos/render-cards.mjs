@@ -1,3 +1,6 @@
+// Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+// SPDX-License-Identifier: Apache-2.0
+
 // Render title/caption PNG cards for the Zyvor Argus "15-minute KT" tutorial —
 // blue/cyan Mission Control ops aesthetic matching the dashboard itself.
 import { chromium } from "playwright";

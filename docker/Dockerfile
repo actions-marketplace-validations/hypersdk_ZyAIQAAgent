@@ -1,3 +1,5 @@
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: Apache-2.0
 # syntax=docker/dockerfile:1
 
 FROM node:20-bookworm AS node-base

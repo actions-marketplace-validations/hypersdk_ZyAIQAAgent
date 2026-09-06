@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Record a Mission Control UX demo: login → dashboard → fill Flow URL/steps → Run → result.
  *

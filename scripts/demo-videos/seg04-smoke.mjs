@@ -1,3 +1,6 @@
+// Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+// SPDX-License-Identifier: Apache-2.0
+
 import { openLoggedIn, closeAndSave } from "./lib.mjs";
 
 const { browser, context, page } = await openLoggedIn("raw/seg04-smoke");

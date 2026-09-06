@@ -1,3 +1,6 @@
+// Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+// SPDX-License-Identifier: Apache-2.0
+
 import { chromium } from "playwright";
 
 export const BASE = process.env.ZQA_MC_URL || "http://127.0.0.1:30080";

@@ -1,17 +1,5 @@
-# Copyright 2026 ZyvorAI Labs Private Limited
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
+# Copyright 2026 Zyvor AI Labs · https://zyvor.dev
+# SPDX-License-Identifier: Apache-2.0
 """Unit tests for orchestrator/enterprise.py's install_enterprise: the
 startup/shutdown lifecycle hooks that start/stop the durable job service
 weren't exercised by any existing test (other suites build the app
