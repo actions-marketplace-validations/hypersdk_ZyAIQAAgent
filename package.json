@@ -20,10 +20,10 @@
     "crawl": "node playwright/scripts/crawl-site.mjs",
     "report": "playwright show-report reports",
     "report:pdf": "node playwright/scripts/html-to-pdf.mjs reports/qa-summary.html reports/qa-summary.pdf",
-    "docs:guides": "node scripts/customer-docs/generate-guides.mjs && node scripts/customer-docs/generate-guide-index.mjs && node scripts/customer-docs/generate-page-index.mjs",
-    "docs:links": "node scripts/customer-docs/check-links.mjs",
-    "docs:pdf": "node scripts/customer-docs/build-customer-pdfs.mjs",
-    "docs:sync": "node scripts/customer-docs/sync-to-website.mjs"
+    "docs:guides": "node scripts/user-docs/generate-guides.mjs && node scripts/user-docs/generate-guide-index.mjs && node scripts/user-docs/generate-page-index.mjs",
+    "docs:links": "node scripts/user-docs/check-links.mjs",
+    "docs:pdf": "node scripts/user-docs/build-user-pdfs.mjs",
+    "docs:sync": "node scripts/user-docs/sync-to-website.mjs"
   },
   "dependencies": {
     "axe-core": "^4.13.0"

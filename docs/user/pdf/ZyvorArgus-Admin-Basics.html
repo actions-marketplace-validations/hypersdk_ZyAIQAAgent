@@ -21,11 +21,11 @@ table{width:100%;border-collapse:collapse;margin:.8em 0 1.1em;font-size:9.5pt}
 th,td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f1f5f9}
 hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 </style></head><body>
-<section class="cover"><div class="kicker">ZyvorAI Labs · Customer Documentation</div>
+<section class="cover"><div class="kicker">ZyvorAI Labs · User Documentation</div>
 <h1>Zyvor <span>Argus</span></h1>
 <div class="sub">Admin Basics</div>
 <div class="badge">2026-09-05</div>
-<div class="foot">zyvor.dev · Confidential — for licensed customers</div></section>
+<div class="foot">zyvor.dev · Confidential — for licensed users</div></section>
 <main><h2>Ports &amp; URLs</h2>
 <table>
 <thead>
@@ -53,7 +53,7 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 <tr>
 <td><strong>8090</strong></td>
 <td>Argus Enterprise (Watchfloor)</td>
-<td>Customer package / Helm Service</td>
+<td>User package / Helm Service</td>
 </tr>
 <tr>
 <td><strong>30180</strong></td>
@@ -188,7 +188,7 @@ options (Helm, BYO OIDC, local auth, manual Docker, troubleshooting):
 <hr>
 <p>How to sign into <strong>Argus Enterprise</strong> (Watchfloor) after install: bundled
 Keycloak, your own OIDC provider, or a local username/password for a test lab.</p>
-<p>This chapter is for the <strong>Argus Enterprise</strong> customer package (Helm chart +
+<p>This chapter is for the <strong>Argus Enterprise</strong> user package (Helm chart +
 scripts). Community Mission Control (<code>argus serve</code>) still uses
 <code>DASHBOARD_PASSWORD</code> — see <a href="admin-basics.md">Admin basics</a>.</p>
 <h2>Demo accounts (smoke-test only)</h2>
@@ -212,7 +212,7 @@ scripts). Community Mission Control (<code>argus serve</code>) still uses
 <td>Scripted / <code>test-login.sh</code> smoke test</td>
 </tr>
 </tbody></table>
-<p><strong>These are not production accounts.</strong> Disable them for a real customer
+<p><strong>These are not production accounts.</strong> Disable them for a real user
 environment (<code>keycloak.createTestUsers: false</code> in Helm, or delete the users
 in Keycloak after you verify login).</p>
 <pre><code class="language-bash">scripts/test-login.sh https://argus.example.com demo demo
@@ -220,7 +220,7 @@ in Keycloak after you verify login).</p>
 scripts/test-login.sh https://argus.example.com ssouser &#39;Sso@321&#39;
 </code></pre>
 <h2>Option A — Helm with bundled Keycloak (recommended)</h2>
-<pre><code class="language-bash"># Load the image from the customer package first (see that package&#39;s INSTALL.md), then:
+<pre><code class="language-bash"># Load the image from the user package first (see that package&#39;s INSTALL.md), then:
 helm install argus charts/argus-enterprise-*.tgz \
   --set appUrl=https://argus.example.com \
   --set keycloak.externalUrl=https://sso.example.com \

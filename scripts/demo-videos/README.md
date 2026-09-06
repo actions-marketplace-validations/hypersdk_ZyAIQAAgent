@@ -40,4 +40,4 @@ generated `.zyvor-argus-auth` credentials.
 
 ## Publishing
 
-Not committed here (binary, per-run): copy finished MP4/GIF to `docs/assets/` for README and customer docs, following the regenerate steps in [`docs/assets/README.md`](../../docs/assets/README.md).
+Not committed here (binary, per-run): copy finished MP4/GIF to `docs/assets/` for README and user docs, following the regenerate steps in [`docs/assets/README.md`](../../docs/assets/README.md).

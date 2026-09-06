@@ -24,10 +24,10 @@ def test_specialised_tools_are_registered() -> None:
         "search_github_code",
         "search_migration_guides",
         "search_known_issues",
-        "search_customer_runbooks",
+        "search_user_runbooks",
     }
     assert expected == set(KNOWLEDGE_TOOL_NAMES)
-    assert TOOL_DOCUMENT_TYPES["search_product_manuals"] == "customer-manual"
+    assert TOOL_DOCUMENT_TYPES["search_product_manuals"] == "user-manual"
     assert TOOL_DOCUMENT_TYPES["search_migration_guides"] == "migration-guide"
     assert TOOL_DOCUMENT_TYPES["search_zyvor_knowledge"] is None
 
@@ -42,7 +42,7 @@ def test_format_artifacts_includes_document_id() -> None:
     source = SourceArtifact(
         document_id="doc-1",
         title="Guide",
-        source="customer-manual",
+        source="user-manual",
         section="Egress",
         url="https://example.invalid",
         product="PacketWolf",

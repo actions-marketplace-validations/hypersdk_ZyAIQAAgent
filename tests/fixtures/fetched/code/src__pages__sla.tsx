@@ -200,7 +200,7 @@ export default function SLA(): ReactNode {
               Downtime caused by factors outside Zyvor&apos; control (force majeure, network provider outages,
               DNS issues).
             </li>
-            <li>Issues resulting from customer misconfigurations or unauthorized modifications.</li>
+            <li>Issues resulting from user misconfigurations or unauthorized modifications.</li>
             <li>Alpha or beta features explicitly marked as not covered by SLA.</li>
           </ul>
         </div>

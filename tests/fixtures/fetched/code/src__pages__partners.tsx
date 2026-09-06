@@ -95,7 +95,7 @@ const partnerPrograms = [
   },
   {
     title: 'MSP Partners',
-    desc: 'White-label HyperSDK Platform for your customers. Offer managed VM migration services with our multi-tenant platform, custom branding, and dedicated support.',
+    desc: 'White-label HyperSDK Platform for your users. Offer managed VM migration services with our multi-tenant platform, custom branding, and dedicated support.',
     cta: 'MSP Program Details',
     to: '/contact?intent=partners',
     accent: '#8b5cf6',

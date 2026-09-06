@@ -39,7 +39,7 @@ def test_check_consent_signals_no_marker_found():
 
 
 def test_scan_pii_patterns_flags_ssn_shaped_value():
-    result = scan_pii_patterns("customer ssn on file: 123-45-6789")
+    result = scan_pii_patterns("user ssn on file: 123-45-6789")
     assert any("SSN" in issue for issue in result["issues"])
 
 

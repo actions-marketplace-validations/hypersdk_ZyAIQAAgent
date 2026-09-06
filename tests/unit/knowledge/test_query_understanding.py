@@ -29,6 +29,6 @@ def test_migration_intent_and_product() -> None:
 def test_followup_rewrite_with_hint() -> None:
     result = understand_query(
         "How do I fix that on the other cluster?",
-        conversation_hint="Hubble Relay timeout on customer K3s",
+        conversation_hint="Hubble Relay timeout on user K3s",
     )
     assert "Hubble Relay" in result.rewritten_question

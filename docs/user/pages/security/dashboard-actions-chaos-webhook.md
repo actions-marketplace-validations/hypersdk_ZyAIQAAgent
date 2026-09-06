@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Trigger a customer-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.
+Trigger a user-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.
 
 ## When to use it
 

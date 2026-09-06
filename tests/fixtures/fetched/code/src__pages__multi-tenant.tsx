@@ -29,7 +29,7 @@ export default function MultiTenant(): ReactNode {
           {[
             {
               title: 'White-Label',
-              desc: 'Brand the dashboard and API with your company identity. Your customers see your brand, not ours.',
+              desc: 'Brand the dashboard and API with your company identity. Your users see your brand, not ours.',
             },
             {
               title: 'Per-Tenant Billing',
@@ -111,7 +111,7 @@ export default function MultiTenant(): ReactNode {
             },
             {
               title: 'White-Label Dashboard',
-              desc: 'Premium pricing justified by branded, professional dashboard experience. Your customers see your brand, building trust and loyalty.',
+              desc: 'Premium pricing justified by branded, professional dashboard experience. Your users see your brand, building trust and loyalty.',
             },
             {
               title: 'Per-Tenant Billing',

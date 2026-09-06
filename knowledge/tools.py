@@ -16,12 +16,12 @@ RETRIEVER = KnowledgeRetriever()
 # Tool name → default metadata.source filter (API/UI filters still win via RequestContext).
 TOOL_DOCUMENT_TYPES: dict[str, str | None] = {
     "search_zyvor_knowledge": None,
-    "search_product_manuals": "customer-manual",
+    "search_product_manuals": "user-manual",
     "search_api_reference": "api-reference",
     "search_github_code": "github",
     "search_migration_guides": "migration-guide",
     "search_known_issues": "known-issue",
-    "search_customer_runbooks": "runbook",
+    "search_user_runbooks": "runbook",
 }
 
 SPECIALISED_TOOL_NAMES = tuple(
@@ -83,7 +83,7 @@ def search_zyvor_knowledge(
     """Broad search across authorized Zyvor manuals, APIs, runbooks and docs.
 
     Prefer a specialised tool when the question clearly targets manuals, APIs,
-    GitHub/code, migration guides, known issues or customer runbooks.
+    GitHub/code, migration guides, known issues or user runbooks.
     """
 
     return _search(query, product=product, document_type=document_type)
@@ -94,9 +94,9 @@ def search_product_manuals(
     query: str,
     product: str | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
-    """Search Zyvor customer product manuals and how-to guides."""
+    """Search Zyvor user product manuals and how-to guides."""
 
-    return _search(query, product=product, document_type="customer-manual")
+    return _search(query, product=product, document_type="user-manual")
 
 
 @tool(response_format="content_and_artifact")
@@ -140,11 +140,11 @@ def search_known_issues(
 
 
 @tool(response_format="content_and_artifact")
-def search_customer_runbooks(
+def search_user_runbooks(
     query: str,
     product: str | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
-    """Search customer/support runbooks for operational procedures."""
+    """Search user/support runbooks for operational procedures."""
 
     return _search(query, product=product, document_type="runbook")
 
@@ -156,7 +156,7 @@ KNOWLEDGE_TOOLS = [
     search_github_code,
     search_migration_guides,
     search_known_issues,
-    search_customer_runbooks,
+    search_user_runbooks,
 ]
 
 KNOWLEDGE_TOOL_NAMES = [tool_obj.name for tool_obj in KNOWLEDGE_TOOLS]

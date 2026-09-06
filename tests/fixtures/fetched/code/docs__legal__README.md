@@ -1,6 +1,6 @@
 # Zyvor commercial legal framework
 
-**Draft for internal use and customer negotiation.** Have counsel licensed in your target jurisdictions (India, EU, US, etc.) review and finalize before any customer signs.
+**Draft for internal use and user negotiation.** Have counsel licensed in your target jurisdictions (India, EU, US, etc.) review and finalize before any user signs.
 
 **Licensor:** ZyvorAI Labs Private Limited · [zyvor.dev](https://zyvor.dev) · info@zyvor.dev · legal@zyvor.dev
 
@@ -25,10 +25,10 @@ See [PROPRIETARY-POLICY.md](PROPRIETARY-POLICY.md) for third-party dependencies 
 
 ---
 
-## Customer agreement flow (enterprise)
+## User agreement flow (enterprise)
 
 ```text
-Customer
+User
    → Master Subscription Agreement (MSA)
    → Order Form (metrics, tier, term)
    → Enterprise License Agreement (ELA) or product EULA
@@ -81,4 +81,4 @@ Prefer **transparent** pricing and metering over opaque audit traps. Document me
 pandoc docs/legal/SOURCE-DOCUMENTS.md -o docs/legal/SOURCE-DOCUMENTS.pdf
 ```
 
-Customer bundles include `LEGAL-INDEX.txt` (from this README) and `CORPORATE.md` via `package-binary-remote.sh`.
+User bundles include `LEGAL-INDEX.txt` (from this README) and `CORPORATE.md` via `package-binary-remote.sh`.

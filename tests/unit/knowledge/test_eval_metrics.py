@@ -18,7 +18,7 @@ def _artifact(document_id: str = "doc-1", score: float = 0.8) -> SourceArtifact:
     return SourceArtifact(
         document_id=document_id,
         title="Guide",
-        source="customer-manual",
+        source="user-manual",
         section="Egress",
         url="https://example.invalid",
         product="PacketWolf",

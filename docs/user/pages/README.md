@@ -92,7 +92,7 @@ Every route is also listed in the [complete page index](../PAGE_INDEX.md).
 | [Attack chain](security/dashboard-actions-attack-chain.md) | Chains exploit-PoC steps via an LLM planner to confirm a multi-step escalation path — same sandbox and opt-ins as Exploit PoC. |
 | [Auth attack scan](security/dashboard-actions-auth-attack-scan.md) | Auth hygiene: JWT alg=none, cookie flags, login enum hints (no brute force) — requires exploit engagement and ZYVOR_DAST_SCAN_ENABLED. |
 | [Chaos inject](security/dashboard-actions-chaos-inject.md) | Client-side fault injection (latency / loss / reset / dependency timeout) while a flow or smoke control test observes — needs ZYVOR_CHAOS_INJECTION_ENABLED, exploit engagement, and target consent. |
-| [Chaos webhook](security/dashboard-actions-chaos-webhook.md) | Trigger a customer-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject. |
+| [Chaos webhook](security/dashboard-actions-chaos-webhook.md) | Trigger a user-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject. |
 | [Cloud pentest](security/dashboard-actions-cloud-pentest.md) | Credentialed AWS/GCP/Azure CLI enumeration of a described finding in the sandbox — same opt-ins and credential-reference rules as Host pentest. |
 | [CSRF probe](security/dashboard-actions-csrf-probe.md) | Target CSRF posture: forms without tokens, cookies without SameSite — requires exploit engagement and ZYVOR_DAST_SCAN_ENABLED. |
 | [CVE lookup](security/dashboard-actions-cve-lookup.md) | Read-only: fingerprints tech/versions and checks them against OSV.dev. No PoC is generated or run — requires a security engagement. |
@@ -121,4 +121,4 @@ Every route is also listed in the [complete page index](../PAGE_INDEX.md).
 
 ---
 
-60 guides. Regenerate: `node scripts/customer-docs/generate-guide-index.mjs`.
+60 guides. Regenerate: `node scripts/user-docs/generate-guide-index.mjs`.

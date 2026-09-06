@@ -7,7 +7,7 @@
 | **30080** | Mission Control (lab / k3s NodePort) | Persisted by `deploy-remote.sh` |
 | **8080** | Local `argus serve --port 8080` | Dev default |
 | **443 / TLS** | `argus serve --tls` | When terminating TLS in-process |
-| **8090** | Argus Enterprise (Watchfloor) | Customer package / Helm Service |
+| **8090** | Argus Enterprise (Watchfloor) | User package / Helm Service |
 | **30180** | Bundled Keycloak NodePort (typical lab) | Only when Enterprise uses NodePort SSO |
 
 ```bash

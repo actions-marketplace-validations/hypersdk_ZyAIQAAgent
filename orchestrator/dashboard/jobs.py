@@ -3531,7 +3531,7 @@ def _job_chaos_inject(params: dict[str, Any]) -> dict[str, Any]:
 
 
 def _job_chaos_webhook(params: dict[str, Any]) -> dict[str, Any]:
-    """Customer-triggered chaos: POSTs to the customer's OWN chaos-
+    """User-triggered chaos: POSTs to the user's OWN chaos-
     experiment webhook (Chaos Mesh/Litmus/etc.), waits `settle_s`, runs the
     control test, optionally POSTs a stop-webhook. Zero new sandbox
     capability -- reuses the same job-composition pattern
@@ -3595,7 +3595,7 @@ def _job_chaos_webhook(params: dict[str, Any]) -> dict[str, Any]:
 
     raised: list[dict[str, Any]] = []
     if not graceful:
-        title = f"resilience gap under customer-triggered chaos on {url}: {reason}"
+        title = f"resilience gap under user-triggered chaos on {url}: {reason}"
         severity = "high" if recovery_s is None else "medium"
         findings.add("chaos_webhook", severity, title, detail=reason, url=url, category="resilience-gap")
         raised.append({"severity": severity, "title": title, "detail": reason, "category": "resilience-gap"})

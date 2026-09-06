@@ -20,7 +20,7 @@ Compiled products may **link to** third-party open-source libraries (e.g., crate
 - Permit redistribution of Zyvor products without a written license
 - Grant trademark rights
 
-## Customer agreements
+## User agreements
 
 Agreements should state:
 

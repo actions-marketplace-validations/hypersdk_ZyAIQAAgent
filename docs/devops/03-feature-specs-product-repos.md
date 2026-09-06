@@ -22,7 +22,7 @@
 ```markdown
 # Billing upgrade CTA
 
-**As a** customer
+**As a** user
 **I want to** see upgrade from Billing
 **So that** I can change plan
 

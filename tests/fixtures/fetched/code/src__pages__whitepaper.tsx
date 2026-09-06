@@ -29,7 +29,7 @@ const chapters = [
   {
     number: '01',
     title: 'The True Cost of VMware',
-    desc: 'Licensing escalation, support costs, and vendor lock-in quantified. Broadcom acquisition impact analysis with real numbers from enterprise customers.',
+    desc: 'Licensing escalation, support costs, and vendor lock-in quantified. Broadcom acquisition impact analysis with real numbers from enterprise users.',
     accent: '#ef4444',
   },
   {

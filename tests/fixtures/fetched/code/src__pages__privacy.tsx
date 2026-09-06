@@ -49,7 +49,7 @@ export default function Privacy(): ReactNode {
               [
                 {
                   title: '1. Introduction',
-                  content: `Zyvor ("we", "us", or "our") is the trade name of ${LEGAL_ENTITY_INDIA.legalName}, a company incorporated in India under the Companies Act, 2013 (CIN ${LEGAL_ENTITY_INDIA.cin}). We are committed to protecting the privacy of our users, customers, and website visitors. This Privacy Policy describes how we collect, use, disclose, and safeguard your information when you visit our website, use the HyperSDK Platform, or interact with our services.`,
+                  content: `Zyvor ("we", "us", or "our") is the trade name of ${LEGAL_ENTITY_INDIA.legalName}, a company incorporated in India under the Companies Act, 2013 (CIN ${LEGAL_ENTITY_INDIA.cin}). We are committed to protecting the privacy of our users, users, and website visitors. This Privacy Policy describes how we collect, use, disclose, and safeguard your information when you visit our website, use the HyperSDK Platform, or interact with our services.`,
                 },
                 {
                   title: '2. Information We Collect',
@@ -59,7 +59,7 @@ export default function Privacy(): ReactNode {
                 {
                   title: '3. How We Use Your Information',
                   content:
-                    'We use the information we collect to: provide, maintain, and improve the HyperSDK Platform and services; process and complete migration operations you initiate; send you technical notices, updates, and support communications; respond to your comments, questions, and customer service requests; monitor and analyze usage trends to improve user experience; and detect, investigate, and prevent fraudulent transactions or unauthorized access.',
+                    'We use the information we collect to: provide, maintain, and improve the HyperSDK Platform and services; process and complete migration operations you initiate; send you technical notices, updates, and support communications; respond to your comments, questions, and user service requests; monitor and analyze usage trends to improve user experience; and detect, investigate, and prevent fraudulent transactions or unauthorized access.',
                 },
                 {
                   title: '4. Data Security',

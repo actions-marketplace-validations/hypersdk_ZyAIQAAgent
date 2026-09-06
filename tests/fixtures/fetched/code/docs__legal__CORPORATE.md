@@ -63,14 +63,14 @@ PacketWolf / NetPredator (network intelligence, eBPF, Kubernetes) falls within t
 | ZYVOR LABS PRIVATE LIMITED | Appears on one GST board resolution PDF — treat as **draft/variant** unless a separate CIN exists on [mca.gov.in](https://www.mca.gov.in) |
 | ZAVORAI Labs Private Limited | Typo on director stamp request letter only — not the registered name |
 
-Always use **ZyvorAI Labs Private Limited** on licenses, contracts, and customer-facing legal text. CIN and tax IDs are recorded in this file for internal use only—not required on deploy EULAs or source headers.
+Always use **ZyvorAI Labs Private Limited** on licenses, contracts, and user-facing legal text. CIN and tax IDs are recorded in this file for internal use only—not required on deploy EULAs or source headers.
 
-## Customer software licensing
+## User software licensing
 
 - Deploy EULA: [LICENSE](../../LICENSE) (v1.6+)  
 - Framework index: [README.md](README.md) (MSA, ELA, SLA, DPA, Order Form, AUP, export)  
 - Deploy / install acceptance: `scripts/lib/license-accept.sh`  
-- Customer bundles: `LEGAL-INDEX.txt` + `legal/` via `scripts/lib/copy-legal-to-bundle.sh`  
+- User bundles: `LEGAL-INDEX.txt` + `legal/` via `scripts/lib/copy-legal-to-bundle.sh`  
 - Sync to sibling repos: `scripts/sync-legal-framework.sh`  
 - Contact: **info@zyvor.dev** (general) · **legal@zyvor.dev** (licensing)
 

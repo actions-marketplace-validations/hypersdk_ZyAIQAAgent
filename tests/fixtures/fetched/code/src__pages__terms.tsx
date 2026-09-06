@@ -128,7 +128,7 @@ export default function Terms(): ReactNode {
             thereof without prior written consent from Zyvor.
           </p>
           <p>
-            Self-hosted software, containers, and customer bundles are governed by the{' '}
+            Self-hosted software, containers, and user bundles are governed by the{' '}
             <a href="/license">Proprietary Software License Agreement (deploy EULA)</a>, not open-source terms.
           </p>
           <p>
@@ -151,12 +151,12 @@ export default function Terms(): ReactNode {
 
           <h2>4. Data and Privacy</h2>
           <p>
-            You retain ownership of all data you upload or process through the Services (&quot;Customer Data&quot;).
-            Zyvor will not access, use, or disclose Customer Data except as necessary to provide the Services,
+            You retain ownership of all data you upload or process through the Services (&quot;User Data&quot;).
+            Zyvor will not access, use, or disclose User Data except as necessary to provide the Services,
             comply with applicable law, or as otherwise permitted by your agreement with us.
           </p>
           <p>
-            Zyvor implements industry-standard security measures to protect Customer Data, including encryption
+            Zyvor implements industry-standard security measures to protect User Data, including encryption
             at rest and in transit, role-based access controls, and regular security audits. For full details, please
             refer to our <a href="/privacy">Privacy Policy</a> and <a href="/docs/security">Security Documentation</a>.
           </p>
@@ -200,7 +200,7 @@ export default function Terms(): ReactNode {
           <p>
             Either party may terminate these Terms with 30 days&apos; written notice. Zyvor may suspend or
             terminate your access immediately if you breach these Terms or if required by law. Upon termination, your
-            license to use the Services ceases immediately. You may request export of your Customer Data within 30 days
+            license to use the Services ceases immediately. You may request export of your User Data within 30 days
             of termination, after which Zyvor may delete it.
           </p>
 

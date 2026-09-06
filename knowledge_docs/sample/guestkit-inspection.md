@@ -2,8 +2,8 @@
 title: GuestKit disk inspection overview
 product: GuestKit
 version: "1.0"
-source: customer-manual
-url: https://zyvor.dev/docs/customer-manuals/guestkit
+source: user-manual
+url: https://zyvor.dev/docs/user-manuals/guestkit
 tenant_id: public
 access_level: public
 updated_at: "2026-07-30"

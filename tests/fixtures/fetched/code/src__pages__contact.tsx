@@ -77,7 +77,7 @@ const intentConfig: Record<string, ContactIntentConfig> = {
     asideBullets: [
       'VMware licensing vs HyperSDK Platform TCO model for your VM count',
       'Public-cloud run-rate comparison for steady-state workloads',
-      'Typical payback window from recent customer programs',
+      'Typical payback window from recent user programs',
     ],
     submitLabel: 'Get savings estimate',
     messagePlaceholder: 'Approximate VM count, current VMware/cloud spend, and goals…',

@@ -7,7 +7,7 @@
 
 ---
 
-Customer and its users shall **not**:
+User and its users shall **not**:
 
 1. Violate any applicable law, regulation, or third-party rights.
 2. Use the Software to attack, probe, or disrupt networks or systems **without authorization**.
@@ -18,6 +18,6 @@ Customer and its users shall **not**:
 7. Misrepresent affiliation with Zyvor or use Zyvor trademarks without permission.
 8. Deploy in **embargoed or sanctioned** jurisdictions or for prohibited end-users (see Export Compliance Addendum) without required licenses.
 
-Zyvor may suspend access for material violation after notice where practicable. Customer remains responsible for users and Customer Content.
+Zyvor may suspend access for material violation after notice where practicable. User remains responsible for users and User Content.
 
 **Report abuse:** legal@zyvor.dev

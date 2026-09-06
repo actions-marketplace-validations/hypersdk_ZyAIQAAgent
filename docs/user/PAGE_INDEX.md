@@ -4,14 +4,14 @@ Every Mission Control surface and action card.
 
 _52 routes_
 
-Regenerate: `node scripts/customer-docs/generate-page-index.mjs`
+Regenerate: `node scripts/user-docs/generate-page-index.mjs`
 
 ## Overview
 
 | Page | Route | Purpose | Guide |
 |------|-------|---------|-------|
 | Mission Control | `/dashboard` | Live Mission Control console — grouped side rail (Console / Testing / Security / Operations), dark theme, status hero, workloads, pods, category action panels, requirements, schedules, findings, and QA run history. | [Open](pages/overview/dashboard.md) |
-| Login | `/login` | Mission Control sign-in — same dark/light design system as the dashboard; DASHBOARD_PASSWORD gate. Argus Enterprise uses Keycloak SSO (demo/demo) — see customer/enterprise-sso.md. | [Open](pages/overview/login.md) |
+| Login | `/login` | Mission Control sign-in — same dark/light design system as the dashboard; DASHBOARD_PASSWORD gate. Argus Enterprise uses Keycloak SSO (demo/demo) — see user/enterprise-sso.md. | [Open](pages/overview/login.md) |
 | Hero status | `/dashboard/hero` | Cluster/app health banner with pods, replicas, last QA run, pass rate, next scheduled smoke, and knowledge (Ask Zyra) status. | [Open](pages/overview/dashboard-hero.md) |
 | Workloads | `/dashboard/workloads` | Deployment and CronJob strip for the argus namespace (when kube access is available). | [Open](pages/overview/dashboard-workloads.md) |
 | Pods | `/dashboard/pods` | Pod cards with phase, restarts, and click-through logs; optional cluster events toggle. | [Open](pages/overview/dashboard-pods.md) |
@@ -101,7 +101,7 @@ Regenerate: `node scripts/customer-docs/generate-page-index.mjs`
 | Cloud pentest | `/dashboard/actions/cloud-pentest` | Credentialed AWS/GCP/Azure CLI enumeration of a described finding in the sandbox — same opt-ins and credential-reference rules as Host pentest. | [Open](pages/security/dashboard-actions-cloud-pentest.md) |
 | DB assert | `/dashboard/actions/db-assert` | Read-only SELECT-only assertion (row_count / cell_equals / column_values) against Postgres, MySQL, or SQLite — needs ZYVOR_DB_TESTING_ENABLED and an engagement; DSN is an env-var reference. | [Open](pages/security/dashboard-actions-db-assert.md) |
 | Chaos inject | `/dashboard/actions/chaos-inject` | Client-side fault injection (latency / loss / reset / dependency timeout) while a flow or smoke control test observes — needs ZYVOR_CHAOS_INJECTION_ENABLED, exploit engagement, and target consent. | [Open](pages/security/dashboard-actions-chaos-inject.md) |
-| Chaos webhook | `/dashboard/actions/chaos-webhook` | Trigger a customer-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject. | [Open](pages/security/dashboard-actions-chaos-webhook.md) |
+| Chaos webhook | `/dashboard/actions/chaos-webhook` | Trigger a user-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject. | [Open](pages/security/dashboard-actions-chaos-webhook.md) |
 
 ## Operations
 
@@ -115,5 +115,5 @@ Regenerate: `node scripts/customer-docs/generate-page-index.mjs`
 
 ## Related
 
-- [Customer docs home](README.md)
+- [User docs home](README.md)
 - [Page-by-page guides](pages/README.md)

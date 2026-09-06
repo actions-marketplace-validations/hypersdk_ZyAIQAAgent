@@ -200,8 +200,8 @@ non-`None` value for — `run_python()` still drops everything, unchanged,
 confirmed by a dedicated test that inspects the actual `V1SecurityContext`
 each function builds. Real target-cluster pod-kill/infra chaos is
 explicitly out of scope — Argus never holds privileged access to a
-customer's own cluster; `chaos_webhook` covers that case by triggering the
-*customer's own* chaos tooling (Chaos Mesh/Litmus) instead, needing zero
+user's own cluster; `chaos_webhook` covers that case by triggering the
+*user's own* chaos tooling (Chaos Mesh/Litmus) instead, needing zero
 new sandbox capability.
 
 - **`agents/chaos/verdict.py::assess_resilience()`** — deterministic

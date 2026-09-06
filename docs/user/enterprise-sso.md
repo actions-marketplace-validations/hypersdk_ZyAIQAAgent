@@ -3,7 +3,7 @@
 How to sign into **Argus Enterprise** (Watchfloor) after install: bundled
 Keycloak, your own OIDC provider, or a local username/password for a test lab.
 
-This chapter is for the **Argus Enterprise** customer package (Helm chart +
+This chapter is for the **Argus Enterprise** user package (Helm chart +
 scripts). Community Mission Control (`argus serve`) still uses
 `DASHBOARD_PASSWORD` — see [Admin basics](admin-basics.md).
 
@@ -16,7 +16,7 @@ After a default install with bundled Keycloak and test users enabled:
 | `demo` | `demo` | Quick manual login check |
 | `ssouser` | `Sso@321` | Scripted / `test-login.sh` smoke test |
 
-**These are not production accounts.** Disable them for a real customer
+**These are not production accounts.** Disable them for a real user
 environment (`keycloak.createTestUsers: false` in Helm, or delete the users
 in Keycloak after you verify login).
 
@@ -29,7 +29,7 @@ scripts/test-login.sh https://argus.example.com ssouser 'Sso@321'
 ## Option A — Helm with bundled Keycloak (recommended)
 
 ```bash
-# Load the image from the customer package first (see that package's INSTALL.md), then:
+# Load the image from the user package first (see that package's INSTALL.md), then:
 helm install argus charts/argus-enterprise-*.tgz \
   --set appUrl=https://argus.example.com \
   --set keycloak.externalUrl=https://sso.example.com \

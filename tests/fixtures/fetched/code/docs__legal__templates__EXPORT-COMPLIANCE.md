@@ -11,9 +11,9 @@
 
 The Software may include or enable **encryption**, **network security**, **attestation**, or **confidential computing** capabilities subject to export control laws including (as applicable) India’s SCOMET rules, U.S. EAR, EU dual-use regulations, and similar regimes.
 
-## 2. Customer representations
+## 2. User representations
 
-Customer represents that it:
+User represents that it:
 
 - Is not located in, organized under, or ordinarily resident in a country subject to comprehensive embargo or sanctions (e.g., as restricted by India, UN, US OFAC, EU—**list to be maintained by counsel**);
 - Is not a denied party, restricted entity, or military end-user where prohibited without authorization;
@@ -22,7 +22,7 @@ Customer represents that it:
 
 ## 3. Prohibited uses
 
-Without limiting the AUP, Customer shall not use the Software:
+Without limiting the AUP, User shall not use the Software:
 
 - For development or production of nuclear, chemical, or biological weapons;
 - For unlawful interception of communications;
@@ -30,11 +30,11 @@ Without limiting the AUP, Customer shall not use the Software:
 
 ## 4. Cooperation
 
-Customer will cooperate with reasonable export classification inquiries. Zyvor may suspend delivery if it reasonably believes a violation has occurred or is imminent.
+User will cooperate with reasonable export classification inquiries. Zyvor may suspend delivery if it reasonably believes a violation has occurred or is imminent.
 
 ## 5. No legal advice
 
-This addendum does not constitute legal advice. Customer is responsible for its own export and sanctions compliance program.
+This addendum does not constitute legal advice. User is responsible for its own export and sanctions compliance program.
 
 ---
 

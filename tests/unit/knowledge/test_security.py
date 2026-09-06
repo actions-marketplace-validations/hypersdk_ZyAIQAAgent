@@ -20,7 +20,7 @@ def test_tenant_pattern() -> None:
 
 
 def test_access_pattern() -> None:
-    assert ACCESS_PATTERN.fullmatch("customer")
+    assert ACCESS_PATTERN.fullmatch("user")
     assert ACCESS_PATTERN.fullmatch("support_engineer")
     assert not ACCESS_PATTERN.fullmatch("Admin Root")
 

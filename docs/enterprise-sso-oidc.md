@@ -3,14 +3,14 @@
 How to sign into **Argus Enterprise** (Watchfloor) after install: bundled Keycloak,
 your own OIDC provider, or a local username/password for a test lab.
 
-**Customer manual chapter (preferred for operators):**
-[`docs/customer/enterprise-sso.md`](customer/enterprise-sso.md) — same content,
+**User manual chapter (preferred for operators):**
+[`docs/user/enterprise-sso.md`](user/enterprise-sso.md) — same content,
 shipped in the printable Admin Basics PDF and the website manual.
 
 This page is the engineering-docs mirror. Keep both in sync when the install
 flow changes.
 
-This guide applies to the **Argus Enterprise** customer package (Helm chart +
+This guide applies to the **Argus Enterprise** user package (Helm chart +
 scripts), not community Mission Control (`argus serve` / `DASHBOARD_PASSWORD`).
 If you only have the community repo, you need the Enterprise install package
 from your Zyvor contact.
@@ -25,7 +25,7 @@ accounts exist so you can prove SSO works:
 | `demo` | `demo` | Quick manual login check |
 | `ssouser` | `Sso@321` | Scripted / `test-login.sh` smoke test |
 
-**These are not production accounts.** Disable them for a real customer
+**These are not production accounts.** Disable them for a real user
 environment (`keycloak.createTestUsers: false` in Helm, or delete the users
 in Keycloak after you verify login).
 
@@ -40,7 +40,7 @@ scripts/test-login.sh https://argus.example.com ssouser 'Sso@321'
 ## Option A — Helm with bundled Keycloak (recommended)
 
 ```bash
-# Load the image from the customer package first (see INSTALL.md), then:
+# Load the image from the user package first (see INSTALL.md), then:
 helm install argus charts/argus-enterprise-*.tgz \
   --set appUrl=https://argus.example.com \
   --set keycloak.externalUrl=https://sso.example.com \
@@ -188,8 +188,8 @@ DEPLOY_EXTRA_ENV=ARGUS_ENTERPRISE_LOCAL_AUTH_ENABLED=true \
 
 ## Related
 
-- Customer manual: [`customer/enterprise-sso.md`](customer/enterprise-sso.md)
-- Product map (Community vs Watchfloor vs overlay): [`customer/which-product.md`](customer/which-product.md)
+- User manual: [`user/enterprise-sso.md`](user/enterprise-sso.md)
+- Product map (Community vs Watchfloor vs overlay): [`user/which-product.md`](user/which-product.md)
 - Enterprise package `INSTALL.md` — image load + Helm quick start
 - Enterprise package `README-manual-deploy.md` — Docker / SSH path
 - Community Enterprise v2 overlay (API tokens, engagements): [`enterprise-v2.md`](enterprise-v2.md)

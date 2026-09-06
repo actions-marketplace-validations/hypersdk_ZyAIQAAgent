@@ -216,7 +216,7 @@ export default function AssessmentPage(): ReactNode {
               <SectionHeader
                 eyebrow="Methodology"
                 title="How We Calculated"
-                subtitle="Our estimates are based on real customer data across hundreds of migrations."
+                subtitle="Our estimates are based on real user data across hundreds of migrations."
               />
               <div className={styles.featureCard} style={{padding: '2.5rem', textAlign: 'left'}}>
                 <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
@@ -234,7 +234,7 @@ export default function AssessmentPage(): ReactNode {
                     {
                       label: 'Cost Factors',
                       detail:
-                        'We factor in licensing costs, ongoing support fees, infrastructure overhead, and migration execution costs. The estimate is conservative -- most customers report savings at the high end of the range.',
+                        'We factor in licensing costs, ongoing support fees, infrastructure overhead, and migration execution costs. The estimate is conservative -- most users report savings at the high end of the range.',
                     },
                     {
                       label: 'Timeline Estimates',

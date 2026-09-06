@@ -218,7 +218,7 @@ export default function PricingPage(): ReactNode {
           ]}
         />
 
-        {/* Customer Savings by VM Count */}
+        {/* User Savings by VM Count */}
         <div className={`${styles.featureGrid} ${styles.featureGridCol3}`}>
           {[
             {vms: '25 VMs', savings: '$112K', period: pricingCopy.savingsPeriod},

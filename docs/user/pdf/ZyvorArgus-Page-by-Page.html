@@ -21,11 +21,11 @@ table{width:100%;border-collapse:collapse;margin:.8em 0 1.1em;font-size:9.5pt}
 th,td{border:1px solid #e5e7eb;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f1f5f9}
 hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 </style></head><body>
-<section class="cover"><div class="kicker">ZyvorAI Labs · Customer Documentation</div>
+<section class="cover"><div class="kicker">ZyvorAI Labs · User Documentation</div>
 <h1>Zyvor <span>Argus</span></h1>
 <div class="sub">Page-by-Page Product Manual</div>
 <div class="badge">2026-09-05</div>
-<div class="foot">zyvor.dev · Confidential — for licensed customers</div></section>
+<div class="foot">zyvor.dev · Confidential — for licensed users</div></section>
 <main><h2>Page-by-page guides</h2>
 <p>Each guide follows: Purpose → When to use it → How to get there → What you can do → Related pages.</p>
 <p>Every route is also listed in the <a href="../PAGE_INDEX.md">complete page index</a>.</p>
@@ -276,7 +276,7 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 </tr>
 <tr>
 <td><a href="security/dashboard-actions-chaos-webhook.md">Chaos webhook</a></td>
-<td>Trigger a customer-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.</td>
+<td>Trigger a user-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.</td>
 </tr>
 <tr>
 <td><a href="security/dashboard-actions-cloud-pentest.md">Cloud pentest</a></td>
@@ -369,7 +369,7 @@ hr{border:none;border-top:1px solid #e5e7eb;margin:1.2em 0}
 </tr>
 </tbody></table>
 <hr>
-<p>60 guides. Regenerate: <code>node scripts/customer-docs/generate-guide-index.mjs</code>.</p>
+<p>60 guides. Regenerate: <code>node scripts/user-docs/generate-guide-index.mjs</code>.</p>
 <hr>
 <h2>API contract diff</h2>
 <h3>Purpose</h3>
@@ -1590,7 +1590,7 @@ IMAP email, transcripts, Jira (JSON / REST / OAuth), and diarized meetings.</p>
 <hr>
 <h2>Chaos webhook</h2>
 <h3>Purpose</h3>
-<p>Trigger a customer-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.</p>
+<p>Trigger a user-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.</p>
 <h3>When to use it</h3>
 <ul>
 <li>Open this card when the job matches the purpose above</li>
@@ -2228,7 +2228,7 @@ IMAP email, transcripts, Jira (JSON / REST / OAuth), and diarized meetings.</p>
 <h2>Zyvor Argus — Complete page index</h2>
 <p>Every Mission Control surface and action card.</p>
 <p><em>52 routes</em></p>
-<p>Regenerate: <code>node scripts/customer-docs/generate-page-index.mjs</code></p>
+<p>Regenerate: <code>node scripts/user-docs/generate-page-index.mjs</code></p>
 <h3>Overview</h3>
 <table>
 <thead>
@@ -2248,7 +2248,7 @@ IMAP email, transcripts, Jira (JSON / REST / OAuth), and diarized meetings.</p>
 <tr>
 <td>Login</td>
 <td><code>/login</code></td>
-<td>Mission Control sign-in — same dark/light design system as the dashboard; DASHBOARD_PASSWORD gate. Argus Enterprise uses Keycloak SSO (demo/demo) — see customer/enterprise-sso.md.</td>
+<td>Mission Control sign-in — same dark/light design system as the dashboard; DASHBOARD_PASSWORD gate. Argus Enterprise uses Keycloak SSO (demo/demo) — see user/enterprise-sso.md.</td>
 <td><a href="pages/overview/login.md">Open</a></td>
 </tr>
 <tr>
@@ -2617,7 +2617,7 @@ IMAP email, transcripts, Jira (JSON / REST / OAuth), and diarized meetings.</p>
 <tr>
 <td>Chaos webhook</td>
 <td><code>/dashboard/actions/chaos-webhook</code></td>
-<td>Trigger a customer-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.</td>
+<td>Trigger a user-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.</td>
 <td><a href="pages/security/dashboard-actions-chaos-webhook.md">Open</a></td>
 </tr>
 </tbody></table>
@@ -2664,7 +2664,7 @@ IMAP email, transcripts, Jira (JSON / REST / OAuth), and diarized meetings.</p>
 </tbody></table>
 <h3>Related</h3>
 <ul>
-<li><a href="README.md">Customer docs home</a></li>
+<li><a href="README.md">User docs home</a></li>
 <li><a href="pages/README.md">Page-by-page guides</a></li>
 </ul>
 </main></body></html>

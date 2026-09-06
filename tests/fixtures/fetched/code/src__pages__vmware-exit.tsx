@@ -87,13 +87,13 @@ export default function VMwareExit(): ReactNode {
         <SectionHeader
           eyebrow="The Real Numbers"
           title="What Broadcom Is Actually Charging"
-          subtitle="These are real numbers from real customers. Broadcom forced 3-year minimum commitments on every renewal."
+          subtitle="These are real numbers from real users. Broadcom forced 3-year minimum commitments on every renewal."
         />
         <FeatureGrid
           features={[
             {
               title: '$45K/yr \u2192 $187K/yr',
-              desc: '315% increase on a single renewal. This is not an outlier -- it is the new normal for VMware customers.',
+              desc: '315% increase on a single renewal. This is not an outlier -- it is the new normal for VMware users.',
             },
             {
               title: '$1.2M/yr',
@@ -115,7 +115,7 @@ export default function VMwareExit(): ReactNode {
         <SectionHeader
           eyebrow="Cost Savings"
           title="93% Annual Cost Reduction"
-          subtitle={`Real numbers from a 350-VM Fortune 500 migration. ${platform.firstBootSuccess} first-boot success rate. 70% average TCO reduction across all customer deployments.`}
+          subtitle={`Real numbers from a 350-VM Fortune 500 migration. ${platform.firstBootSuccess} first-boot success rate. 70% average TCO reduction across all user deployments.`}
         />
         <StatGrid
           stats={[
@@ -189,7 +189,7 @@ export default function VMwareExit(): ReactNode {
           ))}
         </div>
 
-        {/* Customer Quote */}
+        {/* User Quote */}
         <div className={styles.featureCard} style={{textAlign: 'center', marginBottom: '2rem'}}>
           <p
             style={{

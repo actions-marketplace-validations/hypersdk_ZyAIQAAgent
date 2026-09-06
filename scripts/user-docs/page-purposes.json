@@ -1,6 +1,6 @@
 {
   "/dashboard": "Live Mission Control console — grouped side rail (Console / Testing / Security / Operations), dark theme, status hero, workloads, pods, category action panels, requirements, schedules, findings, and QA run history.",
-  "/login": "Mission Control sign-in — same dark/light design system as the dashboard; DASHBOARD_PASSWORD gate. Argus Enterprise uses Keycloak SSO (demo/demo) — see customer/enterprise-sso.md.",
+  "/login": "Mission Control sign-in — same dark/light design system as the dashboard; DASHBOARD_PASSWORD gate. Argus Enterprise uses Keycloak SSO (demo/demo) — see user/enterprise-sso.md.",
   "/dashboard/ask": "Ask Zyra — citation-first product knowledge Q&A (optional Qdrant RAG); read-only, no cluster mutations.",
   "/dashboard/hero": "Cluster/app health banner with pods, replicas, last QA run, pass rate, next scheduled smoke, and knowledge (Ask Zyra) status.",
   "/dashboard/workloads": "Deployment and CronJob strip for the argus namespace (when kube access is available).",
@@ -45,7 +45,7 @@
   "/dashboard/actions/cloud-pentest": "Credentialed AWS/GCP/Azure CLI enumeration of a described finding in the sandbox — same opt-ins and credential-reference rules as Host pentest.",
   "/dashboard/actions/db-assert": "Read-only SELECT-only assertion (row_count / cell_equals / column_values) against Postgres, MySQL, or SQLite — needs ZYVOR_DB_TESTING_ENABLED and an engagement; DSN is an env-var reference.",
   "/dashboard/actions/chaos-inject": "Client-side fault injection (latency / loss / reset / dependency timeout) while a flow or smoke control test observes — needs ZYVOR_CHAOS_INJECTION_ENABLED, exploit engagement, and target consent.",
-  "/dashboard/actions/chaos-webhook": "Trigger a customer-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.",
+  "/dashboard/actions/chaos-webhook": "Trigger a user-owned chaos experiment webhook, then run a control test with the same resilience rubric and gates as Chaos inject.",
   "/dashboard/schedules": "Turn smoke, audit, ping, TLS, flow, route sweep, API, realtime, or vitals into a 5 min–6 h loop (Runs & schedules panel).",
   "/dashboard/findings": "Collected issues from API, auth, live-data, vitals, audit, and security jobs with export/clear.",
   "/dashboard/runs": "History table of QA runs with pass/fail chips and sparkline trends.",

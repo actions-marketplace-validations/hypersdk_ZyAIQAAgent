@@ -2,8 +2,8 @@
 title: PacketWolf Egress Controls
 product: PacketWolf
 version: "2.0"
-source: customer-manual
-url: https://zyvor.dev/docs/customer-manuals/packetwolf
+source: user-manual
+url: https://zyvor.dev/docs/user-manuals/packetwolf
 tenant_id: public
 access_level: public
 updated_at: "2026-07-30"

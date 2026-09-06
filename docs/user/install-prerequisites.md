@@ -10,7 +10,7 @@ of the setup is configuration, not hunting for missing tools.
 1. Toolchain          Docker (or Podman) · kubectl · Helm · (Python/Node if building from source)
 2. Community Argus    ghcr.io/zyvorai/zyvor-argus  OR  git clone + make install
 3. OSS service token  so Watchfloor (or CI) can call /api/v2
-4. Watchfloor         only if you need Argus Enterprise — customer package / Helm
+4. Watchfloor         only if you need Argus Enterprise — user package / Helm
 5. Sign in & use      claim → SSO/demo login → register target → smoke
 ```
 
@@ -107,7 +107,7 @@ make install                  # CLI + Playwright browsers
 argus serve --port 8080
 ```
 
-Customer walkthrough: [Getting Started](getting-started.md).
+User walkthrough: [Getting Started](getting-started.md).
 
 ---
 
@@ -161,7 +161,7 @@ Roles: `viewer` | `operator` | `admin` (admin needed to create engagements).
 | Community `argus serve` | **No** — install §2 first |
 | Your app under test | **No** — set `ZYVOR_BASE_URL` / target `app_url` |
 
-### Download trial / customer package
+### Download trial / user package
 
 Public eval builds are published on the OSS repo’s releases (tag shape
 `v*-trial`). The archive **must include a signed `trial.token`** (Ed25519 JWT).

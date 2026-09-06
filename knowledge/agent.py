@@ -40,12 +40,12 @@ KubeVirt, KVM, Cilium, Ceph and migration topics.
 
 Retrieval tools (prefer the most specific tool first; combine tools when needed):
 
-- search_product_manuals — customer manuals and how-to guides
+- search_product_manuals — user manuals and how-to guides
 - search_api_reference — API endpoints, schemas and operations
 - search_github_code — indexed source/code excerpts
 - search_migration_guides — VMware/KubeVirt and HyperSDK migration
 - search_known_issues — known issues and troubleshooting bulletins
-- search_customer_runbooks — operational runbooks
+- search_user_runbooks — operational runbooks
 - search_zyvor_knowledge — broad fallback across all authorized docs
 
 Mandatory rules:

@@ -40,7 +40,7 @@ class Settings(BaseSettings):
 
     # Mission Control dashboard ask defaults (never taken from the browser).
     knowledge_tenant_id: str = "public"
-    knowledge_access_levels: Annotated[tuple[str, ...], NoDecode] = ("public", "customer")
+    knowledge_access_levels: Annotated[tuple[str, ...], NoDecode] = ("public", "user")
     knowledge_checkpoint_path: str = "reports/knowledge-checkpoints.sqlite"
     enable_live_cluster_tools: bool = False
     knowledge_live_namespaces: Annotated[tuple[str, ...], NoDecode] = ()
@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     max_tool_calls: int = Field(default=8, ge=1, le=20)
     max_query_length: int = Field(default=4000, ge=100, le=20000)
     enable_public_documents: bool = True
-    default_access_levels: Annotated[tuple[str, ...], NoDecode] = ("public", "customer")
+    default_access_levels: Annotated[tuple[str, ...], NoDecode] = ("public", "user")
 
     @field_validator(
         "llm_base_url",

@@ -81,7 +81,7 @@ Only `admin` can create or revoke a security engagement — see
 ## Target policy
 
 ```bash
-export ZYVOR_TARGET_ALLOWLIST='zyvor.dev,*.zyvor.dev,customer.example.com'
+export ZYVOR_TARGET_ALLOWLIST='zyvor.dev,*.zyvor.dev,user.example.com'
 export ZYVOR_TARGET_ALLOWED_PORTS='80,443,24631'
 export ZYVOR_TARGET_ALLOWED_CIDRS='10.20.0.0/16'
 export ZYVOR_ALLOW_PRIVATE_TARGETS=false
@@ -277,5 +277,5 @@ This overlay document covers the community Enterprise v2 security/durability
 layer (service tokens, engagements, target policy). Interactive SSO for the
 Argus Enterprise Watchfloor product — Keycloak, any OIDC IdP, demo accounts
 (`demo`/`demo`, `ssouser`/`Sso@321`), and local username/password — is in
-**[enterprise-sso-oidc.md](enterprise-sso-oidc.md)** and the customer manual
-**[customer/enterprise-sso.md](customer/enterprise-sso.md)**.
+**[enterprise-sso-oidc.md](enterprise-sso-oidc.md)** and the user manual
+**[user/enterprise-sso.md](user/enterprise-sso.md)**.

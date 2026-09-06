@@ -3,7 +3,7 @@
 **DRAFT — NOT FOR EXECUTION WITHOUT LEGAL REVIEW**
 
 **Provider:** ZyvorAI Labs Private Limited  
-**Customer:** __________________________  
+**User:** __________________________  
 **Support tier:** ☐ Standard  ☐ Enterprise  ☐ Sovereign 24×7  
 **Effective:** __________________________
 
@@ -43,13 +43,13 @@ Support covers the **Supported Products** on the Order Form: installation guidan
 
 **Uptime SLA (Hosted Services only, if applicable):** 99.5% monthly excluding scheduled maintenance (with notice) and force majeure. Service credits: ___% of monthly fees per 0.1% below target, capped at ___% (fill on Order Form).
 
-## 5. Customer obligations
+## 5. User obligations
 
 Maintain supported versions; provide logs and reproduction steps; designate technical contacts; apply security patches within agreed windows.
 
 ## 6. Exclusions
 
-Failures caused by Customer networks, cloud provider outages, unlicensed use, or modifications outside documentation.
+Failures caused by User networks, cloud provider outages, unlicensed use, or modifications outside documentation.
 
 ---
 

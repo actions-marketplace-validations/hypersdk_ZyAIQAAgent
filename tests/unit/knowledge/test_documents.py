@@ -22,7 +22,7 @@ def test_chunking_preserves_security_metadata(tmp_path: Path) -> None:
     path = tmp_path / "guide.md"
     path.write_text(
         "---\ntitle: Guide\nproduct: PacketWolf\ntenant_id: acme\n"
-        "access_level: customer\n---\n# Guide\n" + ("content " * 500),
+        "access_level: user\n---\n# Guide\n" + ("content " * 500),
         encoding="utf-8",
     )
     docs = load_and_chunk_file(
@@ -34,5 +34,5 @@ def test_chunking_preserves_security_metadata(tmp_path: Path) -> None:
     )
     assert len(docs) > 1
     assert all(doc.metadata["tenant_id"] == "acme" for doc in docs)
-    assert all(doc.metadata["access_level"] == "customer" for doc in docs)
+    assert all(doc.metadata["access_level"] == "user" for doc in docs)
     assert len({doc.metadata["document_id"] for doc in docs}) == len(docs)

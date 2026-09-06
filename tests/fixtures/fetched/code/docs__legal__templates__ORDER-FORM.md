@@ -6,7 +6,7 @@
 |-------|--------|
 | Order Form # | OF-________ |
 | MSA date | __________ |
-| Customer legal name | __________ |
+| User legal name | __________ |
 | Billing address | __________ |
 | Term start | __________ |
 | Term end | __________ (12 months unless stated) |
@@ -65,5 +65,5 @@ Payment: ☐ Annual upfront ☐ Quarterly Net 30
 **ZyvorAI Labs Private Limited**  
 By: __________________________  Name: __________________________  Title: **Director**
 
-**Customer**  
+**User**  
 By: __________________________  Name: __________________________  Title: __________________________

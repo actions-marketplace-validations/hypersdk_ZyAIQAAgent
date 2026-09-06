@@ -18,7 +18,7 @@ Follow-up to **v0.9.1** (docs & version pin refresh to `zyvorai/argus`).
 - **`cloud_pentest`'s missing Mission Control card fixed** — it was reachable only via direct API calls before; now has a real UI card, live-verified in a browser.
 - **CI coverage gate raised 47 → 50** to match measured 53.47%, keeping the gate meaningful.
 - **First real image published under the new registry** — `ghcr.io/zyvorai/zyvor-argus:v0.9.2` is the first tag published since the `hypersdk` → `zyvorai` container registry migration (v0.9.1 only updated docs/pins; no image had been published under the new path yet).
-- **Customer PDFs** — regenerated from latest markdown.
+- **User PDFs** — regenerated from latest markdown.
 
 ## Pull the image
 

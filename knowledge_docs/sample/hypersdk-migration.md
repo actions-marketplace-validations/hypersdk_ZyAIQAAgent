@@ -3,7 +3,7 @@ title: HyperSDK VMware Migration Workflow
 product: HyperSDK
 version: "1.0"
 source: migration-guide
-url: https://zyvor.dev/docs/customer-manuals
+url: https://zyvor.dev/docs/user-manuals
 tenant_id: public
 access_level: public
 updated_at: "2026-07-30"

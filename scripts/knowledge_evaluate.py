@@ -24,7 +24,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--base-url", default="http://localhost:8080")
     result.add_argument("--api-key")
     result.add_argument("--tenant-id", default="public")
-    result.add_argument("--access-levels", default="public,customer")
+    result.add_argument("--access-levels", default="public,user")
     result.add_argument("--output", type=Path, default=Path("eval/knowledge_report.json"))
     result.add_argument(
         "--langsmith",

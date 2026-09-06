@@ -95,7 +95,7 @@ docker run --rm -p 8080:8080 --env-file .env ghcr.io/zyvorai/zyvor-argus:v0.9.2 
 | **Runs & schedules** | Recurring schedules · 🐞 Findings · QA run history + videos · Test health |
 | **Ask Zyra** | Citation-first Q&A over product docs (optional knowledge extra) |
 
-→ [Dashboard tutorial](docs/tutorials/10-mission-control-dashboard.md) · [Customer manual](docs/customer/README.md)
+→ [Dashboard tutorial](docs/tutorials/10-mission-control-dashboard.md) · [User manual](docs/user/README.md)
 
 ---
 
@@ -137,8 +137,8 @@ Full command reference: [`docs/test-authoring.md`](docs/test-authoring.md)
 | Start here | |
 |------------|---|
 | [Tutorials (1→18)](docs/tutorials/README.md) | Install → dashboard → flows → security |
-| [Customer manual](docs/customer/README.md) | Page-by-page Mission Control + PDFs |
-| [Feature guide](docs/zyvor-argus-customer-feature-guide.md) | Complete capability reference |
+| [User manual](docs/user/README.md) | Page-by-page Mission Control + PDFs |
+| [Feature guide](docs/zyvor-argus-user-feature-guide.md) | Complete capability reference |
 | [Network-attack / DAST gaps](docs/security-network-attack-gaps.md) | What DAST covers vs deliberately deferred |
 | [Configuration](docs/configuration.md) | Every env var |
 | [Remote deploy](docs/remote-deploy.md) | VM, container, or k3s |
@@ -158,7 +158,7 @@ templates/        Mission Control + login (Jinja2)
 playwright/       Test runner, crawl, visual diff
 knowledge/        Ask Zyra RAG (optional [knowledge] extra)
 kubernetes/       Deployment, CronJob, RBAC, sandbox Jobs
-scripts/          deploy-remote.sh, customer-docs, e2e smoke
+scripts/          deploy-remote.sh, user-docs, e2e smoke
 ```
 
 ---

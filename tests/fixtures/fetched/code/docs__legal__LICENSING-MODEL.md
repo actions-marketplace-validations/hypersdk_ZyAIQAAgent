@@ -8,7 +8,7 @@ sidebar_label: Licensing model
 
 **Zyvor suite products** (PacketWolf, Ragnarok, Aether, HyperSDK Platform, Forge, IronWolf, HyperCluster, Zeus OS, Zyvor Fabric, Veyron, Machina, hyper2kvm, and related extensions) are **proprietary**. Access is by written agreement or the [deploy EULA](/license).
 
-**GuestKit** is distributed under **LGPL-3.0-or-later** as the open guest-inspection layer; Zyvor company terms still apply to branded binaries and customer bundles — see the GuestKit repository legal pack.
+**GuestKit** is distributed under **LGPL-3.0-or-later** as the open guest-inspection layer; Zyvor company terms still apply to branded binaries and user bundles — see the GuestKit repository legal pack.
 
 ## License types
 

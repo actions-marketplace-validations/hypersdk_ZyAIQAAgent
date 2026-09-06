@@ -116,7 +116,7 @@ export default function About(): ReactNode {
             Zyvor was born from a simple observation: enterprise VM migration was still painfully manual. After
             years of building enterprise infrastructure tools, our team set out to create the migration platform we
             always wished existed &mdash; one that handles the entire lifecycle from discovery to deployment. The
-            customer-facing platform is <em>Zeus OS</em>; <em>HyperSDK Platform</em> is the migration engine inside it.
+            user-facing platform is <em>Zeus OS</em>; <em>HyperSDK Platform</em> is the migration engine inside it.
           </p>
           <p
             style={{
@@ -191,7 +191,7 @@ export default function About(): ReactNode {
         <SectionHeader
           eyebrow={copy.valuesEyebrow}
           title={copy.valuesTitle}
-          subtitle="Four principles that shape every decision we make, from architecture choices to customer interactions."
+          subtitle="Four principles that shape every decision we make, from architecture choices to user interactions."
         />
         <FeatureGrid columns={2} features={values} />
 

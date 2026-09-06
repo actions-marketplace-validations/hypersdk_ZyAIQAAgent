@@ -227,9 +227,9 @@ Requires Python **3.11 or 3.12**, `pip install -e ".[knowledge]"`, and a running
 | `APP_API_KEY` | *(none)* | Shared key for `POST /v1/qa` (dev). Prefer `AUTH_TOKENS_JSON` in production. |
 | `AUTH_TOKENS_JSON` | *(empty)* | JSON map of API token → `{tenant_id, access_levels}` |
 | `TRUST_CLIENT_TENANT_HEADER` | `false` | If `false` (default) and no `AUTH_TOKENS_JSON` mapping is configured, requests are refused rather than trusting a client-supplied `X-Tenant-ID` header. Only enable for trusted, network-isolated internal deployments — never for tenant-facing/external clients. |
-| `DEFAULT_ACCESS_LEVELS` | `public,customer` | Levels a non-mapped key may request |
+| `DEFAULT_ACCESS_LEVELS` | `public,user` | Levels a non-mapped key may request |
 | `KNOWLEDGE_TENANT_ID` | `public` | Tenant used by Mission Control ask proxy (never from the browser) |
-| `KNOWLEDGE_ACCESS_LEVELS` | `public,customer` | Access levels for Mission Control ask proxy |
+| `KNOWLEDGE_ACCESS_LEVELS` | `public,user` | Access levels for Mission Control ask proxy |
 | `KNOWLEDGE_CHECKPOINT_PATH` | `reports/knowledge-checkpoints.sqlite` | SQLite path for conversation checkpoints (`:memory:` for ephemeral) |
 | `ENABLE_LIVE_CLUSTER_TOOLS` | `false` | Opt-in read-only live K8s/KubeVirt/Cilium/Hubble/Ceph/node tools in Ask Zyra |
 | `ENABLE_REMEDIATION_AGENT` | `false` | Separate HITL remediation planner (`POST /v1/remediation`); not part of Ask Zyra |

@@ -205,7 +205,7 @@ deeper security and resilience job kinds are gated behind an authorized
 | `host_pentest` | `exploit` | Non-destructive SSH enumeration (`paramiko`) via a specially-imaged sandbox (`ZYVOR_SANDBOX_HOST_IMAGE`). Also requires `ZYVOR_CREDENTIALED_PENTEST_ENABLED=true`; creds must be `$secret` refs |
 | `cloud_pentest` | `exploit` | Non-destructive `aws`/`gcloud`/`az` CLI enumeration via a specially-imaged sandbox (`ZYVOR_SANDBOX_CLOUD_IMAGE`). Same additional credentialed-pentest gate as `host_pentest` |
 | `chaos_inject` | `exploit` | Client-side egress fault injection while a flow/smoke control observes — also requires `ZYVOR_CHAOS_INJECTION_ENABLED` and per-run consent |
-| `chaos_webhook` | `exploit` | Trigger a customer-owned chaos experiment webhook, then observe with the same resilience rubric |
+| `chaos_webhook` | `exploit` | Trigger a user-owned chaos experiment webhook, then observe with the same resilience rubric |
 | `port_scan` | `active_recon` | Bounded TCP connect scan (≤64 common ports) — `agents/probes/port_scan.py` |
 | `tls_cipher_scan` | `active_recon` | TLS protocol + weak-cipher grading — `agents/probes/tls_cipher_scan.py` |
 | `dast_scan` / `injection_scan` / `csrf_probe` / `ssrf_probe` / `auth_attack_scan` / `idor_scan` | `exploit` | Bounded DAST / web-attack probes — also require `ZYVOR_DAST_SCAN_ENABLED=true`. Optional nuclei via `ZYVOR_DAST_NUCLEI_BIN`. See `docs/security-network-attack-gaps.md` |

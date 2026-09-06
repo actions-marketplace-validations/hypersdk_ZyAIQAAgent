@@ -63,7 +63,7 @@ export default function DemoPage(): ReactNode {
 
       <PageContent>
         <TrustNarrativeDisclaimer>
-          The migration video is a product walkthrough, not a live customer environment. Dashboard access may require
+          The migration video is a product walkthrough, not a live user environment. Dashboard access may require
           approval — book a guided demo for your hypervisor mix.
         </TrustNarrativeDisclaimer>
         <SectionHeader title="Migration video" />

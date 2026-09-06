@@ -217,7 +217,7 @@ export default function Compliance(): ReactNode {
           features={[
             {
               title: 'Data at Rest',
-              desc: 'AES-256-GCM encryption for all stored disk images, snapshots, and configuration files. Supports customer-managed encryption keys (CMEK) for full key ownership.',
+              desc: 'AES-256-GCM encryption for all stored disk images, snapshots, and configuration files. Supports user-managed encryption keys (CMEK) for full key ownership.',
             },
             {
               title: 'Data in Transit',

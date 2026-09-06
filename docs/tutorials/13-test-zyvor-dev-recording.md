@@ -90,5 +90,5 @@ open http://localhost:8080/dashboard
 
 - [Tutorial 10 — Mission Control](10-mission-control-dashboard.md)
 - [Tutorial 11 — Flow tests](11-flow-tests.md)
-- [Customer: test zyvor.dev](../customer/test-zyvor-dev.md)
-- [Customer: using the dashboard](../customer/using-the-dashboard.md)
+- [User: test zyvor.dev](../user/test-zyvor-dev.md)
+- [User: using the dashboard](../user/using-the-dashboard.md)

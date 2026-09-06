@@ -335,7 +335,7 @@ export default function ROICalculator(): ReactNode {
 
         {/* Real Example */}
         <SectionHeader
-          eyebrow="Real Customer Data"
+          eyebrow="Real User Data"
           title="Real Example: 500-VM Enterprise"
           subtitle="A financial services company migrated 500 VMs from VMware Cloud Foundation to KVM with RHEL subscriptions. Here are their actual numbers."
         />
@@ -406,7 +406,7 @@ export default function ROICalculator(): ReactNode {
         <SectionHeader
           eyebrow="Savings by Scale"
           title="3-Year Savings by VM Count"
-          subtitle="Based on real customer data across deployments of all sizes. Payback period: 1-3 months."
+          subtitle="Based on real user data across deployments of all sizes. Payback period: 1-3 months."
         />
         <div className={`${styles.featureGrid} ${styles.featureGridCol3}`} style={{marginBottom: '1.5rem'}}>
           {[
@@ -440,7 +440,7 @@ export default function ROICalculator(): ReactNode {
         {/* CTA */}
         <CTASection
           title="Get a Custom ROI Analysis"
-          subtitle="Based on real customer data. Average VMware licensing costs range from $5,000-$15,000 per socket. Our solutions engineers can analyze your specific environment and provide a detailed, auditable ROI report."
+          subtitle="Based on real user data. Average VMware licensing costs range from $5,000-$15,000 per socket. Our solutions engineers can analyze your specific environment and provide a detailed, auditable ROI report."
           primaryCta={{
             label: 'Get a Custom ROI Analysis',
             to: buildRoiContactUrl({vmCount, annualSavings, vmwareCost: currentAnnual}),

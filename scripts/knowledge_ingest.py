@@ -15,7 +15,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Ingest documents into Zyvor Argus")
     parser.add_argument("path", type=Path)
     parser.add_argument("--tenant-id", required=True)
-    parser.add_argument("--access-level", default="customer")
+    parser.add_argument("--access-level", default="user")
     parser.add_argument("--product")
     parser.add_argument("--source", default="documentation")
     parser.add_argument("--chunk-size", type=int, default=1400)
