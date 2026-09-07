@@ -25,6 +25,7 @@ orchestrator/        LangGraph pipeline
   state.py           PipelineState (TypedDict) shared by all nodes
   cli.py             Typer CLI (argus …)
   webhook.py         FastAPI GitHub webhook server
+  intelligence/      test intel: classify, quarantine, select, health, studio
   nodes/             thin PipelineState -> PipelineState wrappers, one per stage
 agents/              the actual logic, one package per capability
   common/            Pydantic models + LLM factory (shared by everything)

@@ -18,14 +18,15 @@ Worst-offender ranking by fail count, fail %, and flaky badge from the per-test 
 ## What you can do
 
 1. Open `/dashboard` (sign in at `/login` when `DASHBOARD_PASSWORD` is set).
-2. Fill the card fields for **Test health**, then start the action and watch the live job panel (✓/✗ chips, Stop, download log).
-3. After success, check **Findings**, **QA Runs**, and any video / report links the card produces.
-4. Turn recurring checks into a **Schedule** (5 min – 6 h) when you want continuous monitoring.
+2. Open **Operations → Test health** for the worst-offender ranking (fail count, fail %, flaky badge) from the per-test index.
+3. For a classified overlay (healthy / failing / flaky / …) plus quarantine status, use `GET /api/v2/intel/health` or `argus intel health`.
+4. For a red job's cases + on-disk video/trace + category, use `GET /api/v2/intel/studio/{job_id}`.
 
-If the card stays idle or errors, hit `GET /health`, confirm the webhook/dashboard process is up (`argus serve`), and re-check env from [.env.example](../../../../.env.example).
+If the panel stays empty, hit `GET /health`, confirm `argus serve` is up, and ensure runs have written `reports/test-index.jsonl` / `reports/history/`.
 
 ## Related pages
 
+- [Flaky check](../quality/dashboard-actions-flaky.md)
 - [Getting Started](../../getting-started.md)
 - [Using the Dashboard](../../using-the-dashboard.md)
 - [Mission Control](../overview/dashboard.md)

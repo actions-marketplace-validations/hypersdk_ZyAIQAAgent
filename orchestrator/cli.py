@@ -37,6 +37,7 @@ watch_app = typer.Typer(name="watch", help="Recurring monitoring: vitals & site 
 guard_app = typer.Typer(name="guard", help="Security testing & pentesting", no_args_is_help=True)
 redteam_app = typer.Typer(name="redteam", help="LLM/application red-teaming", no_args_is_help=True)
 ask_app = typer.Typer(name="ask", help="Ask Zyra knowledge base ingestion & evaluation", no_args_is_help=True)
+intel_app = typer.Typer(name="intel", help="Test intelligence: health, quarantine, change-based select", no_args_is_help=True)
 
 app.add_typer(test_app, name="test")
 app.add_typer(flow_app, name="flow")
@@ -46,6 +47,7 @@ app.add_typer(watch_app, name="watch")
 app.add_typer(guard_app, name="guard")
 app.add_typer(redteam_app, name="redteam")
 app.add_typer(ask_app, name="ask")
+app.add_typer(intel_app, name="intel")
 
 
 def _load_env() -> None:
@@ -1540,6 +1542,82 @@ def knowledge_evaluate(
         argv.extend(["--api-key", api_key])
     sys.argv = ["knowledge-evaluate", *argv]
     evaluate_main()
+
+
+@intel_app.command("health")
+def intel_health(limit: int = typer.Option(20, help="Max tests to list")) -> None:
+    """Print suite health with flake verdicts and quarantine overlay."""
+    _load_env()
+    from orchestrator.intelligence.health import summarize
+
+    data = summarize(limit=limit)
+    typer.echo(
+        f"healthy={data['counts']['healthy']} failing={data['counts']['failing']} "
+        f"flaky={data['counts']['flaky']} quarantined={data['quarantined_count']}"
+    )
+    for rec in data["tests"]:
+        flag = "Q" if rec.get("quarantined") else " "
+        typer.echo(
+            f"[{flag}] {rec.get('verdict'):8} fail={rec.get('fails')}/{rec.get('runs')}  {rec.get('title')}"
+        )
+
+
+@intel_app.command("select")
+def intel_select(
+    base: str = typer.Option("HEAD~1", help="git base ref"),
+    head: str = typer.Option("HEAD", help="git head ref"),
+    include_quarantined: bool = typer.Option(False, help="Keep quarantined tests in the selection"),
+) -> None:
+    """Print the tests worth running for a git range (change-based selection)."""
+    _load_env()
+    from orchestrator.intelligence.select import select_from_git
+
+    result = select_from_git(base=base, head=head, include_quarantined=include_quarantined)
+    typer.echo(f"changed={len(result['changed'])} selected={len(result['selected_files'])} "
+               f"grep={result['grep'] or '-'} run={result['run_recommended']}")
+    for path in result["selected_files"]:
+        typer.echo(f"  {path}  ({result['reasons'].get(path, '')})")
+    if result["fallback"]:
+        typer.echo(f"fallback: {result['fallback']}")
+
+
+@intel_app.command("quarantine-add")
+def intel_quarantine_add(
+    title: str = typer.Argument(..., help="Test title"),
+    reason: str = typer.Option(..., "--reason", help="Why it is quarantined"),
+    file: str = typer.Option("", help="Optional spec path"),
+    owner: str = typer.Option("", help="Optional owner"),
+    ttl_hours: int = typer.Option(72, help="Hours until expiry"),
+) -> None:
+    _load_env()
+    from orchestrator.intelligence.quarantine import add
+
+    entry = add(title, file=file, reason=reason, owner=owner, ttl_hours=ttl_hours)
+    typer.echo(f"quarantined {entry['key']} until {entry['expires_at']}")
+
+
+@intel_app.command("quarantine-list")
+def intel_quarantine_list() -> None:
+    _load_env()
+    from orchestrator.intelligence.quarantine import listing
+
+    rows = listing()
+    if not rows:
+        typer.echo("no active quarantine")
+        return
+    for row in rows:
+        typer.echo(f"{row['key']}  {row['title']}  expires={row['expires_at']}  {row['reason']}")
+
+
+@intel_app.command("quarantine-release")
+def intel_quarantine_release(key: str = typer.Argument(..., help="Quarantine key")) -> None:
+    _load_env()
+    from orchestrator.intelligence.quarantine import release
+
+    if not release(key):
+        typer.echo(f"not found: {key}", err=True)
+        raise typer.Exit(code=1)
+    typer.echo(f"released {key}")
 
 
 legacy_app = typer.Typer(

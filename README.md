@@ -116,6 +116,11 @@ argus test run --source diarize --spec meetings/standup.vtt
 argus flow run https://zyvor.dev --steps docs/assets/zyvor-dev-demo.steps --video
 curl localhost:8080/api/v2/requirements              # versioned requirements + quality scores
 curl localhost:8080/api/v2/requirements/impact-graph  # models, flows, co-occurrence + typed deps
+argus intel health                                   # flake taxonomy + quarantine overlay
+argus intel select --base HEAD~1 --head HEAD         # change-based test selection
+curl localhost:8080/api/v2/intel/health
+curl -X POST localhost:8080/api/v2/intel/select \
+  -H 'Content-Type: application/json' -d '{"base":"HEAD~1","head":"HEAD"}'
 ```
 
 Full command reference: [`docs/test-authoring.md`](docs/test-authoring.md)

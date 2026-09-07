@@ -37,6 +37,7 @@ VALID_KINDS = {
     "port_scan", "tls_cipher_scan",
     "dast_scan", "injection_scan", "csrf_probe", "ssrf_probe",
     "auth_attack_scan", "idor_scan",
+    "select_tests",
 } | PROBE_KINDS
 
 # Job kinds gated behind an authorized security engagement
@@ -493,6 +494,10 @@ def _validate(kind: str, params: dict[str, Any]) -> dict[str, Any]:
         clean["insecure"] = bool(params.get("insecure"))
         if clean["run"] and not clean["url"]:
             raise ValueError("url is required when run is enabled")
+    if kind == "select_tests":
+        clean["base"] = (params.get("base") or "HEAD~1").strip()[:80] or "HEAD~1"
+        clean["head"] = (params.get("head") or "HEAD").strip()[:80] or "HEAD"
+        clean["include_quarantined"] = bool(params.get("include_quarantined"))
     if kind == "smoke":
         clean["grep"] = (params.get("grep") or "").strip()[:200]
         clean["shard"] = (params.get("shard") or "").strip()[:20]
@@ -3809,7 +3814,25 @@ def _job_idor_scan(params: dict[str, Any]) -> dict[str, Any]:
     return {"url": url, "findings": raised, **data}
 
 
+def _job_select_tests(params: dict[str, Any]) -> dict[str, Any]:
+    """Change-based test selection — static, no live target."""
+    from orchestrator.intelligence.select import select_from_git
+
+    log_progress(f"select_tests: {params.get('base')}...{params.get('head')}")
+    result = select_from_git(
+        base=params.get("base") or "HEAD~1",
+        head=params.get("head") or "HEAD",
+        include_quarantined=bool(params.get("include_quarantined")),
+    )
+    log_progress(
+        f"select_tests: {len(result['changed'])} changed, "
+        f"{len(result['selected_files'])} selected, grep={result['grep'] or '-'}"
+    )
+    return result
+
+
 _JOBS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
+    "select_tests": _job_select_tests,
     "smoke": _job_smoke,
     "flow": _job_flow,
     "route_sweep": _job_route_sweep,

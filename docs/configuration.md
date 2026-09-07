@@ -255,6 +255,8 @@ Four **product-testing** actions go beyond the page (see [Tutorial 12](tutorials
 
 The dashboard's audit, probe, screenshot, compare, ping, load-test, TLS, flaky, and schedule actions are entirely UI/API-driven — no extra environment variables. They persist artifacts (videos, screenshots, diff images, and HTML/PDF/Markdown/CSV report bundles) under `reports/` (PVC-backed on Kubernetes).
 
+**Test intelligence** (`argus intel …`, `GET/POST/DELETE /api/v2/intel/*`, job kind `select_tests`) is also UI/API/CLI-driven with no extra env vars. Quarantine entries live in `reports/quarantine.json` (TTL + owner). `select_tests` and `POST /api/v2/intel/select` are static analysis — no engagement required.
+
 The dashboard is served by `argus serve` at `/dashboard`. Cluster access resolves in-cluster config first, then local kubeconfig; with neither, the pod panels show an offline state and QA run history still works. See [Tutorial 10](tutorials/10-mission-control-dashboard.md).
 
 Consumed by: `orchestrator/dashboard/k8s.py`.

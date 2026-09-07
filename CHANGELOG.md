@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- **Test intelligence** — flake taxonomy + file-backed quarantine (`reports/quarantine.json`, TTL + owner), change-based test selection (`git diff` + requirement-test links + quarantine exclusion), and a failure-studio payload that stitches per-case video/trace/error/category. New `GET/POST /api/v2/intel/*` routes, `argus intel` CLI, and `select_tests` job kind (static, no engagement). No store-schema change, so SQLite and Postgres stay on the same public surface. New tests: `test_intel_*.py`.
 - **Typed model dependencies + impact canvas** — `model_dependencies` on `requirement_versions` (schema v6) capture explicit edges such as Order → Payment; `GET /api/v2/requirements/impact-graph` returns them alongside co-occurrence `model_edges`; Mission Control renders a typed-dependency list and SVG canvas.
 - **Requirements connectors (second slice)** — Jira OAuth access/refresh (`JIRA_OAUTH_*`), Gmail/IMAP fallback for `email` when no `.eml` paths are set (`IMAP_*` / `GMAIL_*`), and `diarize` source (speaker-tagged VTT or audio via `ZYVOR_DIARIZE_CMD` / `ZYVOR_DIARIZE_API_URL`).
 - **Ask Zyra local FastEmbed** — `EMBEDDING_BACKEND=fastembed` (or `EMBEDDING_MODEL=BAAI/…`) uses on-box FastEmbed when an OpenAI-compatible embeddings endpoint is unavailable (e.g. Ollama chat-only labs).

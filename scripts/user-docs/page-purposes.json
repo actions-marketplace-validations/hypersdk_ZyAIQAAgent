@@ -16,7 +16,7 @@
   "/dashboard/actions/screenshot": "Capture desktop / tablet / mobile screenshots of any URL.",
   "/dashboard/actions/route-sweep": "Screenshot many routes (or auto-crawl) and diff against route-sweep baselines.",
   "/dashboard/actions/audit": "Crawl pages for a11y (axe), broken links, SEO, console, perf, and security headers.",
-  "/dashboard/actions/flaky": "Re-run the suite N times and surface unstable tests.",
+  "/dashboard/actions/flaky": "Re-run the suite N times and surface unstable tests. Quarantine findings via argus intel quarantine-add / POST /api/v2/intel/quarantine (reports/quarantine.json).",
   "/dashboard/actions/vitals": "Measure Core Web Vitals (LCP / CLS / INP) with optional device and network throttle.",
   "/dashboard/actions/crawl": "Crawl an arbitrary site and validate every discovered page.",
   "/dashboard/actions/ping": "HTTP uptime / latency checks across a list of URLs.",
@@ -50,5 +50,5 @@
   "/dashboard/findings": "Collected issues from API, auth, live-data, vitals, audit, and security jobs with export/clear.",
   "/dashboard/runs": "History table of QA runs with pass/fail chips and sparkline trends.",
   "/dashboard/videos": "Browse and download recorded journey videos / traces from recent jobs.",
-  "/dashboard/test-health": "Worst-offender ranking by fail count, fail %, and flaky badge from the per-test index."
+  "/dashboard/test-health": "Worst-offender ranking by fail count, fail %, and flaky badge from the per-test index. Classified overlay + quarantine: GET /api/v2/intel/health / argus intel health."
 }

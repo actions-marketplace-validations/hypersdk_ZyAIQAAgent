@@ -129,6 +129,7 @@ Press **⌘K** (Ctrl-K) or click **Search** for the command palette that launche
 | Card | Panel | Notes |
 |------|-------|-------|
 | 🆚 API contract diff | API | Static OpenAPI breaking-change diff — no engagement |
+| *(CLI/API)* `select_tests` | — | Change-based test select — static, no engagement; no card yet (`argus intel select` / `POST /api/v2/intel/select`) |
 | 🤝 Contract verify | API | HAR consumer expectations vs live provider — engagement |
 | 📦 SCA scan | Security testing | Client-side licenses and/or local `pip-audit`/`npm audit` |
 | 🔭 Port / 🔐 TLS cipher | Security testing | Bounded port scan + weak-cipher grading — `active_recon` |
@@ -203,9 +204,11 @@ Citation-first Q&A over ingested product docs — see [Tutorial 14](14-ask-zyra-
 
 - Every executed job writes an **HTML / PDF / Markdown / CSV bundle** to `reports/jobs/<ts>-<kind>/` (PVC-backed on K8s) and exposes it in the result panel — Markdown needs no external renderer, so it's always produced even with `ENABLE_PDF_REPORT=false`.
 - **Runs & schedules → Videos** lists every recorded test video; **⬇ all videos (zip)** downloads them in one shot.
-- **Test health** (Runs & schedules) ranks the worst-offender tests (fail count, fail %, flaky badge) from a per-test index every run appends to.
+- **Test health** (Runs & schedules) ranks the worst-offender tests (fail count, fail %, flaky badge) from a per-test index every run appends to. Classified overlay + quarantine: `GET /api/v2/intel/health` / `argus intel health`.
 - **QA Runs** shows the pass-rate sparkline, expandable run rows, and **⬇ export** (runs as JSON).
 - **Requirements** panel lists versioned requirements + quality scores; **Impact** groups them by shared data models and flows, shows co-occurrence edges, and draws typed dependencies (`Order → Payment`) on an SVG canvas (`GET /api/v2/requirements`, `…/impact-graph`).
+- **Test intelligence** (CLI/API; no dedicated card yet): quarantine flakes (`POST/DELETE /api/v2/intel/quarantine`), change-based select (`POST /api/v2/intel/select` or job `select_tests`), failure studio (`GET /api/v2/intel/studio/{job_id}`). Quarantine is file-backed at `reports/quarantine.json`.
+
 ## 9. Cluster ops
 
 - **Pods** cards show CPU/memory (metrics-server), restarts, warnings, and a **⟳ restart** button.
@@ -223,7 +226,9 @@ The page is a thin client over JSON endpoints you can script against:
 | `DELETE /api/dashboard/pods/{name}` | restart (delete) a pod |
 | `GET /api/dashboard/events` · `/api/dashboard/tests` | cluster events · per-test health |
 | `GET /api/dashboard/runs?limit=` · `/api/dashboard/videos` · `/api/dashboard/videos.zip` | history · videos · zip |
-| `POST /api/dashboard/jobs` `{kind, params}` · `GET /jobs/status` · `POST /jobs/cancel` · `POST /jobs/rerun` | run / watch / stop / rerun a job |
+| `GET /api/v2/intel/health` · `GET/POST/DELETE /api/v2/intel/quarantine[/{key}]` | classified suite health · flake quarantine |
+| `POST /api/v2/intel/select` · `GET /api/v2/intel/studio/{job_id}` | change-based test select · failure studio |
+| `POST /api/dashboard/jobs` `{kind, params}` · `GET /jobs/status` · `POST /jobs/cancel` · `POST /jobs/rerun` | run / watch / stop / rerun a job (`select_tests` is static, no engagement) |
 | `GET /api/dashboard/jobs/report.{csv,html,pdf}` | download the last job's report |
 | `GET/POST/DELETE /api/dashboard/schedules[/{id}]` | list / add / remove recurring schedules |
 | `POST /api/login` · `POST /api/logout` | session auth |

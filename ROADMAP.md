@@ -5,6 +5,27 @@ scattered across runbooks, docstrings, and CI config comments. This is
 inventory, not a promise sheet — no dates, just what's open and where the
 detail already lives.
 
+## Test intelligence: flake quarantine, change-based selection, failure studio
+
+First slice — **done.** File-backed on purpose (`reports/quarantine.json`), so this
+does not grow `MissionControlStore` / `PostgresStore`'s public surface.
+
+- Deterministic failure taxonomy (`orchestrator/intelligence/classify.py`):
+  healthy / failing / flaky / selector / assertion / infra / data. Quarantine
+  is recommended only after ≥3 runs with a mixed pass/fail history.
+- Quarantine with TTL + owner + release/expiry. Never heals assertions —
+  quarantine is an explicit operator action.
+- Change-based selection from `git diff --name-only` + `requirement_test_links`
+  + smoke fallback on product-path changes. Infra-only diffs do not enqueue
+  a product suite.
+- Failure studio: `GET /api/v2/intel/studio/{job_id}` joins the job's cases
+  with on-disk video/trace presence and a classification.
+- CLI: `argus intel health|select|quarantine-*`. Job kind `select_tests`.
+
+**Still named rather than silently skipped:** in-run locator healing, heal-PRs,
+Playwright Healer/Planner adapters, session-replay coverage clustering,
+concurrent dashboard jobs, Watchfloor-lite multi-target switcher.
+
 ## New test-capability families: contract testing, chaos testing, database testing, compliance/SCA scanning
 
 Shipped as four phases, all done. Each is an independently-shippable, real

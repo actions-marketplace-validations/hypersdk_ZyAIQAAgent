@@ -172,11 +172,37 @@ GitHub repo ──► download discovery files ──► extract candidates ─�
 
 ---
 
+## Test intelligence subsystem
+
+Suite brain for Mission Control and CI: classify flakes, quarantine them, select
+which tests a change should run, and open a failure studio for a red job. File-
+backed on purpose (`reports/quarantine.json`) — no `MissionControlStore` /
+`PostgresStore` schema change.
+
+- **Taxonomy** (`orchestrator/intelligence/classify.py`): deterministic
+  (no LLM) — `healthy` / `failing` / `flaky` / `selector` / `assertion` /
+  `infra` / `data` / `unknown`. Quarantine is recommended only after ≥3 runs
+  with a mixed pass/fail history.
+- **Quarantine** (`orchestrator/intelligence/quarantine.py`): TTL + owner +
+  release/expiry prune. Never heals assertions — quarantine is an explicit
+  operator action.
+- **Change-based select** (`orchestrator/intelligence/select.py`):
+  `git diff --name-only` + requirement-linked tests + quarantine drop; smoke
+  fallback on product-path changes; infra-only diffs do not enqueue a product
+  suite.
+- **Health / studio** (`health.py`, `studio.py`): overlay quarantine on
+  `history.test_health()`; join a job's cases with on-disk video/trace
+  presence and a classification.
+- **Surfaces**: `GET/POST/DELETE /api/v2/intel/*`, CLI `argus intel …`, job
+  kind `select_tests` (static, no engagement).
+
+---
+
 ## Entry points
 
 | Entry | File | Trigger |
 |-------|------|---------|
-| CLI `argus` | `orchestrator/cli.py` (Typer) | `test run`, `test exec`, `flow run`, `vision regression`, `guard misconfig-scan`, `serve` (grouped subcommands; legacy flat `zyvor-qa` alias still works) |
+| CLI `argus` | `orchestrator/cli.py` (Typer) | `test run`, `test exec`, `flow run`, `vision regression`, `guard misconfig-scan`, `intel health|select|quarantine-*`, `serve` (grouped subcommands; legacy flat `zyvor-qa` alias still works) |
 | Webhook server | `orchestrator/webhook.py` (FastAPI) | GitHub `push`, `pull_request`, `repository_dispatch: staging-deployed`; HMAC-verified via `GITHUB_WEBHOOK_SECRET`; `/health` for probes |
 | Slack slash command | `orchestrator/webhook.py` (`POST /webhook/slack/command`) | `/zyvor run <smoke\|full\|regression\|audit>` / `/zyvor status <job_id>` from chat, enqueued onto the same job queue as `POST /api/v2/jobs`. HMAC-verified via `SLACK_SIGNING_SECRET` (`orchestrator/security/slack.py`); dispatch logic in `orchestrator/slack_gateway.py`. One-way only — completion is still reported via the existing `SLACK_WEBHOOK_URL` notify channel, not a reply to the command. See [Tutorial 16](tutorials/16-slack-gateway.md). |
 | MCP server | `integrations/mcp/` (`argus-mcp`, optional `[mcp]` extra) | Exposes an allowlisted subset of `/api/v2` jobs as MCP tools (`run_job`, `run_smoke_test`, `run_site_audit`, `run_crawl_test`, `get_job_status`, `cancel_job`) for MCP-capable chat agents (e.g. Hermes Agent) to trigger and poll QA jobs from Telegram/Discord/Slack/CLI. Thin HTTP client of `/api/v2`, no `orchestrator.*` imports — deployable independently. Bearer-token auth via the same `orchestrator/security/rbac.py` scopes. See [`docs/mcp-server.md`](mcp-server.md). |
@@ -255,6 +281,9 @@ Directories the pipeline reads and writes (all relative to repo root):
 | `reports/qa-summary.html` / `.pdf` | Final report | `report` |
 | `reports/results.json` | Playwright JSON output | `execute` |
 | `reports/artifacts/` | Per-failure video/screenshot/trace | `execute` |
+| `reports/test-index.jsonl` | Per-test pass/fail index for Test health | `history.record_test_results` |
+| `reports/history/` | Run history for sparklines / trends | dashboard history |
+| `reports/quarantine.json` | Flake quarantine (TTL, owner, status) | `orchestrator/intelligence/quarantine` |
 | `reports/v8-coverage/` | Per-test V8 coverage JSON | Playwright fixture |
 | `reports/crawl-inventory.json` | Live crawl results | crawl script |
 | `screenshots/baselines/`, `current/`, `diffs/` | Visual regression images | `regression` |

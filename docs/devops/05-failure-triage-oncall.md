@@ -71,6 +71,24 @@ Report-only mode (`fail-on-error: false`) is for **rollout**, not for permanent 
 
 ## 5. Quarantine pattern
 
+Prefer Argus quarantine (file-backed, TTL + owner) so change-based select drops
+the test automatically:
+
+```bash
+argus intel quarantine-add "billing CTA" \
+  --file tests/manual/billing.spec.ts \
+  --reason "INC-1234: flaky billing CTA" \
+  --owner qa --ttl-hours 72
+argus intel quarantine-list
+# After fix / expiry:
+argus intel quarantine-release 'tests/manual/billing.spec.ts::billing-cta'
+```
+
+Or via API: `POST /api/v2/intel/quarantine` / `DELETE /api/v2/intel/quarantine/{key}`.
+Entries live in `reports/quarantine.json`.
+
+Fallback when you must keep CI green before the intel path is wired:
+
 ```ts
 test.skip(true, 'INC-1234: flaky billing CTA — until 2026-08-20');
 // or grep-exclude in CI temporarily:

@@ -24,8 +24,22 @@ Re-run the suite N times and surface unstable tests.
 
 If the card stays idle or errors, hit `GET /health`, confirm the webhook/dashboard process is up (`argus serve`), and re-check env from [.env.example](../../../../.env.example).
 
+## Next step: quarantine
+
+After Flaky check ranks unstable tests, quarantine them so change-based select
+drops them until fixed:
+
+```bash
+argus intel quarantine-add "<title>" --reason "INC-… flake" --file <spec> --ttl-hours 72
+# or POST /api/v2/intel/quarantine
+```
+
+See [Test health](../operations/dashboard-test-health.md) and the feature guide's
+**Test intelligence** section.
+
 ## Related pages
 
+- [Test health](../operations/dashboard-test-health.md)
 - [Getting Started](../../getting-started.md)
 - [Using the Dashboard](../../using-the-dashboard.md)
 - [Mission Control](../overview/dashboard.md)

@@ -150,6 +150,29 @@ argus test create "Check /vm page shows migration content" --execute
 
 ---
 
+### Test intelligence
+
+Flake taxonomy, file-backed quarantine (`reports/quarantine.json`), change-based
+selection, and failure studio. No store-schema change; `select_tests` needs no
+engagement. Related code: `orchestrator/intelligence/`, CLI in `orchestrator/cli.py`.
+
+```bash
+argus intel health [--limit 20]
+argus intel select [--base HEAD~1] [--head HEAD] [--include-quarantined]
+argus intel quarantine-add "checkout pays" --reason "INC-1234 price flake" \
+  --file playwright/checkout.spec.ts [--owner qa] [--ttl-hours 72]
+argus intel quarantine-list
+argus intel quarantine-release 'playwright/checkout.spec.ts::checkout-pays'
+
+# Same surfaces over HTTP / Mission Control jobs:
+# GET  /api/v2/intel/health
+# POST /api/v2/intel/select   {"base":"HEAD~1","head":"HEAD"}
+# POST /api/v2/jobs           {"kind":"select_tests","params":{"base":"main","head":"HEAD"}}
+# GET  /api/v2/intel/studio/{job_id}
+```
+
+---
+
 ### Visual regression
 
 ```bash
@@ -201,6 +224,9 @@ npm run report:pdf        # Regenerate PDF from reports/qa-summary.html
 | Post report to PR | Add `--pr-number 42` to any `run` command |
 | Natural language test | `argus test create "your description"` |
 | NL test + run | `argus test create "description" --execute` |
+| Suite health + quarantine overlay | `argus intel health` |
+| Change-based test select | `argus intel select --base HEAD~1 --head HEAD` |
+| Quarantine a flake | `argus intel quarantine-add "title" --reason "…"` |
 | Visual regression | `argus vision regression` |
 | Webhook server | `argus serve` |
 | Write tests by hand | Add files to `tests/manual/*.spec.ts` |
