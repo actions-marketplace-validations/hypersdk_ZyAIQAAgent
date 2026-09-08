@@ -178,7 +178,15 @@ class DurableJobService:
 
 def _validation_view(value: Any) -> Any:
     if is_secret_ref(value):
-        return "secret-reference-placeholder"
+        # Keep the {"$secret": "env:NAME"} shape rather than collapsing to a
+        # bare string -- some kinds (db_assert) re-check is_secret_ref() on
+        # their own param directly during _validate(), and a bare string
+        # would fail that check even though the real, unmodified `params`
+        # (not this view) is what actually gets persisted/executed. The
+        # placeholder ref name must still satisfy _validate_ref()'s "env:"/
+        # "file:" prefix requirement so nested assert_persistable() checks
+        # (e.g. host_pentest/cloud_pentest's creds) pass too.
+        return {"$secret": "env:VALIDATION_PLACEHOLDER"}
     if isinstance(value, dict):
         return {k: _validation_view(v) for k, v in value.items()}
     if isinstance(value, list):

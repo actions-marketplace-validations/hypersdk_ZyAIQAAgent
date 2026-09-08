@@ -10,6 +10,9 @@
 - **Desktop remote Mission Control** — Settings **Remote URL** opens the Tauri shell against a lab/team `argus serve` without spawning a local server (Chromium stays on the remote).
 - Broad `_job_*` registry/wrapper unit coverage (`tests/unit/test_job_wrappers_broad.py`) and connector entity tests.
 
+### Fixed
+- **`db_assert` always rejected a correctly-shaped `db_secret`** — found live while wiring `zyvorai/argus-enterprise`'s new Watchfloor "DB assertion" panel up to a real `argus serve` instance: every request with a genuine `{"$secret": "env:NAME"}` reference 400'd with "db_secret is required and must be a `{'$secret': 'env:NAME'}` reference", even though the request sent exactly that shape. Root cause: `orchestrator/dashboard/durable_jobs.py::_validation_view()` (which sanitizes secret refs before `_validate()` re-checks params, so validation never sees a real secret value) collapsed any `{"$secret": ...}` value to a bare placeholder *string* — `db_assert`'s own `is_secret_ref()` re-check on `db_secret` then always failed against that string. Fixed by keeping the placeholder in the same `{"$secret": "env:NAME"}` shape (`env:VALIDATION_PLACEHOLDER`) instead of collapsing it, so any kind that re-checks a ref's shape during validation (not just its resolved value) still passes. New regression test `test_enqueue_db_assert_survives_validation_view` (exercises the real `jobs._validate()`, not a mock, unlike the existing `_validation_view` tests); updated the two existing tests that asserted the old bare-string placeholder. Live-verified end to end against a real `argus serve` + `argus-enterprise` pair: the same `db_assert` request now passes validation and fails only on the correct, later boundary (`environment secret 'DB_DSN' is not configured`).
+
 ## [0.9.2](https://github.com/zyvorai/argus/releases/tag/v0.9.2) — 2026-09-02
 
 ### Added

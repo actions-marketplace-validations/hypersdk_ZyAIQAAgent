@@ -15,6 +15,7 @@ from unittest.mock import MagicMock
 
 import orchestrator.dashboard.jobs as jobs_module
 import orchestrator.dashboard.durable_jobs as durable_jobs
+import orchestrator.persistence.store as store_module
 from orchestrator.dashboard.durable_jobs import DurableJobService, _validation_view, get_service
 
 
@@ -22,13 +23,16 @@ from orchestrator.dashboard.durable_jobs import DurableJobService, _validation_v
 
 
 def test_validation_view_replaces_secret_refs():
-    assert _validation_view({"$secret": "env:X"}) == "secret-reference-placeholder"
+    # Stays a well-formed {"$secret": "env:NAME"} ref, not a bare string --
+    # kinds like db_assert re-check is_secret_ref() on their own param
+    # directly during _validate(), and a bare string would fail that check.
+    assert _validation_view({"$secret": "env:X"}) == {"$secret": "env:VALIDATION_PLACEHOLDER"}
 
 
 def test_validation_view_recurses_dict_and_list():
     payload = {"a": [{"$secret": "env:X"}, "plain"], "b": {"c": 1}}
     assert _validation_view(payload) == {
-        "a": ["secret-reference-placeholder", "plain"],
+        "a": [{"$secret": "env:VALIDATION_PLACEHOLDER"}, "plain"],
         "b": {"c": 1},
     }
 
@@ -88,11 +92,44 @@ def test_enqueue_substitutes_secret_placeholder_for_validation_only(monkeypatch)
     service.enqueue("audit", raw_params)
 
     # validation sees the placeholder, not the raw secret reference...
-    fake_validate.assert_called_once_with("audit", {"token": "secret-reference-placeholder"})
+    fake_validate.assert_called_once_with("audit", {"token": {"$secret": "env:VALIDATION_PLACEHOLDER"}})
     # ...but the store persists the real (still-a-reference, never-resolved) params.
     fake_store.enqueue_job.assert_called_once_with(
         "audit", raw_params, requested_by="", idempotency_key=None, priority=100, trace_context=None
     )
+
+
+class _FakeEngagementStore:
+    def get_engagement(self, engagement_id):
+        return {
+            "id": "eng-1", "target_pattern": "*", "scope_statement": "authorized",
+            "tier": "active_recon", "authorized_by": "admin", "created_at": "2026-01-01T00:00:00+00:00",
+            "expires_at": None, "revoked_at": None, "revoked_by": None,
+        } if engagement_id == "eng-1" else None
+
+    def audit(self, action, **kwargs):
+        pass
+
+
+def test_enqueue_db_assert_survives_validation_view(monkeypatch):
+    # Regression: _validation_view() used to collapse a secret ref to a bare
+    # placeholder string, which broke db_assert's own is_secret_ref()
+    # re-check inside the REAL jobs._validate() (unmocked here, unlike the
+    # tests above) -- enqueue() must not reject a correctly-shaped db_secret.
+    monkeypatch.setenv("ZYVOR_DB_TESTING_ENABLED", "true")
+    monkeypatch.setattr(store_module, "get_store", lambda: _FakeEngagementStore())
+
+    fake_store = MagicMock()
+    fake_store.enqueue_job.return_value = {"id": "job-3", "kind": "db_assert"}
+    service = DurableJobService(store=fake_store)
+
+    params = {
+        "engine": "postgres", "target": "staging-orders-db",
+        "db_secret": {"$secret": "env:DB_DSN"}, "query": "SELECT 1",
+        "assertion": {"mode": "row_count", "value": 1}, "engagement_id": "eng-1",
+    }
+    result = service.enqueue("db_assert", params)
+    assert result == {"id": "job-3", "kind": "db_assert"}
 
 
 # -- start(): recovery + idempotent thread spawn ---------------------------
