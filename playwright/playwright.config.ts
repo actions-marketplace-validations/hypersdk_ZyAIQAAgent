@@ -120,7 +120,18 @@ export default defineConfig({
       : undefined,
   reporter: [
     ['list'],
-    ['html', { outputFolder: path.join(repoRoot, 'reports'), open: 'never' }],
+    // outputFolder must NOT be `reports/` itself -- Playwright's HTML
+    // reporter unconditionally clears its entire outputFolder before
+    // writing (even when zero tests run, e.g. a bad testDir filter), and
+    // `reports/` is also where Mission Control's live SQLite state
+    // (mission-control.db), job/run history, and artifacts live. Every
+    // `smoke`/`flow` job (including a chaos_inject/chaos_webhook control
+    // test) invokes this config, so pointing the reporter at the bare
+    // `reports/` root silently destroyed the live database mid-process on
+    // every test run -- crashing the durable-jobs worker thread the next
+    // time it touched a now-missing table. Scoped to its own subdirectory
+    // instead, so only Playwright's own report output gets cleared.
+    ['html', { outputFolder: path.join(repoRoot, 'reports', 'playwright-report'), open: 'never' }],
     ['json', { outputFile: path.join(repoRoot, 'reports', 'results.json') }],
   ],
   use: sharedUse,
