@@ -168,21 +168,15 @@ scripts/          deploy-remote.sh, user-docs, e2e smoke
 
 ---
 
-## Contributing & license
+## License
 
-- **Issues & PRs:** [github.com/zyvorai/argus](https://github.com/zyvorai/argus)
-- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
-- **License:** Apache 2.0 — [LICENSE](LICENSE)
-- **Commercial:** [zyvor.dev](https://zyvor.dev) · [sales@zyvor.dev](mailto:sales@zyvor.dev)
+### Open source (Apache-2.0)
 
----
+This repository is licensed under the [Apache License, Version 2.0](LICENSE).
+You may use, modify, and run it for personal, lab, and commercial production
+use at no charge, subject to Apache-2.0 (preserve notices / NOTICE where required).
 
-<p align="center">
-  <a href="https://star-history.com/#zyvorai/argus&Date">
-    <img src="https://api.star-history.com/svg?repos=zyvorai/argus&type=Date" alt="Star history for zyvorai/argus" width="600">
-  </a>
-</p>
+### Enterprise
 
-<p align="center">
-  If Argus saves your team a debugging afternoon, a ⭐ on the repo helps others find it.
-</p>
+Production support, SLAs, and Zyvor Enterprise products are licensed separately.
+Contact [sales@zyvor.dev](mailto:sales@zyvor.dev) or see [zyvor.dev](https://zyvor.dev).
